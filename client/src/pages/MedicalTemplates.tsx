@@ -34,6 +34,25 @@ const templateDisplay: Record<string, { icon: any; color: string; bg: string; ic
   gastrointestinal: { icon: Pill, color: "from-amber-500 to-amber-600", bg: "bg-amber-50", iconBg: "bg-amber-100 text-amber-600" },
   neurological: { icon: Brain, color: "from-sky-500 to-sky-600", bg: "bg-sky-50", iconBg: "bg-sky-100 text-sky-600" },
   "elderly-care": { icon: Heart, color: "from-slate-500 to-slate-600", bg: "bg-slate-50", iconBg: "bg-slate-100 text-slate-600" },
+  "canine-wellness": { icon: PawPrint, color: "from-amber-500 to-amber-600", bg: "bg-amber-50", iconBg: "bg-amber-100 text-amber-600" },
+  "feline-wellness": { icon: PawPrint, color: "from-orange-500 to-orange-600", bg: "bg-orange-50", iconBg: "bg-orange-100 text-orange-600" },
+  "puppy-vaccination": { icon: Shield, color: "from-green-500 to-green-600", bg: "bg-green-50", iconBg: "bg-green-100 text-green-600" },
+  "vet-dental": { icon: Bone, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50", iconBg: "bg-cyan-100 text-cyan-600" },
+  "heartworm-prevention": { icon: Heart, color: "from-rose-500 to-rose-600", bg: "bg-rose-50", iconBg: "bg-rose-100 text-rose-600" },
+  "vet-emergency": { icon: AlertTriangle, color: "from-red-500 to-red-600", bg: "bg-red-50", iconBg: "bg-red-100 text-red-600" },
+  "vet-post-surgery": { icon: Stethoscope, color: "from-gray-600 to-gray-700", bg: "bg-gray-50", iconBg: "bg-gray-100 text-gray-600" },
+  "vet-dermatology": { icon: Wind, color: "from-purple-500 to-purple-600", bg: "bg-purple-50", iconBg: "bg-purple-100 text-purple-600" },
+  "vet-arthritis": { icon: Bone, color: "from-indigo-500 to-indigo-600", bg: "bg-indigo-50", iconBg: "bg-indigo-100 text-indigo-600" },
+  "equine-wellness": { icon: PawPrint, color: "from-amber-700 to-amber-800", bg: "bg-amber-50", iconBg: "bg-amber-100 text-amber-700" },
+  "avian-exotic": { icon: PawPrint, color: "from-teal-500 to-teal-600", bg: "bg-teal-50", iconBg: "bg-teal-100 text-teal-600" },
+  "dental-checkup": { icon: Bone, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50", iconBg: "bg-cyan-100 text-cyan-600" },
+  "root-canal": { icon: Activity, color: "from-red-500 to-red-600", bg: "bg-red-50", iconBg: "bg-red-100 text-red-600" },
+  "teeth-whitening": { icon: Sparkles, color: "from-blue-500 to-blue-600", bg: "bg-blue-50", iconBg: "bg-blue-100 text-blue-600" },
+  "orthodontic": { icon: Bone, color: "from-purple-500 to-purple-600", bg: "bg-purple-50", iconBg: "bg-purple-100 text-purple-600" },
+  "gum-treatment": { icon: Heart, color: "from-pink-500 to-pink-600", bg: "bg-pink-50", iconBg: "bg-pink-100 text-pink-600" },
+  "pediatric-dental": { icon: Baby, color: "from-green-400 to-green-500", bg: "bg-green-50", iconBg: "bg-green-100 text-green-600" },
+  "dental-emergency": { icon: AlertTriangle, color: "from-red-500 to-red-600", bg: "bg-red-50", iconBg: "bg-red-100 text-red-600" },
+  "wisdom-tooth": { icon: Bone, color: "from-violet-500 to-violet-600", bg: "bg-violet-50", iconBg: "bg-violet-100 text-violet-600" },
 };
 
 const finalQuestion = "Do you have anything else you'd like to tell the doctor?";
@@ -50,8 +69,10 @@ export default function MedicalTemplates() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const activeTemplates: any[] = templateTab === "veterinary" ? veterinaryTemplates :
-    templateTab === "dental" ? dentalTemplates :
+  const allVet = veterinaryTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
+  const allDental = dentalTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
+  const activeTemplates: any[] = templateTab === "veterinary" ? allVet :
+    templateTab === "dental" ? allDental :
     sharedTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
 
   const categories = [...new Set(activeTemplates.map((t: any) => t.category))] as string[];
