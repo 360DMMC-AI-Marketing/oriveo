@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0a7c6f;
+  --color-primary-dark: #08635a;
+  --color-primary-light: #e8f5f3;
+  --color-primary-lighter: #f0fdfa;
+  --color-secondary: #2563eb;
+  --color-secondary-light: #eff6ff;
+  --color-accent: #f59e0b;
+  --color-accent-light: #fffbeb;
+  --color-danger: #ef4444;
+  --color-danger-light: #fef2f2;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-200) transparent;
+}
+
+::selection {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+@layer base {
+  * { @apply border-gray-200; }
+}
+
+@media print {
+  @page { margin: 0.5in; size: A4; }
+  body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  nav, aside, .sidebar, .print\\:hidden, [class*="sidebar"], header, footer,
+  button, .no-print, .pagination { display: none !important; }
+  .report-print-area { visibility: visible !important; position: static !important; }
+  .report-print-area * { visibility: visible !important; }
+  .report-print-area .border, .report-print-area .rounded-lg,
+  .report-print-area .rounded-xl { border: 1px solid #ddd !important; box-shadow: none !important; }
+  .report-print-area .bg-red-50 { background-color: #fef2f2 !important; }
+  .report-print-area .bg-blue-50 { background-color: #eff6ff !important; }
+  .report-print-area .bg-gray-50 { background-color: #f9fafb !important; }
+  .report-print-area .bg-emerald-50 { background-color: #ecfdf5 !important; }
+  .report-print-area .bg-amber-50 { background-color: #fffbeb !important; }
+  .report-print-area .bg-green-50 { background-color: #f0fdf4 !important; }
+  .report-print-area .text-red-700 { color: #b91c1c !important; }
+  .report-print-area .text-emerald-600 { color: #059669 !important; }
+  .report-print-area .text-emerald-700 { color: #047857 !important; }
+  .report-print-area .text-primary { color: #0a7c6f !important; }
+  .report-print-area .ring-1 { box-shadow: none !important; }
+  .report-print-area .shadow-sm, .report-print-area .shadow { box-shadow: none !important; }
+  .report-print-area { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  .report-print-area h2 { font-size: 18pt !important; }
+  .report-print-area h3 { font-size: 12pt !important; }
+  .report-print-area p, .report-print-area li, .report-print-area span:not([class*="text-"]) { font-size: 10pt !important; }
+  .report-print-area .text-xs { font-size: 8pt !important; }
+  .report-print-area .text-sm { font-size: 9pt !important; }
+  .report-print-area .text-lg { font-size: 12pt !important; }
+  .report-print-area .text-xl { font-size: 16pt !important; }
+  .report-print-area .gap-1 { gap: 2px !important; }
+  .report-print-area .gap-2 { gap: 4px !important; }
+  .report-print-area .gap-3 { gap: 6px !important; }
+  .report-print-area .gap-4 { gap: 8px !important; }
+  .report-print-area .gap-5 { gap: 10px !important; }
+  .report-print-area .p-4 { padding: 8px !important; }
+  .report-print-area .p-6 { padding: 12px !important; }
+  .report-print-area .px-6 { padding-left: 12px !important; padding-right: 12px !important; }
+  .report-print-area .py-4 { padding-top: 8px !important; padding-bottom: 8px !important; }
+  .report-print-area .space-y-5 > * + * { margin-top: 10px !important; }
+  .report-print-area .space-y-2 > * + * { margin-top: 4px !important; }
+  .report-print-area .mb-2 { margin-bottom: 4px !important; }
+  .report-print-area .mb-4 { margin-bottom: 8px !important; }
+  .report-print-area .mt-3 { margin-top: 6px !important; }
+  .report-print-area .mt-6 { margin-top: 12px !important; }
+}

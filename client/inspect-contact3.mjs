@@ -1,0 +1,18 @@
+﻿import { chromium } from "playwright-core";
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage();
+page.on("response", r => console.log("RESP:", r.status(), r.url()));
+page.on("console", msg => console.log("CONSOLE:", msg.type(), msg.text().substring(0, 200)));
+await page.goto("http://localhost:5173/contact");
+await page.waitForTimeout(3000);
+await page.locator("input").first().fill("Test User");
+await page.locator("input[type=\"email\"]").fill("test@example.com");
+const inputs = await page.locator("input").all();
+if (inputs.length > 2) await inputs[2].fill("+1234567890");
+if (inputs.length > 3) await inputs[3].fill("Test Clinic");
+await page.locator("textarea").fill("Test message");
+await page.getByRole("button", { name: /Send/i }).click();
+await page.waitForTimeout(5000);
+const body = await page.innerText("body");
+console.log("BODY:", body.substring(0, 500));
+await browser.close();

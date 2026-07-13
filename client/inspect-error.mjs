@@ -1,0 +1,16 @@
+﻿import { chromium } from "playwright-core";
+const b = await chromium.launch({headless:true, args:["--no-sandbox"]});
+const p = await b.newPage();
+p.on("console", msg => console.log("CONSOLE:", msg.type(), msg.text()));
+p.on("pageerror", err => console.log("PAGE ERROR:", err.message));
+await p.goto("http://localhost:5173/login", {waitUntil:"networkidle", timeout:20000});
+await p.waitForFunction(() => document.querySelectorAll("input, button").length > 2, {timeout:10000});
+await p.fill('input[type="email"]', "anassamiri87@gmail.com");
+await p.fill('input[type="password"]', "demo123");
+await p.click("button");
+await p.waitForURL("**/dashboard", {timeout:15000});
+await p.waitForTimeout(3000);
+const fullHTML = await p.evaluate(() => document.body.innerHTML);
+console.log("=== FULL BODY HTML (length=" + fullHTML.length + ") ===");
+console.log(fullHTML);
+await b.close();
