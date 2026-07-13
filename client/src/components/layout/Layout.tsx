@@ -5,6 +5,7 @@ import Navbar from "./Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 import VoiceCommandBar from "@/components/VoiceCommandBar";
+import OnboardingTour from "@/components/OnboardingTour";
 
 export default function Layout() {
   const { token } = useAuth();
@@ -28,6 +29,7 @@ export default function Layout() {
         </main>
       </div>
       <VoiceCommandBar />
+      <OnboardingTour />
     </div>
   );
 }
