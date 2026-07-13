@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   Search, Heart, Activity, Brain, Wind, Eye, Bone, Droplets,
   Thermometer, Pill, Baby, Stethoscope, Shield, AlertTriangle,
-  Sparkles, Plus, Trash2, Star, Layers, Pencil, ClipboardCheck, Save, X, ArrowLeft, ArrowUp, ArrowDown, PawPrint, Bone
+  Sparkles, Plus, Trash2, Star, Layers, Pencil, ClipboardCheck, Save, X, ArrowLeft, ArrowUp, ArrowDown, PawPrint
 } from "lucide-react";
 import { activeTemplates as sharedTemplates } from "@/data/activeTemplates";
 import { veterinaryTemplates } from "@/data/veterinaryTemplates";
