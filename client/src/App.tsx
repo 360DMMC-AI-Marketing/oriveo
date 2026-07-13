@@ -25,7 +25,7 @@ import CallCenter from "@/pages/CallCenter";
 import Analytics from "@/pages/Analytics";
 import KnowledgeBase from "@/pages/KnowledgeBase";
 import CallReview from "@/pages/CallReview";
-import OnboardingGuide from "@/pages/OnboardingGuide";
+
 import AuditLog from "@/pages/AuditLog";
 import Reports from "@/pages/Reports";
 import InboundCalls from "@/pages/InboundCalls";
@@ -94,7 +94,7 @@ function AppRoutes() {
         <Route path="/live-monitoring" element={<LiveMonitoring />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/knowledge-base" element={<KnowledgeBase />} />
-        <Route path="/onboarding-guide" element={<OnboardingGuide />} />
+
         <Route path="/clinic" element={<ClinicDashboard />} />
         <Route path="/clinic/settings" element={<ClinicSettingsPage />} />
         <Route path="/clinic/users" element={<ClinicUsers />} />
