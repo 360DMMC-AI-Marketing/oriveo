@@ -16,8 +16,9 @@ export const signupSchema = z.object({
   email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["admin", "doctor", "nurse", "receptionist", "staff"]).optional(),
+  profession: z.string().optional(),
   clinicName: z.string().min(1).max(200).optional(),
   clinicSlug: z.string().min(1).max(100).optional(),
   phone: z.string().optional(),
-  specialty: z.string().optional(),
+  specialty: z.union([z.string(), z.array(z.string())]).optional(),
 });

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Phone, Play, FileText, Download, Calendar, Sparkles, Clock, Droplets, AlertTriangle, Pill, Bone, Stethoscope, HeartPulse, Syringe, User, Shield, MapPin, PhoneCall, Ban, BookOpen, Save, X, Mic } from "lucide-react";
+import { Phone, Play, FileText, Download, Calendar, Sparkles, Clock, Droplets, AlertTriangle, Pill, Bone, Stethoscope, HeartPulse, Syringe, User, Shield, MapPin, PhoneCall, Ban, BookOpen, Save, X, Mic, PawPrint, Weight } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import { formatDateTime } from "@/lib/utils";
@@ -87,6 +87,7 @@ export default function PatientDetail() {
   const startEditing = () => {
     const p = patientData?.patient;
     if (!p) return;
+    const isPet = p.patientType === "pet";
     setEditForm({
       language: p.language || "en",
       gender: p.gender || "",
@@ -102,6 +103,16 @@ export default function PatientDetail() {
       emergencyContact: p.emergencyContact || "",
       emergencyContactPhone: p.emergencyContactPhone || "",
       medicalNotes: p.medicalNotes || "",
+      ...(isPet ? {
+        species: p.species || "",
+        breed: p.breed || "",
+        weight: p.weight || "",
+        color: p.color || "",
+        microchipId: p.microchipId || "",
+        ownerName: p.ownerName || "",
+        ownerPhone: p.ownerPhone || "",
+        ownerEmail: p.ownerEmail || "",
+      } : {}),
     });
     setEditing(true);
   };
@@ -111,6 +122,7 @@ export default function PatientDetail() {
   const questionnaires = questionnairesData?.questionnaires || [];
 
   const recommendedQuestionnaires = questionnaires.filter((q: any) => {
+    if (patient?.patientType === "pet" && q.targetProfession !== "veterinary" && q.targetSpecies !== "" && q.targetSpecies !== patient?.species) return false;
     const text = [
       patient?.medicalNotes,
       patient?.primaryDiagnosis,
@@ -148,15 +160,24 @@ export default function PatientDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-light text-primary text-2xl font-bold">
-            {patient.name.charAt(0).toUpperCase()}
+          <div className="flex items-center gap-4">
+            <div className={`flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold ${patient.patientType === "pet" ? "bg-amber-100 text-amber-600" : "bg-primary-light text-primary"}`}>
+              {patient.patientType === "pet" ? <PawPrint className="h-8 w-8" /> : patient.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{patient.name}</h1>
+                {patient.patientType === "pet" && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Pet</span>
+                )}
+              </div>
+              <p className="text-gray-500">
+                {patient.patientType === "pet"
+                  ? `${patient.ownerName ? `Owner: ${patient.ownerName}` : ""}${patient.ownerPhone ? ` · ${patient.ownerPhone}` : ""}`
+                  : `${patient.phone || ""}${patient.email ? ` · ${patient.email}` : ""}`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">{patient.name}</h1>
-            <p className="text-gray-500">{patient.phone}{patient.email ? ` · ${patient.email}` : ""}</p>
-          </div>
-        </div>
         <div className="flex items-center gap-2">
           <Button variant={patient.doNotCall ? "destructive" : "outline"} size="sm" onClick={() => doNotCallMutation.mutate(!patient.doNotCall)} disabled={doNotCallMutation.isPending}>
             <Ban className="mr-2 h-4 w-4" /> {patient.doNotCall ? "Unblock Calls" : "Do Not Call"}
@@ -420,17 +441,37 @@ export default function PatientDetail() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                  <div><span className="text-gray-500 block">Language</span><span className="font-medium uppercase">{patient.language}</span></div>
-                  <div><span className="text-gray-500 block">Gender</span><span className="font-medium capitalize">{patient.gender || "—"}</span></div>
-                  <div><span className="text-gray-500 block">Blood Type</span><span className="font-medium">{patient.bloodType ? <span className="text-red-600">{patient.bloodType}</span> : "—"}</span></div>
-                  <div><span className="text-gray-500 block">DOB</span><span className="font-medium">{patient.dob ? new Date(patient.dob).toLocaleDateString() : "—"}</span></div>
-                  <div><span className="text-gray-500 block">Assigned Doctor</span><span className="font-medium">{patient.assignedDoctor?.name || "—"}</span></div>
-                  <div><span className="text-gray-500 block">Insurance ID</span><span className="font-medium">{patient.insuranceId || "—"}</span></div>
-                  <div className="col-span-full"><span className="text-gray-500 block">Address</span><span className="font-medium">{patient.address || "—"}</span></div>
-                  <div><span className="text-gray-500 block">Last Checkup</span><span className="font-medium">{patient.lastCheckupDate ? new Date(patient.lastCheckupDate).toLocaleDateString() : "—"}</span></div>
-                  <div><span className="text-gray-500 block">Next Scheduled</span><span className="font-medium">{patient.nextScheduledDate ? new Date(patient.nextScheduledDate).toLocaleDateString() : "—"}</span></div>
-                </div>
+                {patient.patientType === "pet" ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                    <div><span className="text-gray-500 block">Species</span><span className="font-medium">{patient.species || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Breed</span><span className="font-medium">{patient.breed || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Weight</span><span className="font-medium">{patient.weight ? `${patient.weight} kg` : "—"}</span></div>
+                    <div><span className="text-gray-500 block">Color</span><span className="font-medium">{patient.color || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Microchip ID</span><span className="font-medium">{patient.microchipId || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Gender</span><span className="font-medium capitalize">{patient.gender || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Assigned Vet</span><span className="font-medium">{patient.assignedDoctor?.name || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Last Checkup</span><span className="font-medium">{patient.lastCheckupDate ? new Date(patient.lastCheckupDate).toLocaleDateString() : "—"}</span></div>
+                    <div><span className="text-gray-500 block">Next Scheduled</span><span className="font-medium">{patient.nextScheduledDate ? new Date(patient.nextScheduledDate).toLocaleDateString() : "—"}</span></div>
+                    <div className="col-span-full border-t pt-2 mt-2">
+                      <span className="text-gray-500 block text-xs font-medium mb-2">Owner Information</span>
+                    </div>
+                    <div><span className="text-gray-500 block">Owner Name</span><span className="font-medium">{patient.ownerName || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Owner Phone</span><span className="font-medium">{patient.ownerPhone || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Owner Email</span><span className="font-medium">{patient.ownerEmail || "—"}</span></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                    <div><span className="text-gray-500 block">Language</span><span className="font-medium uppercase">{patient.language}</span></div>
+                    <div><span className="text-gray-500 block">Gender</span><span className="font-medium capitalize">{patient.gender || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Blood Type</span><span className="font-medium">{patient.bloodType ? <span className="text-red-600">{patient.bloodType}</span> : "—"}</span></div>
+                    <div><span className="text-gray-500 block">DOB</span><span className="font-medium">{patient.dob ? new Date(patient.dob).toLocaleDateString() : "—"}</span></div>
+                    <div><span className="text-gray-500 block">Assigned Doctor</span><span className="font-medium">{patient.assignedDoctor?.name || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Insurance ID</span><span className="font-medium">{patient.insuranceId || "—"}</span></div>
+                    <div className="col-span-full"><span className="text-gray-500 block">Address</span><span className="font-medium">{patient.address || "—"}</span></div>
+                    <div><span className="text-gray-500 block">Last Checkup</span><span className="font-medium">{patient.lastCheckupDate ? new Date(patient.lastCheckupDate).toLocaleDateString() : "—"}</span></div>
+                    <div><span className="text-gray-500 block">Next Scheduled</span><span className="font-medium">{patient.nextScheduledDate ? new Date(patient.nextScheduledDate).toLocaleDateString() : "—"}</span></div>
+                  </div>
+                )}
 
                 <div className="border-t pt-3">
                   <h4 className="text-sm font-semibold flex items-center gap-2 mb-2"><Stethoscope className="h-4 w-4 text-primary" /> Medical Summary</h4>

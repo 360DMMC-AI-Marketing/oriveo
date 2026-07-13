@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import compression from "compression";
 
 process.on("uncaughtException", (err) => {
   console.error("UNCAUGHT EXCEPTION:", err);
@@ -121,6 +122,7 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use(compression());
 app.use(helmet());
 app.use(mongoSanitize());
 
@@ -133,6 +135,7 @@ function createRateLimiter() {
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many requests, please try again later" },
+    skipFailedRequests: true,
   };
 
   if (process.env.MONGODB_URI) {

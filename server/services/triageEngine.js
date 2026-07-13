@@ -1,4 +1,4 @@
-import { RED_FLAGS, TIERS, TIER_ACTIONS, classifyTier, getTierActions, getTierConfig, EMERGENCY_SCRIPT, CRISIS_SCRIPT } from "../config/triageDecisionTable.js";
+import { RED_FLAGS, TIERS, TIER_ACTIONS, classifyTier, getTierActions, getTierConfig, EMERGENCY_SCRIPT, VET_EMERGENCY_SCRIPT, CRISIS_SCRIPT } from "../config/triageDecisionTable.js";
 import { SPECIALTY_TEMPLATES, getSpecialtyForKeywords } from "../config/specialtyTemplates.js";
 
 export class TriageEngine {
@@ -73,6 +73,24 @@ export class TriageEngine {
       }
     }
 
+    if (RED_FLAGS.VETERINARY_EMERGENCY) {
+      for (const keyword of RED_FLAGS.VETERINARY_EMERGENCY.keywords) {
+        if (lower.includes(keyword)) {
+          detectedTiers.add(0);
+          newRedFlags.push({ tier: 0, keyword, text: text.slice(0, 100), veterinary: true });
+        }
+      }
+    }
+
+    if (RED_FLAGS.VETERINARY_URGENT) {
+      for (const keyword of RED_FLAGS.VETERINARY_URGENT.keywords) {
+        if (lower.includes(keyword)) {
+          detectedTiers.add(1);
+          newRedFlags.push({ tier: 1, keyword, text: text.slice(0, 100), veterinary: true });
+        }
+      }
+    }
+
     // Emotional distress detection (severe distress → Tier 1 urgent)
     const distressKeywords = ["can't breathe", "help me", "please help", "i can't handle", "overwhelmed", "desperate", "can't cope", "i'm dying", "something's wrong", "i need help", "i can't do this"];
     for (const kw of distressKeywords) {
@@ -132,7 +150,8 @@ export class TriageEngine {
   }
 
   getEmergencyScript() {
-    return EMERGENCY_SCRIPT;
+    const hasVetFlags = this.redFlags.some(f => f.veterinary);
+    return hasVetFlags ? VET_EMERGENCY_SCRIPT : EMERGENCY_SCRIPT;
   }
 
   getCrisisScript() {

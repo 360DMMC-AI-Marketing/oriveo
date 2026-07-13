@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2,
+  Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2, PawPrint,
 } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Patients() {
+  const { user } = useAuth();
+  const isVet = user?.organization?.type === "veterinary";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -21,16 +24,20 @@ export default function Patients() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [expandGroup, setExpandGroup] = useState<string | null>(null);
   const [groupSearch, setGroupSearch] = useState("");
+  const [patientType, setPatientType] = useState<"human" | "pet">(isVet ? "pet" : "human");
   const [patientForm, setPatientForm] = useState({
     name: "", phone: "", email: "", language: "en", primaryDiagnosis: "", chronicConditions: "",
     allergies: "", currentMedications: "", pastSurgeries: "", medicalNotes: "", assignedDoctor: "",
     address: "", emergencyContact: "", emergencyContactPhone: "", insuranceId: "", kbNotes: "",
+    patientType: isVet ? "pet" : "human",
+    species: "", breed: "", weight: "", color: "", microchipId: "",
+    ownerName: "", ownerPhone: "", ownerEmail: "",
   });
   const [groupForm, setGroupForm] = useState({ name: "", description: "", diagnosisFilter: "" });
 
   const { data: patientsRes, isLoading } = useQuery({
-    queryKey: ["patients"],
-    queryFn: () => api.get("/patients").then((r) => r.data),
+    queryKey: ["patients", patientType],
+    queryFn: () => api.get(`/patients?patientType=${patientType}`).then((r) => r.data),
   });
   const { data: groupsRes } = useQuery({
     queryKey: ["groups"],
@@ -41,7 +48,7 @@ export default function Patients() {
   const groups = groupsRes?.groups || [];
 
   const createPatient = useMutation({
-    mutationFn: (d: any) => api.post("/patients", d),
+    mutationFn: (d: any) => api.post("/patients", { ...d, patientType }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["patients"] }); setShowForm(null); toast.success("Patient added"); },
     onError: (err: any) => toast.error(err?.response?.data?.message || "Failed"),
   });
@@ -131,55 +138,92 @@ export default function Patients() {
         </div>
       </div>
 
-      <div className="relative flex gap-2 items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input placeholder="Search patients..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="relative flex gap-2 items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input placeholder="Search patients..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <VoiceInputButton onResult={(text) => setSearch(text)} language="en-US" />
         </div>
-        <VoiceInputButton onResult={(text) => setSearch(text)} language="en-US" />
-      </div>
 
-      {showForm === "patient" && (
-        <Card className="border-primary/30">
-          <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm">New Patient</CardTitle>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowForm(null)}><X className="h-4 w-4" /></Button>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-1"><label className="text-xs font-medium">Name *</label>
-                <Input value={patientForm.name} onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })} className="h-9 text-sm" /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Phone *</label>
-                <Input value={patientForm.phone} onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })} className="h-9 text-sm" /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Email</label>
-                <Input value={patientForm.email} onChange={(e) => setPatientForm({ ...patientForm, email: e.target.value })} className="h-9 text-sm" /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Language</label>
-                <LanguageSelect value={patientForm.language} onChange={(v) => setPatientForm({ ...patientForm, language: v })} /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Primary Diagnosis</label>
-                <Input value={patientForm.primaryDiagnosis} onChange={(e) => setPatientForm({ ...patientForm, primaryDiagnosis: e.target.value })} className="h-9 text-sm" /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Chronic Conditions</label>
-                <Input value={patientForm.chronicConditions} onChange={(e) => setPatientForm({ ...patientForm, chronicConditions: e.target.value })} className="h-9 text-sm" /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Allergies</label>
-                <Input value={patientForm.allergies} onChange={(e) => setPatientForm({ ...patientForm, allergies: e.target.value })} className="h-9 text-sm" /></div>
-              <div className="space-y-1"><label className="text-xs font-medium">Medications</label>
-                <Input value={patientForm.currentMedications} onChange={(e) => setPatientForm({ ...patientForm, currentMedications: e.target.value })} className="h-9 text-sm" /></div>
-            </div>
-            <div className="mt-2">
-              <label className="text-xs font-medium">KB Notes</label>
-              <textarea value={patientForm.kbNotes} onChange={(e) => setPatientForm({ ...patientForm, kbNotes: e.target.value })}
-                placeholder="AI context: patient prefers afternoon calls, hard of hearing..."
-                className="flex min-h-[60px] w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm mt-1" />
-            </div>
-            <div className="flex gap-2 mt-3">
-              <Button size="sm" disabled={createPatient.isPending} onClick={() => {
-                if (!patientForm.name || !patientForm.phone) { toast.error("Name and phone required"); return; }
-                createPatient.mutate(patientForm);
-              }}>Save</Button>
-              <Button variant="outline" size="sm" onClick={() => setShowForm(null)}>Cancel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {showForm === "patient" && (
+          <Card className="border-primary/30">
+            <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm">New {patientType === "pet" ? "Pet" : "Patient"}</CardTitle>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowForm(null)}><X className="h-4 w-4" /></Button>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="flex gap-2 mb-3">
+                <button type="button" onClick={() => { setPatientType("human"); setPatientForm({ ...patientForm, patientType: "human" }) }}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${patientType === "human" ? "border-primary bg-primary text-white" : "border-gray-200"}`}><User className="h-3 w-3 inline mr-1" />Human</button>
+                <button type="button" onClick={() => { setPatientType("pet"); setPatientForm({ ...patientForm, patientType: "pet" }) }}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${patientType === "pet" ? "border-primary bg-primary text-white" : "border-gray-200"}`}><PawPrint className="h-3 w-3 inline mr-1" />Pet</button>
+              </div>
+              {patientType === "pet" ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1"><label className="text-xs font-medium">Pet Name *</label>
+                    <Input value={patientForm.name} onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Species *</label>
+                    <Input value={patientForm.species} onChange={(e) => setPatientForm({ ...patientForm, species: e.target.value })} placeholder="e.g. Dog, Cat" className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Breed</label>
+                    <Input value={patientForm.breed} onChange={(e) => setPatientForm({ ...patientForm, breed: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Weight (kg)</label>
+                    <Input type="number" value={patientForm.weight} onChange={(e) => setPatientForm({ ...patientForm, weight: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Color</label>
+                    <Input value={patientForm.color} onChange={(e) => setPatientForm({ ...patientForm, color: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Microchip ID</label>
+                    <Input value={patientForm.microchipId} onChange={(e) => setPatientForm({ ...patientForm, microchipId: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Owner Name *</label>
+                    <Input value={patientForm.ownerName} onChange={(e) => setPatientForm({ ...patientForm, ownerName: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Owner Phone</label>
+                    <Input value={patientForm.ownerPhone} onChange={(e) => setPatientForm({ ...patientForm, ownerPhone: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Owner Email</label>
+                    <Input value={patientForm.ownerEmail} onChange={(e) => setPatientForm({ ...patientForm, ownerEmail: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Allergies</label>
+                    <Input value={patientForm.allergies} onChange={(e) => setPatientForm({ ...patientForm, allergies: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Current Meds</label>
+                    <Input value={patientForm.currentMedications} onChange={(e) => setPatientForm({ ...patientForm, currentMedications: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Past Surgeries</label>
+                    <Input value={patientForm.pastSurgeries} onChange={(e) => setPatientForm({ ...patientForm, pastSurgeries: e.target.value })} className="h-9 text-sm" /></div>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1"><label className="text-xs font-medium">Name *</label>
+                    <Input value={patientForm.name} onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Phone *</label>
+                    <Input value={patientForm.phone} onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Email</label>
+                    <Input value={patientForm.email} onChange={(e) => setPatientForm({ ...patientForm, email: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Language</label>
+                    <LanguageSelect value={patientForm.language} onChange={(v) => setPatientForm({ ...patientForm, language: v })} /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Primary Diagnosis</label>
+                    <Input value={patientForm.primaryDiagnosis} onChange={(e) => setPatientForm({ ...patientForm, primaryDiagnosis: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Chronic Conditions</label>
+                    <Input value={patientForm.chronicConditions} onChange={(e) => setPatientForm({ ...patientForm, chronicConditions: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Allergies</label>
+                    <Input value={patientForm.allergies} onChange={(e) => setPatientForm({ ...patientForm, allergies: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium">Medications</label>
+                    <Input value={patientForm.currentMedications} onChange={(e) => setPatientForm({ ...patientForm, currentMedications: e.target.value })} className="h-9 text-sm" /></div>
+                </div>
+              )}
+              <div className="mt-2">
+                <label className="text-xs font-medium">KB Notes</label>
+                <textarea value={patientForm.kbNotes} onChange={(e) => setPatientForm({ ...patientForm, kbNotes: e.target.value })}
+                  placeholder={patientType === "pet" ? "AI context: pet is nervous during exams, prefers female vet..." : "AI context: patient prefers afternoon calls, hard of hearing..."}
+                  className="flex min-h-[60px] w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm mt-1" />
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Button size="sm" disabled={createPatient.isPending} onClick={() => {
+                  if (!patientForm.name) { toast.error("Name required"); return; }
+                  if (patientType === "human" && !patientForm.phone) { toast.error("Phone required"); return; }
+                  if (patientType === "pet" && !patientForm.species) { toast.error("Species required"); return; }
+                  createPatient.mutate(patientForm);
+                }}>Save</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowForm(null)}>Cancel</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {showForm === "group" && (
         <Card className="border-primary/30">
@@ -287,9 +331,9 @@ export default function Patients() {
                         {members.map((m: any) => (
                           <div key={m._id} className="flex items-center justify-between rounded-lg border px-3 py-1.5 hover:bg-gray-50">
                             <Link to={`/patients/${m._id}`} className="flex items-center gap-2 min-w-0 flex-1">
-                              <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                              {m.patientType === "pet" ? <PawPrint className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
                               <span className="text-sm font-medium truncate">{m.name}</span>
-                              <span className="text-xs text-muted-foreground shrink-0">{m.phone}</span>
+                              <span className="text-xs text-muted-foreground shrink-0">{m.patientType === "pet" ? m.species || "Pet" : m.phone}</span>
                               {m.primaryDiagnosis && <span className="text-[10px] text-blue-600 bg-blue-50 rounded px-1 truncate">{m.primaryDiagnosis}</span>}
                             </Link>
                             <div className="flex items-center gap-1 shrink-0">
@@ -332,10 +376,19 @@ export default function Patients() {
               {(search ? filtered : ungrouped).map((p: any) => (
                 <div key={p._id} className="flex items-center justify-between rounded-lg border px-3 py-2 hover:bg-gray-50">
                   <Link to={`/patients/${p._id}`} className="min-w-0 flex-1">
-                    <div className="text-sm font-medium hover:text-primary truncate">{p.name}</div>
+                    <div className="text-sm font-medium hover:text-primary truncate flex items-center gap-1.5">
+                      {p.patientType === "pet" ? <PawPrint className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
+                      <span>{p.name}</span>
+                    </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span>{p.phone}</span>
-                      {p.primaryDiagnosis && <span className="truncate">· {p.primaryDiagnosis}</span>}
+                      {p.patientType === "pet" ? (
+                        <span>{p.species}{p.breed ? ` · ${p.breed}` : ""}</span>
+                      ) : (
+                        <>
+                          <span>{p.phone}</span>
+                          {p.primaryDiagnosis && <span className="truncate">· {p.primaryDiagnosis}</span>}
+                        </>
+                      )}
                     </div>
                   </Link>
                   <div className="flex items-center gap-1 shrink-0 ml-2">

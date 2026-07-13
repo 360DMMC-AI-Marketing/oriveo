@@ -2,10 +2,11 @@ import { z } from "zod";
 
 export const createPatientSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
-  phone: z.string().min(1, "Phone is required").max(30),
+  patientType: z.enum(["human", "pet"]).optional(),
+  phone: z.string().max(30).optional().or(z.literal("")),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   dob: z.string().optional().or(z.literal("")),
-  gender: z.enum(["male", "female", "other", ""]).optional(),
+  gender: z.enum(["male", "female", "other", "intact-male", "neutered", "intact-female", "spayed", ""]).optional(),
   address: z.string().max(300).optional().or(z.literal("")),
   primaryDiagnosis: z.string().max(200).optional().or(z.literal("")),
   chronicConditions: z.string().max(500).optional().or(z.literal("")),
@@ -14,6 +15,14 @@ export const createPatientSchema = z.object({
   language: z.string().max(50).optional().or(z.literal("")),
   assignedDoctor: z.string().optional().or(z.literal("")),
   kbNotes: z.string().max(2000).optional().or(z.literal("")),
+  species: z.string().max(100).optional().or(z.literal("")),
+  breed: z.string().max(100).optional().or(z.literal("")),
+  weight: z.number().positive().optional().nullable(),
+  color: z.string().max(100).optional().or(z.literal("")),
+  microchipId: z.string().max(100).optional().or(z.literal("")),
+  ownerName: z.string().max(100).optional().or(z.literal("")),
+  ownerPhone: z.string().max(30).optional().or(z.literal("")),
+  ownerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
 });
 
 export const updatePatientSchema = createPatientSchema.partial();

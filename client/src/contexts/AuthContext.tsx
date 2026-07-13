@@ -8,17 +8,18 @@ interface User {
   email: string;
   role: string;
   phone: string;
-  specialty: string;
+  profession: string;
+  specialty: string[];
   language: string;
   superAdmin?: boolean;
-  organization?: { _id: string; name: string; slug: string } | null;
+  organization?: { _id: string; name: string; slug: string; type?: string } | null;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (data: { name: string; email: string; password: string; role?: string; phone?: string; clinicName?: string; clinicSlug?: string }) => Promise<void>;
+  signup: (data: { name: string; email: string; password: string; role?: string; phone?: string; profession?: string; clinicName?: string; clinicSlug?: string }) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }

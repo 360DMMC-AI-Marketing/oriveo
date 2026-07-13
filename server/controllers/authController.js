@@ -11,13 +11,16 @@ const generateToken = (user) => {
   );
 };
 
+import { PROFESSIONS } from "../config/professions.js";
+
 export const signup = async (req, res) => {
   try {
-    const { name, email, password, role, phone, specialty, clinicName, clinicSlug } = req.body;
+    const { name, email, password, role, phone, profession, specialty, clinicName, clinicSlug } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered" });
     }
+    const prof = profession ? PROFESSIONS.find(p => p.id === profession) : null;
     let organization = null;
     if (clinicName && clinicSlug) {
       const existingOrg = await Organization.findOne({ slug: clinicSlug });
@@ -27,6 +30,7 @@ export const signup = async (req, res) => {
       organization = await Organization.create({
         name: clinicName,
         slug: clinicSlug,
+        type: prof?.orgType || "human",
       });
       await Subscription.create({
         organization: organization._id,
@@ -37,10 +41,12 @@ export const signup = async (req, res) => {
     }
     const user = await User.create({
       name, email, password, role: role || "admin",
-      phone, specialty,
+      profession: profession || "",
+      phone,
+      specialty: Array.isArray(specialty) ? specialty : (specialty ? [specialty] : []),
       organization: organization?._id || null,
     });
-    await user.populate("organization", "name slug");
+    await user.populate("organization", "name slug type");
     const token = generateToken(user);
     res.status(201).json({ token, user });
   } catch (error) {
@@ -51,7 +57,7 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email }).populate("organization", "name slug");
+    const user = await User.findOne({ email }).populate("organization", "name slug type");
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -66,7 +72,7 @@ export const login = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  const user = await User.findById(req.user._id).populate("organization", "name slug");
+  const user = await User.findById(req.user._id).populate("organization", "name slug type");
   res.json({ user });
 };
 

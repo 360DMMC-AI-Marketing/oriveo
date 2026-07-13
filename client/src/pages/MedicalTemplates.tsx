@@ -10,9 +10,12 @@ import { toast } from "sonner";
 import {
   Search, Heart, Activity, Brain, Wind, Eye, Bone, Droplets,
   Thermometer, Pill, Baby, Stethoscope, Shield, AlertTriangle,
-  Sparkles, Plus, Trash2, Star, Layers, Pencil, ClipboardCheck, Save, X, ArrowLeft, ArrowUp, ArrowDown
+  Sparkles, Plus, Trash2, Star, Layers, Pencil, ClipboardCheck, Save, X, ArrowLeft, ArrowUp, ArrowDown, PawPrint, Bone
 } from "lucide-react";
-import { medicalTemplates as sharedTemplates } from "@/data/medicalTemplates";
+import { activeTemplates as sharedTemplates } from "@/data/activeTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { useAuth } from "@/contexts/AuthContext";
 
 const templateDisplay: Record<string, { icon: any; color: string; bg: string; iconBg: string }> = {
   diabetes: { icon: Droplets, color: "from-blue-500 to-blue-600", bg: "bg-blue-50", iconBg: "bg-blue-100 text-blue-600" },
@@ -33,18 +36,25 @@ const templateDisplay: Record<string, { icon: any; color: string; bg: string; ic
   "elderly-care": { icon: Heart, color: "from-slate-500 to-slate-600", bg: "bg-slate-50", iconBg: "bg-slate-100 text-slate-600" },
 };
 
-const medicalTemplates = sharedTemplates.map((t) => ({ ...t, ...templateDisplay[t.id] }));
-
-const categories = [...new Set(medicalTemplates.map((t) => t.category))];
-
 const finalQuestion = "Do you have anything else you'd like to tell the doctor?";
 
 export default function MedicalTemplates() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [templateTab, setTemplateTab] = useState<"human" | "veterinary" | "dental">(
+    user?.organization?.type === "veterinary" ? "veterinary" :
+    user?.organization?.type === "dental" ? "dental" : "human"
+  );
   const [tab, setTab] = useState<"templates" | "create">("templates");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const activeTemplates = templateTab === "veterinary" ? veterinaryTemplates :
+    templateTab === "dental" ? dentalTemplates :
+    sharedTemplates.map((t) => ({ ...t, ...templateDisplay[t.id] }));
+
+  const categories = [...new Set(activeTemplates.map((t: any) => t.category))] as string[];
 
   const [customizing, setCustomizing] = useState<any | null>(null);
   const [customTitle, setCustomTitle] = useState("");
@@ -109,13 +119,13 @@ export default function MedicalTemplates() {
     setNewQuestions(newQuestions.filter((_, i) => i !== index));
   };
 
-  const filteredTemplates = medicalTemplates.filter((t) => {
+  const filteredTemplates = activeTemplates.filter((t) => {
     const matchSearch = !search || t.condition.toLowerCase().includes(search.toLowerCase()) || t.description?.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase());
     const matchCategory = !categoryFilter || t.category === categoryFilter;
     return matchSearch && matchCategory;
   });
 
-  const handleCustomize = (template: typeof medicalTemplates[0]) => {
+  const handleCustomize = (template: any) => {
     setCustomizing(template);
     setCustomTitle(template.condition + " Checkup");
     setCustomQuestions(template.questions.map((q) => ({ text: q })));
@@ -173,9 +183,22 @@ export default function MedicalTemplates() {
         </Button>
       </div>
 
-      <div className="flex gap-2 border-b pb-1">
+      <div className="flex gap-1 border-b pb-1">
+        <button onClick={() => setTemplateTab("human")}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${templateTab === "human" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
+          <User className="inline h-4 w-4 mr-1.5" />Medical
+        </button>
+        <button onClick={() => setTemplateTab("veterinary")}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${templateTab === "veterinary" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
+          <PawPrint className="inline h-4 w-4 mr-1.5" />Veterinary
+        </button>
+        <button onClick={() => setTemplateTab("dental")}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${templateTab === "dental" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
+          <Bone className="inline h-4 w-4 mr-1.5" />Dental
+        </button>
+        <div className="flex-1" />
         <button onClick={() => setTab("templates")} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${tab === "templates" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
-          <Layers className="inline h-4 w-4 mr-1.5" />Medical Templates
+          <Layers className="inline h-4 w-4 mr-1.5" />Saved
         </button>
       </div>
 

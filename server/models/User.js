@@ -11,8 +11,9 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "doctor", "nurse", "receptionist"],
       default: "doctor",
     },
+    profession: { type: String, default: "" },
     phone: { type: String, default: "" },
-    specialty: { type: String, default: "" },
+    specialty: { type: [String], default: [] },
     language: { type: String, default: "en" },
     avatar: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
@@ -43,6 +44,8 @@ userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ specialty: 1 });
+userSchema.index({ profession: 1 });
+userSchema.index({ organization: 1 });
 userSchema.index({ name: "text" });
 
 export default mongoose.model("User", userSchema);

@@ -28,6 +28,9 @@ export const TIERS = {
 export const EMERGENCY_SCRIPT =
   "This may be an emergency. Please hang up and call 911 right now. I will notify your care team immediately.";
 
+export const VET_EMERGENCY_SCRIPT =
+  "This sounds like it could be an emergency for your pet. Please hang up and take your pet to the nearest emergency veterinary clinic immediately. I will notify your veterinary team right away.";
+
 export const CRISIS_SCRIPT =
   "If you are thinking about hurting yourself, please call or text 988 now. The Suicide and Crisis Lifeline has trained counselors available 24/7. Would you like me to stay on the line with you while you call?";
 
@@ -69,6 +72,36 @@ export const RED_FLAGS = {
       "don't want to be here", "better off dead",
       "hurt myself", "self harm", "cutting",
       "988", "crisis",
+    ],
+  },
+  VETERINARY_EMERGENCY: {
+    keywords: [
+      "dog ate", "cat ate", "pet ate", "poison", "toxic", "antifreeze",
+      "hit by car", "dog fight", "cat fight", "animal attack",
+      "seizure", "convulsing", "fitting",
+      "bleeding heavily", "gushing blood", "won't stop bleeding",
+      "can't stand", "can't walk", "paralyzed", "dragging legs",
+      "collapsed", "went limp", "suddenly collapsed",
+      "bloat", "swollen belly", "distended abdomen", "gdv",
+      "choking", "can't breathe", "blue gums", "pale gums",
+      "eye injury", "eye popped out", "proptosed",
+      "heatstroke", "overheated", "panting excessively",
+      "hit by car", "snake bite", "spider bite", "scorpion",
+      "not eating for days", "vomiting for days", "not drinking",
+    ],
+  },
+  VETERINARY_URGENT: {
+    keywords: [
+      "limping", "not putting weight", "not eating well", "decreased appetite",
+      "vomiting", "diarrhea", "soft stool", "litter box issues",
+      "urinating inside", "inappropriate urination", "blood in urine",
+      "sneezing", "coughing", "nasal discharge", "runny eyes",
+      "lump", "bump", "swelling", "hotspot", "rash",
+      "ear infection", "scratching ears", "head shaking",
+      "bad breath", "dental disease", "broken tooth",
+      "eye discharge", "red eye", "squinting",
+      "weight loss", "weight gain", "hair loss",
+      "licking paws", "chewing paws",
     ],
   },
 };

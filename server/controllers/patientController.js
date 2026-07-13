@@ -6,18 +6,23 @@ function syncKbNotes(patient) {
     removeDocument(`patient_${patient._id}`);
     return;
   }
+  const isPet = patient.patientType === "pet";
   const summary = [
-    `Patient: ${patient.name}`,
-    patient.primaryDiagnosis ? `Diagnosis: ${patient.primaryDiagnosis}` : "",
-    patient.chronicConditions ? `Chronic: ${patient.chronicConditions}` : "",
+    isPet ? `Pet: ${patient.name}` : `Patient: ${patient.name}`,
+    isPet && patient.species ? `Species: ${patient.species}` : "",
+    isPet && patient.breed ? `Breed: ${patient.breed}` : "",
+    isPet && patient.ownerName ? `Owner: ${patient.ownerName}` : "",
+    !isPet && patient.primaryDiagnosis ? `Diagnosis: ${patient.primaryDiagnosis}` : "",
+    !isPet && patient.chronicConditions ? `Chronic: ${patient.chronicConditions}` : "",
     patient.allergies ? `Allergies: ${patient.allergies}` : "",
     patient.currentMedications ? `Medications: ${patient.currentMedications}` : "",
     patient.language ? `Language: ${patient.language}` : "",
     `Notes: ${patient.kbNotes}`,
   ].filter(Boolean).join("\n");
 
-  addDocument(`patient_${patient._id}`, `Patient: ${patient.name}`, summary, {
+  addDocument(`patient_${patient._id}`, isPet ? `Pet: ${patient.name}` : `Patient: ${patient.name}`, summary, {
     type: "patient",
+    patientType: patient.patientType,
     patientId: patient._id.toString(),
     patientName: patient.name,
   });
@@ -26,6 +31,9 @@ function syncKbNotes(patient) {
 export const getPatients = async (req, res) => {
   try {
     const query = { ...req.tenantFilter };
+    if (req.query.patientType) {
+      query.patientType = req.query.patientType;
+    }
     if (req.user.role === "doctor" || req.user.role === "nurse") {
       query.assignedDoctor = req.user._id;
     }
@@ -33,13 +41,23 @@ export const getPatients = async (req, res) => {
       query.$or = [
         { name: { $regex: req.query.search, $options: "i" } },
         { phone: { $regex: req.query.search, $options: "i" } },
+        { ownerName: { $regex: req.query.search, $options: "i" } },
+        { ownerPhone: { $regex: req.query.search, $options: "i" } },
       ];
     }
-    const patients = await Patient.find(query)
-      .populate("assignedDoctor", "name email")
-      .populate("createdBy", "name")
-      .sort({ createdAt: -1 });
-    res.json({ patients });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+    const [patients, total] = await Promise.all([
+      Patient.find(query)
+        .populate("assignedDoctor", "name email")
+        .populate("createdBy", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Patient.countDocuments(query),
+    ]);
+    res.json({ patients, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

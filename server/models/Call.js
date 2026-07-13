@@ -26,6 +26,8 @@ const callSchema = new mongoose.Schema(
     direction: { type: String, enum: ["outbound", "inbound"], default: "outbound" },
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     patient: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", default: null },
+    patientType: { type: String, enum: ["human", "pet", ""], default: "" },
+    species: { type: String, default: "" },
     questionnaire: { type: mongoose.Schema.Types.ObjectId, ref: "Questionnaire", default: null },
     startedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     status: {

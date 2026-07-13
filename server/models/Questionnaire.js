@@ -14,9 +14,11 @@ const questionnaireSchema = new mongoose.Schema(
     language: { type: String, default: "en" },
     category: {
       type: String,
-      enum: ["post-surgery", "wound-check", "general", "chronic", "custom"],
+      enum: ["post-surgery", "wound-check", "general", "chronic", "custom", "veterinary", "dental"],
       default: "general",
     },
+    targetProfession: { type: String, default: "" },
+    targetSpecies: { type: String, default: "" },
     questions: [questionSchema],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     isTemplate: { type: Boolean, default: false },

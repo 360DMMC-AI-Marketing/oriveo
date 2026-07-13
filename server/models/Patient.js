@@ -5,12 +5,14 @@ import encryptPlugin from "../utils/encryptPlugin.js";
 const patientSchema = new mongoose.Schema(
   {
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
+    patientType: { type: String, enum: ["human", "pet"], default: "human" },
+
     name: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+    phone: { type: String, default: "", trim: true },
     phoneHash: { type: String, default: "" },
     email: { type: String, default: "", lowercase: true, trim: true },
     dob: { type: Date, default: null },
-    gender: { type: String, enum: ["male", "female", "other", ""], default: "" },
+    gender: { type: String, enum: ["male", "female", "other", "intact-male", "neutered", "intact-female", "spayed", ""], default: "" },
     bloodType: { type: String, enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", ""], default: "" },
     language: { type: String, default: "en" },
     address: { type: String, default: "" },
@@ -31,11 +33,20 @@ const patientSchema = new mongoose.Schema(
     kbNotes: { type: String, default: "" },
     doNotCall: { type: Boolean, default: false },
     doNotCallReason: { type: String, default: "" },
+
+    species: { type: String, default: "" },
+    breed: { type: String, default: "" },
+    weight: { type: Number, default: null },
+    color: { type: String, default: "" },
+    microchipId: { type: String, default: "" },
+    ownerName: { type: String, default: "" },
+    ownerPhone: { type: String, default: "" },
+    ownerEmail: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-const phiFields = ["name", "phone", "email", "address", "emergencyContact", "emergencyContactPhone", "insuranceId", "medicalNotes", "chronicConditions", "allergies", "currentMedications", "pastSurgeries", "primaryDiagnosis"];
+const phiFields = ["name", "phone", "email", "address", "emergencyContact", "emergencyContactPhone", "insuranceId", "medicalNotes", "chronicConditions", "allergies", "currentMedications", "pastSurgeries", "primaryDiagnosis", "ownerName", "ownerPhone", "ownerEmail"];
 encryptPlugin(patientSchema, { fields: phiFields });
 
 patientSchema.pre("save", function (next) {
