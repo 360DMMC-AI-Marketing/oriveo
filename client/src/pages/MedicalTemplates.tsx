@@ -45,14 +45,14 @@ const templateDisplay: Record<string, { icon: any; color: string; bg: string; ic
   "vet-arthritis": { icon: Bone, color: "from-indigo-500 to-indigo-600", bg: "bg-indigo-50", iconBg: "bg-indigo-100 text-indigo-600" },
   "equine-wellness": { icon: PawPrint, color: "from-amber-700 to-amber-800", bg: "bg-amber-50", iconBg: "bg-amber-100 text-amber-700" },
   "avian-exotic": { icon: PawPrint, color: "from-teal-500 to-teal-600", bg: "bg-teal-50", iconBg: "bg-teal-100 text-teal-600" },
-  "dental-checkup": { icon: Bone, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50", iconBg: "bg-cyan-100 text-cyan-600" },
+  "general-dental": { icon: Bone, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50", iconBg: "bg-cyan-100 text-cyan-600" },
   "root-canal": { icon: Activity, color: "from-red-500 to-red-600", bg: "bg-red-50", iconBg: "bg-red-100 text-red-600" },
-  "teeth-whitening": { icon: Sparkles, color: "from-blue-500 to-blue-600", bg: "bg-blue-50", iconBg: "bg-blue-100 text-blue-600" },
   "orthodontic": { icon: Bone, color: "from-purple-500 to-purple-600", bg: "bg-purple-50", iconBg: "bg-purple-100 text-purple-600" },
-  "gum-treatment": { icon: Heart, color: "from-pink-500 to-pink-600", bg: "bg-pink-50", iconBg: "bg-pink-100 text-pink-600" },
-  "pediatric-dental": { icon: Baby, color: "from-green-400 to-green-500", bg: "bg-green-50", iconBg: "bg-green-100 text-green-600" },
+  "oral-surgery": { icon: Stethoscope, color: "from-gray-600 to-gray-700", bg: "bg-gray-50", iconBg: "bg-gray-100 text-gray-600" },
   "dental-emergency": { icon: AlertTriangle, color: "from-red-500 to-red-600", bg: "bg-red-50", iconBg: "bg-red-100 text-red-600" },
-  "wisdom-tooth": { icon: Bone, color: "from-violet-500 to-violet-600", bg: "bg-violet-50", iconBg: "bg-violet-100 text-violet-600" },
+  "periodontal": { icon: Heart, color: "from-pink-500 to-pink-600", bg: "bg-pink-50", iconBg: "bg-pink-100 text-pink-600" },
+  "pediatric-dental": { icon: Baby, color: "from-green-400 to-green-500", bg: "bg-green-50", iconBg: "bg-green-100 text-green-600" },
+  "cosmetic-dental": { icon: Sparkles, color: "from-blue-500 to-blue-600", bg: "bg-blue-50", iconBg: "bg-blue-100 text-blue-600" },
 };
 
 const finalQuestion = "Do you have anything else you'd like to tell the doctor?";
@@ -60,10 +60,13 @@ const finalQuestion = "Do you have anything else you'd like to tell the doctor?"
 export default function MedicalTemplates() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [templateTab, setTemplateTab] = useState<"human" | "veterinary" | "dental">(
-    user?.organization?.type === "veterinary" ? "veterinary" :
-    user?.organization?.type === "dental" ? "dental" : "human"
-  );
+  const orgType = user?.organization?.type as string | undefined;
+  const availableTabs: ("human" | "veterinary" | "dental")[] = !orgType ? ["human", "veterinary", "dental"] :
+    orgType === "veterinary" ? ["veterinary"] :
+    orgType === "dental" ? ["dental"] :
+    ["human"];
+  const defaultTab = availableTabs.includes("human") ? "human" : availableTabs[0];
+  const [templateTab, setTemplateTab] = useState<"human" | "veterinary" | "dental">(defaultTab);
   const [tab, setTab] = useState<"templates" | "create">("templates");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -205,18 +208,24 @@ export default function MedicalTemplates() {
       </div>
 
       <div className="flex gap-1 border-b pb-1">
+        {availableTabs.includes("human") && (
         <button onClick={() => setTemplateTab("human")}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${templateTab === "human" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
           <User className="inline h-4 w-4 mr-1.5" />Medical
         </button>
+        )}
+        {availableTabs.includes("veterinary") && (
         <button onClick={() => setTemplateTab("veterinary")}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${templateTab === "veterinary" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
           <PawPrint className="inline h-4 w-4 mr-1.5" />Veterinary
         </button>
+        )}
+        {availableTabs.includes("dental") && (
         <button onClick={() => setTemplateTab("dental")}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${templateTab === "dental" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
           <Bone className="inline h-4 w-4 mr-1.5" />Dental
         </button>
+        )}
         <div className="flex-1" />
         <button onClick={() => setTab("templates")} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${tab === "templates" ? "bg-primary text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
           <Layers className="inline h-4 w-4 mr-1.5" />Saved
