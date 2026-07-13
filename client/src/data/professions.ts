@@ -25,7 +25,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: "dentist",
     label: "Dentist",
-    icon: "Tooth",
+    icon: "Activity",
     description: "General dentistry, orthodontics, oral surgery",
     orgType: "dental",
     specialties: [

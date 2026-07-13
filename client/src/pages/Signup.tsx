@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Building2, User, CreditCard, ArrowRight, ArrowLeft, Loader2, Sparkles, Stethoscope, PawPrint, HeartPulse, Brain, Tooth } from "lucide-react";
+import { Building2, User, CreditCard, ArrowRight, ArrowLeft, Loader2, Sparkles, Stethoscope, PawPrint, HeartPulse, Brain, Activity } from "lucide-react";
 import { PROFESSIONS } from "@/data/professions";
 
 const PROFESSION_ICONS: Record<string, any> = {
-  Stethoscope, PawPrint, Tooth, Brain, HeartPulse,
+  Stethoscope, PawPrint, Activity, Brain, HeartPulse,
 };
 
 export default function Signup() {

@@ -10,9 +10,9 @@ import { toast } from "sonner";
 import {
   Search, Heart, Activity, Brain, Wind, Eye, Bone, Droplets,
   Thermometer, Pill, Baby, Stethoscope, Shield, AlertTriangle,
-  Sparkles, Plus, Trash2, Star, Layers, Pencil, ClipboardCheck, Save, X, ArrowLeft, ArrowUp, ArrowDown, PawPrint
+  Sparkles, Plus, Trash2, Star, Layers, Pencil, ClipboardCheck, Save, X, ArrowLeft, ArrowUp, ArrowDown, PawPrint, User
 } from "lucide-react";
-import { activeTemplates as sharedTemplates } from "@/data/activeTemplates";
+import { medicalTemplates as sharedTemplates } from "@/data/medicalTemplates";
 import { veterinaryTemplates } from "@/data/veterinaryTemplates";
 import { dentalTemplates } from "@/data/dentalTemplates";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,9 +50,9 @@ export default function MedicalTemplates() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const activeTemplates = templateTab === "veterinary" ? veterinaryTemplates :
+  const activeTemplates: any[] = templateTab === "veterinary" ? veterinaryTemplates :
     templateTab === "dental" ? dentalTemplates :
-    sharedTemplates.map((t) => ({ ...t, ...templateDisplay[t.id] }));
+    sharedTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
 
   const categories = [...new Set(activeTemplates.map((t: any) => t.category))] as string[];
 
@@ -119,7 +119,7 @@ export default function MedicalTemplates() {
     setNewQuestions(newQuestions.filter((_, i) => i !== index));
   };
 
-  const filteredTemplates = activeTemplates.filter((t) => {
+  const filteredTemplates = activeTemplates.filter((t: any) => {
     const matchSearch = !search || t.condition.toLowerCase().includes(search.toLowerCase()) || t.description?.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase());
     const matchCategory = !categoryFilter || t.category === categoryFilter;
     return matchSearch && matchCategory;
@@ -128,7 +128,7 @@ export default function MedicalTemplates() {
   const handleCustomize = (template: any) => {
     setCustomizing(template);
     setCustomTitle(template.condition + " Checkup");
-    setCustomQuestions(template.questions.map((q) => ({ text: q })));
+    setCustomQuestions(template.questions.map((q: any) => ({ text: q })));
   };
 
   const addCustomQuestion = () => {
@@ -277,7 +277,7 @@ export default function MedicalTemplates() {
             <Card><CardContent className="py-12 text-center text-gray-400"><Search className="mx-auto mb-3 h-8 w-8" /><p>No templates match your search</p></CardContent></Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredTemplates.map((template) => (
+              {filteredTemplates.map((template: any) => (
                 <Card key={template.id} className="flex flex-col transition-shadow hover:shadow-md">
                   <div className={`h-2 w-full rounded-t-xl bg-gradient-to-r ${template.color}`} />
                   <CardContent className="flex-1 p-5">
@@ -295,7 +295,7 @@ export default function MedicalTemplates() {
                     <h3 className="font-semibold text-gray-900">{template.condition}</h3>
                     <p className="text-xs text-gray-500 mb-1">{template.category} &middot; {template.questions.length} questions</p>
                     <div className="mt-2 space-y-1">
-                      {template.questions.slice(0, expandedId === template.id ? template.questions.length : 3).map((q, i) => (
+                      {template.questions.slice(0, expandedId === template.id ? template.questions.length : 3).map((q: any, i: number) => (
                         <p key={i} className="text-xs text-gray-500 flex items-start gap-1.5"><span className="shrink-0 mt-0.5">&bull;</span>{q}</p>
                       ))}
                       {template.questions.length > 3 && (

@@ -19,7 +19,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (data: { name: string; email: string; password: string; role?: string; phone?: string; profession?: string; clinicName?: string; clinicSlug?: string }) => Promise<void>;
+  signup: (data: { name: string; email: string; password: string; role?: string; phone?: string; profession?: string; specialty?: string; clinicName?: string; clinicSlug?: string }) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
