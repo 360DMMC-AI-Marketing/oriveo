@@ -178,23 +178,14 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t px-4 py-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-light text-primary font-semibold text-sm">
-            {user.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-            <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-          </div>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("opencode-show-tour"))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-            title="Show Tour"
-          >
-            <BookOpen className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="border-t px-4 py-4 space-y-1">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("opencode-show-tour"))}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
+        >
+          <BookOpen className="h-5 w-5" />
+          Onboarding Guide
+        </button>
         <button
           onClick={logout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
