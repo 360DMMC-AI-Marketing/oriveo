@@ -23,7 +23,7 @@ const COMMANDS: Command[] = [
   { pattern: /^(go to|open|navigate to|show)\s+(templates?|questionnaires?)/i, route: "/templates", label: "Go to Templates" },
   { pattern: /^(go to|open|navigate to|show)\s+(live monitoring|supervisor|monitor)/i, route: "/live-monitoring", label: "Go to Live Monitoring" },
   { pattern: /^(go to|open|navigate to|show)\s+(notifications?|alerts?)/i, route: "/notifications", label: "Go to Notifications" },
-  { pattern: /^(go to|open|navigate to|show)\s+(guide|onboarding|help)/i, route: "/onboarding-guide", label: "Go to Onboarding Guide" },
+  { pattern: /^(go to|open|navigate to|show)\s+(guide|onboarding|help|tour)/i, action: () => window.dispatchEvent(new CustomEvent("opencode-show-tour")), label: "Show Onboarding Tour" },
   { pattern: /^(go to|open|navigate to|show)\s+(audit log|audit)$/i, route: "/audit-log", label: "Go to Audit Log" },
   { pattern: /^search\s+patient\s+(.+)/i, route: "/patients?search=$1", label: "Search Patient" },
   { pattern: /^(call|dial|phone)\s+(.+)/i, route: "/voice-agent", label: "Call patient" },

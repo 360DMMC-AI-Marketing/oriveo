@@ -22,6 +22,7 @@ interface AuthContextType {
   signup: (data: { name: string; email: string; password: string; role?: string; phone?: string; profession?: string; specialty?: string; clinicName?: string; clinicSlug?: string }) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  updateUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,6 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  const updateUser = (data: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...data };
+      localStorage.setItem("oriveo_user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = async () => {
     try {
       await api.post("/auth/logout");
@@ -71,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, signup, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -16,6 +16,12 @@ export default function OnboardingTour() {
     if (!seen) {
       setShow(true);
     }
+    const handler = () => {
+      localStorage.removeItem(TOUR_KEY);
+      setShow(true);
+    };
+    window.addEventListener("opencode-show-tour", handler);
+    return () => window.removeEventListener("opencode-show-tour", handler);
   }, []);
 
   const dismiss = () => {
@@ -29,7 +35,7 @@ export default function OnboardingTour() {
   };
 
   // Don't show on the settings page itself or onboarding guide
-  if (!show || location.pathname === "/clinic/settings" || location.pathname === "/onboarding-guide") {
+  if (!show || location.pathname === "/clinic/settings") {
     return null;
   }
 

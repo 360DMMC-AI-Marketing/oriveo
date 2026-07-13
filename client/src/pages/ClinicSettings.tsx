@@ -54,7 +54,7 @@ const PROVIDER_CONFIG: Record<string, { icon: any; label: string; via: string; f
 };
 
 export default function ClinicSettings() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["org", "settings"],
@@ -72,6 +72,7 @@ export default function ClinicSettings() {
   const profileMutation = useMutation({
     mutationFn: (body: any) => api.put("/auth/profile", body),
     onSuccess: (res: any) => {
+      updateUser(res.data.user);
       toast.success("Profile updated");
     },
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),

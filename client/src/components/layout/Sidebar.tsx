@@ -187,18 +187,13 @@ export default function Sidebar() {
             <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
             <p className="text-xs text-gray-500 capitalize">{user.role}</p>
           </div>
-          <NavLink
-            to="/onboarding-guide"
-            className={({ isActive }) => cn(
-              "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-              isActive
-                ? "bg-primary-light text-primary"
-                : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            )}
-            title="Onboarding Guide"
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("opencode-show-tour"))}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            title="Show Tour"
           >
             <BookOpen className="h-4 w-4" />
-          </NavLink>
+          </button>
         </div>
         <button
           onClick={logout}
