@@ -277,13 +277,17 @@ export default function MedicalTemplates() {
             <Card><CardContent className="py-12 text-center text-gray-400"><Search className="mx-auto mb-3 h-8 w-8" /><p>No templates match your search</p></CardContent></Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredTemplates.map((template: any) => (
+              {filteredTemplates.map((template: any) => {
+                const Icon = template.icon || Stethoscope;
+                const color = template.color || "from-gray-400 to-gray-500";
+                const iconBg = template.iconBg || "bg-gray-100 text-gray-600";
+                return (
                 <Card key={template.id} className="flex flex-col transition-shadow hover:shadow-md">
-                  <div className={`h-2 w-full rounded-t-xl bg-gradient-to-r ${template.color}`} />
+                  <div className={`h-2 w-full rounded-t-xl bg-gradient-to-r ${color}`} />
                   <CardContent className="flex-1 p-5">
                     <div className="flex items-start justify-between mb-3">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${template.iconBg}`}>
-                        <template.icon className="h-6 w-6" />
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${iconBg}`}>
+                        <Icon className="h-6 w-6" />
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         template.severity === "critical" ? "bg-red-100 text-red-700" :
@@ -313,7 +317,8 @@ export default function MedicalTemplates() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           )}
         </>
