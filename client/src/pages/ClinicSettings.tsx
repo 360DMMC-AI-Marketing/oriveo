@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Building2, Globe2, Phone, RefreshCw, CheckCircle2, XCircle, Bot, Globe, Database, Bell, MessageSquare, Activity, Shield, Mail } from "lucide-react";
+import { Save, Loader2, Building2, Globe2, Phone, RefreshCw, CheckCircle2, XCircle, Bot, Globe, Database, Bell, MessageSquare, Activity, Shield, Mail, User, Lock } from "lucide-react";
 import LanguageSelect from "@/components/LanguageSelect";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TESTABLE_PROVIDERS = ["openai", "deepgram", "elevenlabs", "twilio"];
 
@@ -53,6 +54,7 @@ const PROVIDER_CONFIG: Record<string, { icon: any; label: string; via: string; f
 };
 
 export default function ClinicSettings() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["org", "settings"],
@@ -64,6 +66,25 @@ export default function ClinicSettings() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [keyValues, setKeyValues] = useState<Record<string, Record<string, string>>>({});
   const [testResults, setTestResults] = useState<Record<string, "idle" | "testing" | "ok" | "fail">>({});
+
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+
+  const profileMutation = useMutation({
+    mutationFn: (body: any) => api.put("/auth/profile", body),
+    onSuccess: (res: any) => {
+      toast.success("Profile updated");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message),
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: (body: any) => api.post("/auth/change-password", body),
+    onSuccess: () => {
+      toast.success("Password changed");
+      setPasswordForm({ currentPassword: "", newPassword: "" });
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message),
+  });
 
   const saveMutation = useMutation({
     mutationFn: (body: any) => {
@@ -227,6 +248,63 @@ export default function ClinicSettings() {
           <div className="flex justify-end pt-2">
             <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="gap-1">
               <Save className="h-4 w-4" /> {saveMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><User className="h-4 w-4" /> Admin Account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <Input value={user?.email || ""} disabled className="bg-gray-50 text-gray-500" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
+              <Input value={user?.specialty?.join(", ") || ""} disabled className="bg-gray-50 text-gray-500" />
+            </div>
+          </div>
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2"><Lock className="h-3.5 w-3.5" /> Change Password</h4>
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Current Password</label>
+                <Input type="password" placeholder="Enter current password"
+                  value={passwordForm.currentPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">New Password</label>
+                <Input type="password" placeholder="Min 6 characters"
+                  value={passwordForm.newPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => passwordMutation.mutate(passwordForm)}
+              disabled={passwordMutation.isPending || !passwordForm.currentPassword || !passwordForm.newPassword}
+              className="gap-1">
+              {passwordMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
+              Update Password
+            </Button>
+          </div>
+          <div className="flex justify-end pt-2 border-t">
+            <Button onClick={() => profileMutation.mutate({ name: form.name, phone: form.phone })}
+              disabled={profileMutation.isPending} className="gap-1">
+              <Save className="h-4 w-4" /> {profileMutation.isPending ? "Saving..." : "Save Profile Info"}
             </Button>
           </div>
         </CardContent>
