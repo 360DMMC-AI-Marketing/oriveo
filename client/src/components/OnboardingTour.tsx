@@ -29,13 +29,13 @@ export default function OnboardingTour() {
     setShow(false);
   };
 
-  const goToSettings = () => {
+  const goToGuide = () => {
     dismiss();
-    navigate("/clinic/settings");
+    navigate("/onboarding-guide");
   };
 
-  // Don't show on the settings page itself or onboarding guide
-  if (!show || location.pathname === "/clinic/settings") {
+  // Don't show on the onboarding guide page itself
+  if (!show || location.pathname === "/onboarding-guide") {
     return null;
   }
 
@@ -55,8 +55,9 @@ export default function OnboardingTour() {
           </div>
 
           <p className="text-sm text-gray-600 leading-relaxed mb-4">
-            This is your clinic dashboard. From here you can manage patients, launch AI-powered voice calls,
-            view analytics and reports, customize medical templates, and much more.
+            Welcome to Oriveo! This app helps you manage patients, launch AI-powered voice calls,
+            view analytics, schedule appointments, and much more. Before you dive in, we recommend
+            checking the <strong>Onboarding Guide</strong> — it explains every feature with step-by-step instructions.
           </p>
 
           <div className="rounded-lg bg-gray-50 p-3 mb-5 text-sm text-gray-600">
@@ -64,13 +65,13 @@ export default function OnboardingTour() {
             <ul className="space-y-1 list-disc list-inside">
               <li>Use the sidebar to navigate between sections</li>
               <li>Click the voice command button to navigate hands-free</li>
-              <li>Customize your clinic settings to get started</li>
+              <li>Open the Onboarding Guide anytime from the sidebar</li>
             </ul>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Button onClick={goToSettings} className="w-full">
-              Go to Clinic Settings
+            <Button onClick={goToGuide} className="w-full">
+              Open Onboarding Guide
             </Button>
             <Button variant="ghost" onClick={dismiss} className="text-sm text-gray-500">
               Skip, I'll explore on my own

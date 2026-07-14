@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
@@ -90,6 +90,7 @@ const navGroups: NavGroup[] = [
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     for (const group of navGroups) {
@@ -180,7 +181,7 @@ export default function Sidebar() {
 
       <div className="border-t px-4 py-4 space-y-1">
         <button
-          onClick={() => window.dispatchEvent(new CustomEvent("opencode-show-tour"))}
+          onClick={() => navigate("/onboarding-guide")}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
         >
           <BookOpen className="h-5 w-5" />

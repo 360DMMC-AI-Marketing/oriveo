@@ -97,8 +97,11 @@ export default function ClinicSettings() {
       };
       return api.put("/org/settings", payload);
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ["org", "settings"] });
+      if (res?.data?.organization) {
+        updateUser({ organization: res.data.organization });
+      }
       toast.success("Settings saved");
     },
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),

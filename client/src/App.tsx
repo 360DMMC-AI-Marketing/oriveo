@@ -33,6 +33,7 @@ import Notifications from "@/pages/Notifications";
 import LiveMonitoring from "@/pages/LiveMonitoring";
 import Admin from "@/pages/Admin";
 import PatientBooking from "@/pages/PatientBooking";
+import OnboardingGuide from "@/pages/OnboardingGuide";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -99,6 +100,7 @@ function AppRoutes() {
         <Route path="/clinic/settings" element={<ClinicSettingsPage />} />
         <Route path="/clinic/users" element={<ClinicUsers />} />
 
+        <Route path="/onboarding-guide" element={<OnboardingGuide />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/recordings" element={<Navigate to="/call-review" replace />} />
         <Route path="/ai-qa" element={<Navigate to="/call-review" replace />} />
