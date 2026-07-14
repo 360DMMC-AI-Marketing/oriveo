@@ -23,14 +23,23 @@ async function syncMembers(group) {
   await group.save();
 }
 
+async function filterMembersByTenant(members, tenantFilter) {
+  if (!members || !members.length || !tenantFilter?.specialty) return members || [];
+  return members.filter(m => m?.specialty === tenantFilter.specialty);
+}
+
 export const getGroups = async (req, res) => {
   try {
     const query = { ...req.tenantFilter };
     if (req.user.role !== "admin") query.createdBy = req.user._id;
-    const groups = await Group.find(query)
-      .populate("members", "name phone primaryDiagnosis language")
+    let groups = await Group.find(query)
+      .populate("members", "name phone primaryDiagnosis language specialty")
       .populate("createdBy", "name")
       .sort({ updatedAt: -1 });
+    groups = await Promise.all(groups.map(async g => {
+      g.members = await filterMembersByTenant(g.members, req.tenantFilter);
+      return g;
+    }));
     res.json({ groups });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -40,9 +49,10 @@ export const getGroups = async (req, res) => {
 export const getGroup = async (req, res) => {
   try {
     const group = await Group.findOne({ _id: req.params.id, ...req.tenantFilter })
-      .populate("members", "name phone primaryDiagnosis chronicConditions language doNotCall")
+      .populate("members", "name phone primaryDiagnosis chronicConditions language doNotCall specialty")
       .populate("createdBy", "name");
     if (!group) return res.status(404).json({ message: "Group not found" });
+    group.members = await filterMembersByTenant(group.members, req.tenantFilter);
     res.json({ group });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -52,6 +62,10 @@ export const getGroup = async (req, res) => {
 export const createGroup = async (req, res) => {
   try {
     const data = { ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: req.tenantFilter?.specialty || "general" };
+    if (data.members) {
+      const validPatients = await Patient.find({ _id: { $in: data.members }, ...req.tenantFilter }).select("_id");
+      data.members = validPatients.map(p => p._id);
+    }
     if (!data.members) data.members = [];
     const group = await Group.create(data);
     if (group.diagnosisFilter) await syncMembers(group);
@@ -96,6 +110,8 @@ export const addMember = async (req, res) => {
     const group = await Group.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!group) return res.status(404).json({ message: "Group not found" });
     const { patientId } = req.body;
+    const patient = await Patient.findOne({ _id: patientId, ...req.tenantFilter });
+    if (!patient) return res.status(400).json({ message: "Patient not found or not in your specialty" });
     const alreadyMember = group.members.some(
       (m) => m.toString() === patientId
     );
