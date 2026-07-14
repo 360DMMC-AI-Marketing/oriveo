@@ -5,11 +5,23 @@ import { suggestCptCode, getCptCodeInfo } from "../services/medicalCoding.js";
 import { SPECIALTY_TEMPLATES, getSpecialtyForKeywords } from "../config/specialtyTemplates.js";
 import Patient from "../models/Patient.js";
 import Call from "../models/Call.js";
+import {
+  getClinicalNotes,
+  createClinicalNote,
+  getClinicalNote,
+  updateClinicalNote,
+  deleteClinicalNote,
+  signClinicalNote,
+  getClinicalTemplates,
+  createClinicalTemplate,
+  searchIcd10,
+} from "../controllers/clinicalController.js";
 
 const router = Router();
 
 router.use(protect);
 
+// AI clinical query
 router.post("/query", async (req, res) => {
   try {
     const { question, patientId, callId } = req.body;
@@ -49,6 +61,7 @@ router.post("/query", async (req, res) => {
   }
 });
 
+// CPT coding
 router.post("/coding", async (req, res) => {
   try {
     const { callId, triageLevel, durationSeconds, callType } = req.body;
@@ -71,6 +84,7 @@ router.post("/coding", async (req, res) => {
   }
 });
 
+// Specialty detection
 router.get("/specialties", (req, res) => {
   const list = Object.entries(SPECIALTY_TEMPLATES).map(([key, t]) => ({
     id: key,
@@ -91,5 +105,20 @@ router.post("/detect-specialty", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ICD-10 search
+router.get("/icd10", searchIcd10);
+
+// Clinical templates
+router.get("/templates", getClinicalTemplates);
+router.post("/templates", createClinicalTemplate);
+
+// Clinical notes (under /api/clinical/patients/:patientId/notes)
+router.get("/patients/:id/notes", getClinicalNotes);
+router.post("/patients/:id/notes", createClinicalNote);
+router.get("/patients/:id/notes/:noteId", getClinicalNote);
+router.put("/patients/:id/notes/:noteId", updateClinicalNote);
+router.delete("/patients/:id/notes/:noteId", deleteClinicalNote);
+router.post("/patients/:id/notes/:noteId/sign", signClinicalNote);
 
 export default router;
