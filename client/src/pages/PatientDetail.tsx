@@ -335,31 +335,31 @@ export default function PatientDetail() {
               <Button variant="ghost" size="icon" onClick={() => setEditingPatient(false)}><X className="h-4 w-4" /></Button>
             </div>
             <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-              <Field label="Name"><Input value={patientForm.name || ""} onChange={e => setPatientForm(f => ({...f, name: e.target.value}))} /></Field>
-              <Field label="Phone"><Input value={patientForm.phone || ""} onChange={e => setPatientForm(f => ({...f, phone: e.target.value}))} /></Field>
-              <Field label="Email"><Input type="email" value={patientForm.email || ""} onChange={e => setPatientForm(f => ({...f, email: e.target.value}))} /></Field>
+              <Field label="Name"><Input value={patientForm.name || ""} onChange={e => setPatientForm((f: any) => ({...f, name: e.target.value}))} /></Field>
+              <Field label="Phone"><Input value={patientForm.phone || ""} onChange={e => setPatientForm((f: any) => ({...f, phone: e.target.value}))} /></Field>
+              <Field label="Email"><Input type="email" value={patientForm.email || ""} onChange={e => setPatientForm((f: any) => ({...f, email: e.target.value}))} /></Field>
               <Field label="Gender">
-                <select value={patientForm.gender || ""} onChange={e => setPatientForm(f => ({...f, gender: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                <select value={patientForm.gender || ""} onChange={e => setPatientForm((f: any) => ({...f, gender: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                   <option value="">Select...</option><option value="male">Male</option><option value="female">Female</option>
                 </select>
               </Field>
-              <Field label="DOB"><Input type="date" value={patientForm.dob ? patientForm.dob.slice(0,10) : ""} onChange={e => setPatientForm(f => ({...f, dob: e.target.value}))} /></Field>
+              <Field label="DOB"><Input type="date" value={patientForm.dob ? patientForm.dob.slice(0,10) : ""} onChange={e => setPatientForm((f: any) => ({...f, dob: e.target.value}))} /></Field>
               <Field label="Blood Type">
-                <select value={patientForm.bloodType || ""} onChange={e => setPatientForm(f => ({...f, bloodType: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                <select value={patientForm.bloodType || ""} onChange={e => setPatientForm((f: any) => ({...f, bloodType: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                   <option value="">Select...</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option>
                 </select>
               </Field>
-              <Field label="Language"><Input value={patientForm.language || ""} onChange={e => setPatientForm(f => ({...f, language: e.target.value}))} /></Field>
-              <Field label="Address"><Input value={patientForm.address || ""} onChange={e => setPatientForm(f => ({...f, address: e.target.value}))} /></Field>
-              <Field label="Insurance ID"><Input value={patientForm.insuranceId || ""} onChange={e => setPatientForm(f => ({...f, insuranceId: e.target.value}))} /></Field>
-              <Field label="Primary Diagnosis"><Input value={patientForm.primaryDiagnosis || ""} onChange={e => setPatientForm(f => ({...f, primaryDiagnosis: e.target.value}))} /></Field>
-              <Field label="Chronic Conditions"><Input value={patientForm.chronicConditions || ""} onChange={e => setPatientForm(f => ({...f, chronicConditions: e.target.value}))} /></Field>
-              <Field label="Allergies"><Input value={patientForm.allergies || ""} onChange={e => setPatientForm(f => ({...f, allergies: e.target.value}))} /></Field>
-              <Field label="Current Medications"><Input value={patientForm.currentMedications || ""} onChange={e => setPatientForm(f => ({...f, currentMedications: e.target.value}))} /></Field>
-              <Field label="Past Surgeries"><Input value={patientForm.pastSurgeries || ""} onChange={e => setPatientForm(f => ({...f, pastSurgeries: e.target.value}))} /></Field>
-              <Field label="Emergency Contact"><Input value={patientForm.emergencyContact || ""} onChange={e => setPatientForm(f => ({...f, emergencyContact: e.target.value}))} /></Field>
-              <Field label="Emergency Phone"><Input value={patientForm.emergencyContactPhone || ""} onChange={e => setPatientForm(f => ({...f, emergencyContactPhone: e.target.value}))} /></Field>
-              <Field label="Medical Notes"><Textarea value={patientForm.medicalNotes || ""} onChange={e => setPatientForm(f => ({...f, medicalNotes: e.target.value}))} /></Field>
+              <Field label="Language"><Input value={patientForm.language || ""} onChange={e => setPatientForm((f: any) => ({...f, language: e.target.value}))} /></Field>
+              <Field label="Address"><Input value={patientForm.address || ""} onChange={e => setPatientForm((f: any) => ({...f, address: e.target.value}))} /></Field>
+              <Field label="Insurance ID"><Input value={patientForm.insuranceId || ""} onChange={e => setPatientForm((f: any) => ({...f, insuranceId: e.target.value}))} /></Field>
+              <Field label="Primary Diagnosis"><Input value={patientForm.primaryDiagnosis || ""} onChange={e => setPatientForm((f: any) => ({...f, primaryDiagnosis: e.target.value}))} /></Field>
+              <Field label="Chronic Conditions"><Input value={patientForm.chronicConditions || ""} onChange={e => setPatientForm((f: any) => ({...f, chronicConditions: e.target.value}))} /></Field>
+              <Field label="Allergies"><Input value={patientForm.allergies || ""} onChange={e => setPatientForm((f: any) => ({...f, allergies: e.target.value}))} /></Field>
+              <Field label="Current Medications"><Input value={patientForm.currentMedications || ""} onChange={e => setPatientForm((f: any) => ({...f, currentMedications: e.target.value}))} /></Field>
+              <Field label="Past Surgeries"><Input value={patientForm.pastSurgeries || ""} onChange={e => setPatientForm((f: any) => ({...f, pastSurgeries: e.target.value}))} /></Field>
+              <Field label="Emergency Contact"><Input value={patientForm.emergencyContact || ""} onChange={e => setPatientForm((f: any) => ({...f, emergencyContact: e.target.value}))} /></Field>
+              <Field label="Emergency Phone"><Input value={patientForm.emergencyContactPhone || ""} onChange={e => setPatientForm((f: any) => ({...f, emergencyContactPhone: e.target.value}))} /></Field>
+              <Field label="Medical Notes"><Textarea value={patientForm.medicalNotes || ""} onChange={e => setPatientForm((f: any) => ({...f, medicalNotes: e.target.value}))} /></Field>
             </div>
             <div className="flex gap-2 mt-4">
               <Button className="flex-1" onClick={() => {
