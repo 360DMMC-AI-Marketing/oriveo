@@ -5,9 +5,10 @@ import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint } from "lucide-react";
+import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3 } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import SummaryTab from "@/components/patients/SummaryTab";
@@ -31,6 +32,8 @@ export default function PatientDetail() {
   const [sendingLink, setSendingLink] = useState(false);
   const [editingKb, setEditingKb] = useState(false);
   const [kbDraft, setKbDraft] = useState("");
+  const [editingPatient, setEditingPatient] = useState(false);
+  const [patientForm, setPatientForm] = useState<any>({});
 
   const { data: patientData } = useQuery({
     queryKey: ["patient", id],
@@ -83,7 +86,9 @@ export default function PatientDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient", id] });
       queryClient.invalidateQueries({ queryKey: ["patient-unified", id] });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
       setEditingKb(false);
+      setEditingPatient(false);
       toast.success("Patient info updated");
     },
     onError: () => toast.error("Failed to update"),
@@ -130,6 +135,9 @@ export default function PatientDetail() {
               {patient.patientType === "pet" && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Pet</span>
               )}
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setPatientForm({ ...patient }); setEditingPatient(true); }}>
+                <Edit3 className="h-3.5 w-3.5" />
+              </Button>
             </div>
             <p className="text-gray-500 text-sm">
               {patient.patientType === "pet"
@@ -318,6 +326,61 @@ export default function PatientDetail() {
           <ClinicalTab patientId={id!} specialty={patient?.specialty} />
         </TabsContent>
       </Tabs>
+
+      {editingPatient && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-10" onClick={() => setEditingPatient(false)}>
+          <div className="max-w-lg w-full mx-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Edit Patient</h2>
+              <Button variant="ghost" size="icon" onClick={() => setEditingPatient(false)}><X className="h-4 w-4" /></Button>
+            </div>
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+              <Field label="Name"><Input value={patientForm.name || ""} onChange={e => setPatientForm(f => ({...f, name: e.target.value}))} /></Field>
+              <Field label="Phone"><Input value={patientForm.phone || ""} onChange={e => setPatientForm(f => ({...f, phone: e.target.value}))} /></Field>
+              <Field label="Email"><Input type="email" value={patientForm.email || ""} onChange={e => setPatientForm(f => ({...f, email: e.target.value}))} /></Field>
+              <Field label="Gender">
+                <select value={patientForm.gender || ""} onChange={e => setPatientForm(f => ({...f, gender: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                  <option value="">Select...</option><option value="male">Male</option><option value="female">Female</option>
+                </select>
+              </Field>
+              <Field label="DOB"><Input type="date" value={patientForm.dob ? patientForm.dob.slice(0,10) : ""} onChange={e => setPatientForm(f => ({...f, dob: e.target.value}))} /></Field>
+              <Field label="Blood Type">
+                <select value={patientForm.bloodType || ""} onChange={e => setPatientForm(f => ({...f, bloodType: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                  <option value="">Select...</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option>
+                </select>
+              </Field>
+              <Field label="Language"><Input value={patientForm.language || ""} onChange={e => setPatientForm(f => ({...f, language: e.target.value}))} /></Field>
+              <Field label="Address"><Input value={patientForm.address || ""} onChange={e => setPatientForm(f => ({...f, address: e.target.value}))} /></Field>
+              <Field label="Insurance ID"><Input value={patientForm.insuranceId || ""} onChange={e => setPatientForm(f => ({...f, insuranceId: e.target.value}))} /></Field>
+              <Field label="Primary Diagnosis"><Input value={patientForm.primaryDiagnosis || ""} onChange={e => setPatientForm(f => ({...f, primaryDiagnosis: e.target.value}))} /></Field>
+              <Field label="Chronic Conditions"><Input value={patientForm.chronicConditions || ""} onChange={e => setPatientForm(f => ({...f, chronicConditions: e.target.value}))} /></Field>
+              <Field label="Allergies"><Input value={patientForm.allergies || ""} onChange={e => setPatientForm(f => ({...f, allergies: e.target.value}))} /></Field>
+              <Field label="Current Medications"><Input value={patientForm.currentMedications || ""} onChange={e => setPatientForm(f => ({...f, currentMedications: e.target.value}))} /></Field>
+              <Field label="Past Surgeries"><Input value={patientForm.pastSurgeries || ""} onChange={e => setPatientForm(f => ({...f, pastSurgeries: e.target.value}))} /></Field>
+              <Field label="Emergency Contact"><Input value={patientForm.emergencyContact || ""} onChange={e => setPatientForm(f => ({...f, emergencyContact: e.target.value}))} /></Field>
+              <Field label="Emergency Phone"><Input value={patientForm.emergencyContactPhone || ""} onChange={e => setPatientForm(f => ({...f, emergencyContactPhone: e.target.value}))} /></Field>
+              <Field label="Medical Notes"><Textarea value={patientForm.medicalNotes || ""} onChange={e => setPatientForm(f => ({...f, medicalNotes: e.target.value}))} /></Field>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button className="flex-1" onClick={() => {
+                updatePatientMutation.mutate(patientForm, { onSuccess: () => setEditingPatient(false) });
+              }} disabled={updatePatientMutation.isPending}>
+                <Save className="h-4 w-4 mr-1" /> Save
+              </Button>
+              <Button variant="outline" onClick={() => setEditingPatient(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
+      {children}
     </div>
   );
 }
