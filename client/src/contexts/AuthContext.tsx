@@ -12,7 +12,7 @@ interface User {
   specialty: string[];
   language: string;
   superAdmin?: boolean;
-  organization?: { _id: string; name: string; slug: string; type?: string } | null;
+  organization?: { _id: string; name: string; slug: string; specialty?: string } | null;
 }
 
 interface AuthContextType {
