@@ -315,7 +315,7 @@ export default function PatientDetail() {
           <ReportsTab patientId={id!} />
         </TabsContent>
         <TabsContent value="clinical">
-          <ClinicalTab patientId={id!} />
+          <ClinicalTab patientId={id!} specialty={patient?.specialty} />
         </TabsContent>
       </Tabs>
     </div>

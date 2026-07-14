@@ -17,7 +17,7 @@ export const addOrgUserSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "doctor", "nurse", "receptionist", "staff"]).default("staff"),
+  role: z.enum(["admin", "doctor", "nurse", "receptionist", "staff", "user"]).default("staff"),
 });
 
 export const subscriptionSchema = z.object({

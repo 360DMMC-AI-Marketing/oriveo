@@ -117,8 +117,8 @@ export default function Sidebar() {
         <div>
           <h1 className="text-lg font-bold text-gray-900">Oriveo</h1>
           <p className="text-xs text-gray-500">
-            {user?.organization?.type === "veterinary" ? "Veterinary Voice AI" :
-             user?.organization?.type === "dental" ? "Dental Voice AI" :
+            {user?.organization?.specialty === "veterinary" ? "Veterinary Voice AI" :
+             user?.organization?.specialty === "dentistry" ? "Dental Voice AI" :
              "Medical Voice Assistant"}
           </p>
         </div>

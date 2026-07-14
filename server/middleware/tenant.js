@@ -17,7 +17,8 @@ export async function requireActiveSubscription(req, res, next) {
       return res.status(403).json({ message: "Organization subscription is not active. Contact your admin." });
     }
     next();
-  } catch {
-    next();
+  } catch (err) {
+    console.error("[requireActiveSubscription] DB error:", err.message);
+    return res.status(500).json({ message: "Subscription check failed. Try again." });
   }
 }

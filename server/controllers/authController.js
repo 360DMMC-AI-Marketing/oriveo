@@ -46,7 +46,7 @@ export const signup = async (req, res) => {
       specialty: Array.isArray(specialty) ? specialty : (specialty ? [specialty] : []),
       organization: organization?._id || null,
     });
-    await user.populate("organization", "name slug type");
+    await user.populate("organization", "name slug specialty");
     const token = generateToken(user);
     res.status(201).json({ token, user });
   } catch (error) {
@@ -57,7 +57,7 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email }).populate("organization", "name slug type");
+    const user = await User.findOne({ email }).populate("organization", "name slug specialty");
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -72,7 +72,7 @@ export const login = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  const user = await User.findById(req.user._id).populate("organization", "name slug type");
+  const user = await User.findById(req.user._id).populate("organization", "name slug specialty");
   res.json({ user });
 };
 

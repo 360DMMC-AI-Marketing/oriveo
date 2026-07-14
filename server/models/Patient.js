@@ -6,6 +6,7 @@ const patientSchema = new mongoose.Schema(
   {
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     patientType: { type: String, enum: ["human", "pet"], default: "human" },
+    specialty: { type: String, enum: ["general","cardiology","endocrinology","dentistry","orthopedics","veterinary","pediatrics"], default: "general" },
 
     name: { type: String, required: true, trim: true },
     phone: { type: String, default: "", trim: true },
@@ -57,6 +58,7 @@ patientSchema.pre("save", function (next) {
 });
 
 patientSchema.index({ organization: 1 });
+patientSchema.index({ organization: 1, specialty: 1 });
 patientSchema.index({ phoneHash: 1 });
 patientSchema.index({ name: "text", phone: "text" });
 patientSchema.index({ email: 1 });

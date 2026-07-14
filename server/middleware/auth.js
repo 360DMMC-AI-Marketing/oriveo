@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import Subscription from "../models/Subscription.js";
+import Organization from "../models/Organization.js";
 
 export const protect = async (req, res, next) => {
   try {
@@ -23,29 +23,16 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Session expired, please login again" });
     }
     req.tenantFilter = req.user.superAdmin ? {} : { organization: req.user.organization || null };
+    if (!req.user.superAdmin && req.user.organization) {
+      const org = await Organization.findById(req.user.organization).lean();
+      if (org?.specialty) req.tenantFilter.specialty = org.specialty;
+    }
     return next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Token expired, please login again" });
     }
     return res.status(401).json({ message: "Not authorized, token failed" });
-  }
-};
-
-export const requireActiveSubscription = async (req, res, next) => {
-  if (req.user?.superAdmin) return next();
-  if (!req.user?.organization) {
-    return res.status(403).json({ message: "No organization assigned" });
-  }
-  try {
-    const sub = await Subscription.findOne({ organization: req.user.organization });
-    if (!sub || ["suspended", "cancelled", "expired"].includes(sub.status)) {
-      return res.status(403).json({ message: "Organization subscription is not active. Contact your admin." });
-    }
-    return next();
-  } catch (err) {
-    console.error("[requireActiveSubscription] DB error:", err.message);
-    return res.status(500).json({ message: "Subscription check failed. Try again." });
   }
 };
 

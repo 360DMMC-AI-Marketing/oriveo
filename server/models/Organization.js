@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const organizationSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true },
   slug:     { type: String, required: true, unique: true, lowercase: true, trim: true },
-  type:     { type: String, enum: ["human", "veterinary", "dental"], default: "human" },
+  specialty: { type: String, enum: ["general","cardiology","endocrinology","dentistry","orthopedics","veterinary","pediatrics","human","veterinary","dental"], default: "general" },
   isActive: { type: Boolean, default: true },
   logo:     { type: String, default: "" },
   brandName:{ type: String, default: "" },

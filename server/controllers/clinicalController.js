@@ -4,8 +4,7 @@ import Icd10Code from "../models/Icd10Code.js";
 
 export const getClinicalNotes = async (req, res) => {
   try {
-    const query = { patient: req.params.id, isActive: true };
-    if (req.query.specialty) query.specialty = req.query.specialty;
+    const query = { patient: req.params.id, isActive: true, ...req.tenantFilter };
     const notes = await ClinicalNote.find(query)
       .sort({ encounterDate: -1 })
       .populate("createdBy", "name")
@@ -22,6 +21,7 @@ export const createClinicalNote = async (req, res) => {
       ...req.body,
       patient: req.params.id,
       organization: req.user.organization || null,
+      specialty: req.body.specialty || req.tenantFilter?.specialty || "general",
       createdBy: req.user._id,
     });
     const populated = await note.populate("createdBy", "name");
@@ -37,6 +37,7 @@ export const getClinicalNote = async (req, res) => {
       _id: req.params.noteId,
       patient: req.params.id,
       isActive: true,
+      ...req.tenantFilter,
     }).populate("createdBy", "name").populate("signedBy", "name");
     if (!note) return res.status(404).json({ message: "Note not found" });
     res.json({ note });
@@ -48,7 +49,7 @@ export const getClinicalNote = async (req, res) => {
 export const updateClinicalNote = async (req, res) => {
   try {
     const note = await ClinicalNote.findOneAndUpdate(
-      { _id: req.params.noteId, patient: req.params.id, isActive: true, isSigned: false },
+      { _id: req.params.noteId, patient: req.params.id, isActive: true, isSigned: false, ...req.tenantFilter },
       { $set: req.body },
       { new: true, runValidators: true }
     ).populate("createdBy", "name").populate("signedBy", "name");
@@ -62,7 +63,7 @@ export const updateClinicalNote = async (req, res) => {
 export const deleteClinicalNote = async (req, res) => {
   try {
     const note = await ClinicalNote.findOneAndUpdate(
-      { _id: req.params.noteId, patient: req.params.id },
+      { _id: req.params.noteId, patient: req.params.id, ...req.tenantFilter },
       { isActive: false },
       { new: true }
     );
@@ -77,7 +78,7 @@ export const signClinicalNote = async (req, res) => {
   try {
     const { signatureTitle } = req.body;
     const note = await ClinicalNote.findOneAndUpdate(
-      { _id: req.params.noteId, patient: req.params.id, isActive: true, isSigned: false },
+      { _id: req.params.noteId, patient: req.params.id, isActive: true, isSigned: false, ...req.tenantFilter },
       {
         $set: {
           isSigned: true,
@@ -102,12 +103,11 @@ export const getClinicalTemplates = async (req, res) => {
   try {
     const query = {
       $or: [
-        { organization: req.user.organization || null },
-        { isBuiltIn: true },
+        { organization: req.user.organization || null, specialty: req.tenantFilter?.specialty || "general" },
+        { isBuiltIn: true, specialty: req.tenantFilter?.specialty || "general" },
       ],
       isActive: true,
     };
-    if (req.query.specialty) query.specialty = req.query.specialty;
     const templates = await ClinicalTemplate.find(query).sort({ name: 1 });
     res.json({ templates });
   } catch (error) {

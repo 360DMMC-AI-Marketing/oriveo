@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 const api = axios.create({
   baseURL: "/api",
@@ -20,6 +21,9 @@ api.interceptors.response.use(
       localStorage.removeItem("oriveo_token");
       localStorage.removeItem("oriveo_user");
       window.location.href = "/login";
+    }
+    if (error.response?.status === 403) {
+      toast.error(error.response?.data?.message || "Access denied");
     }
     return Promise.reject(error);
   }

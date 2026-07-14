@@ -13,6 +13,90 @@ import ServerConfig from "../models/ServerConfig.js";
 
 const router = Router();
 
+// ─── Health Monitoring (public) ──────────────────────────
+
+async function checkService(name, checkFn) {
+  try {
+    const result = await checkFn();
+    if (result === null) return { name, status: "disabled", message: "Not configured" };
+    return { name, status: "ok", message: result };
+  } catch (e) {
+    return { name, status: "error", message: e.message };
+  }
+}
+
+router.get("/health", async (req, res) => {
+  try {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const mongodbState = ["disconnected", "connected", "connecting", "disconnecting"][mongoose.connection.readyState] || "unknown";
+
+    const services = await Promise.all([
+      checkService("MongoDB", async () => mongoose.connection.readyState === 1 ? "Connected" : null),
+      checkService("OpenAI", async () => {
+        if (!process.env.OPENAI_API_KEY) return null;
+        const resp = await fetch("https://api.openai.com/v1/models", {
+          headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+          signal: AbortSignal.timeout(5000),
+        });
+        return resp.ok ? "API reachable" : null;
+      }),
+      checkService("Deepgram", async () => {
+        return process.env.DEEPGRAM_API_KEY ? "API key set" : null;
+      }),
+      checkService("ElevenLabs", async () => {
+        return process.env.ELEVENLABS_API_KEY ? "API key set" : null;
+      }),
+      checkService("Twilio", async () => {
+        return process.env.TWILIO_ACCOUNT_SID ? "Account SID set" : null;
+      }),
+      checkService("athenahealth EHR", async () => {
+        const { isAthenaConfigured } = await import("../services/ehrAthena.js");
+        return isAthenaConfigured() ? "Configured" : null;
+      }),
+      checkService("ACS Email", async () => {
+        return process.env.ACS_CONNECTION_STRING ? "Connection string set" : null;
+      }),
+      checkService("Sentry", async () => {
+        return process.env.SENTRY_DSN ? "DSN set" : null;
+      }),
+      checkService("PHI Encryption", async () => {
+        return process.env.PHI_ENCRYPTION_KEY ? "Key configured" : null;
+      }),
+    ]);
+
+    const failedCalls30m = await Call.countDocuments({
+      status: "failed",
+      createdAt: { $gte: thirtyMinAgo },
+    });
+    const totalCalls30m = await Call.countDocuments({
+      createdAt: { $gte: thirtyMinAgo },
+    });
+    const errorEvents30m = await CallEvent.countDocuments({
+      type: "error",
+      timestamp: { $gte: thirtyMinAgo },
+    });
+    const errorRate = totalCalls30m > 0 ? (failedCalls30m / totalCalls30m * 100).toFixed(2) : "0.00";
+    const orgStatuses = await Subscription.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+    const configuredServices = services.filter(s => s.status !== "disabled");
+    const allOk = configuredServices.every(s => s.status === "ok") && failedCalls30m < 5 && parseFloat(errorRate) < 20;
+
+    res.json({
+      services,
+      periodMinutes: 30,
+      failedCalls: failedCalls30m,
+      totalCalls: totalCalls30m,
+      errorRate: `${errorRate}%`,
+      errorEvents: errorEvents30m,
+      orgStatuses: Object.fromEntries(orgStatuses.map(o => [o._id, o.count])),
+      healthy: allOk,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.use(protect);
 
 function requireSuperAdmin(req, res, next) {
@@ -214,90 +298,6 @@ router.get("/analytics/organization/:id", requireSuperAdmin, async (req, res) =>
       callsLast30Days: callsLast30,
       subscription: sub,
       callsByStatus: Object.fromEntries(callsByStatus.map(c => [c._id, c.count])),
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// ─── Health Monitoring ──────────────────────────────────
-
-async function checkService(name, checkFn) {
-  try {
-    const result = await checkFn();
-    if (result === null) return { name, status: "disabled", message: "Not configured" };
-    return { name, status: "ok", message: result };
-  } catch (e) {
-    return { name, status: "error", message: e.message };
-  }
-}
-
-router.get("/health", requireSuperAdmin, async (req, res) => {
-  try {
-    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const mongodbState = ["disconnected", "connected", "connecting", "disconnecting"][mongoose.connection.readyState] || "unknown";
-
-    const services = await Promise.all([
-      checkService("MongoDB", async () => mongoose.connection.readyState === 1 ? "Connected" : null),
-      checkService("OpenAI", async () => {
-        if (!process.env.OPENAI_API_KEY) return null;
-        const resp = await fetch("https://api.openai.com/v1/models", {
-          headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        return resp.ok ? "API reachable" : null;
-      }),
-      checkService("Deepgram", async () => {
-        return process.env.DEEPGRAM_API_KEY ? "API key set" : null;
-      }),
-      checkService("ElevenLabs", async () => {
-        return process.env.ELEVENLABS_API_KEY ? "API key set" : null;
-      }),
-      checkService("Twilio", async () => {
-        return process.env.TWILIO_ACCOUNT_SID ? "Account SID set" : null;
-      }),
-      checkService("athenahealth EHR", async () => {
-        const { isAthenaConfigured } = await import("../services/ehrAthena.js");
-        return isAthenaConfigured() ? "Configured" : null;
-      }),
-      checkService("ACS Email", async () => {
-        return process.env.ACS_CONNECTION_STRING ? "Connection string set" : null;
-      }),
-      checkService("Sentry", async () => {
-        return process.env.SENTRY_DSN ? "DSN set" : null;
-      }),
-      checkService("PHI Encryption", async () => {
-        return process.env.PHI_ENCRYPTION_KEY ? "Key configured" : null;
-      }),
-    ]);
-
-    const failedCalls30m = await Call.countDocuments({
-      status: "failed",
-      createdAt: { $gte: thirtyMinAgo },
-    });
-    const totalCalls30m = await Call.countDocuments({
-      createdAt: { $gte: thirtyMinAgo },
-    });
-    const errorEvents30m = await CallEvent.countDocuments({
-      type: "error",
-      timestamp: { $gte: thirtyMinAgo },
-    });
-    const errorRate = totalCalls30m > 0 ? (failedCalls30m / totalCalls30m * 100).toFixed(2) : "0.00";
-    const orgStatuses = await Subscription.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 } } },
-    ]);
-    const configuredServices = services.filter(s => s.status !== "disabled");
-    const allOk = configuredServices.every(s => s.status === "ok") && failedCalls30m < 5 && parseFloat(errorRate) < 20;
-
-    res.json({
-      services,
-      periodMinutes: 30,
-      failedCalls: failedCalls30m,
-      totalCalls: totalCalls30m,
-      errorRate: `${errorRate}%`,
-      errorEvents: errorEvents30m,
-      orgStatuses: Object.fromEntries(orgStatuses.map(o => [o._id, o.count])),
-      healthy: allOk,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

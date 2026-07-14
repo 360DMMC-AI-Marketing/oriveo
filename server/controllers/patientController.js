@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Patient from "../models/Patient.js";
 import { addDocument, removeDocument } from "../services/knowledgeBase.js";
 
@@ -79,7 +80,12 @@ export const getPatient = async (req, res) => {
 
 export const createPatient = async (req, res) => {
   try {
-    const patient = await Patient.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null });
+    let orgSpecialty;
+    if (req.user.organization) {
+      const org = await mongoose.model("Organization").findById(req.user.organization).lean();
+      orgSpecialty = org?.specialty;
+    }
+    const patient = await Patient.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: req.body.specialty || orgSpecialty || "general" });
     syncKbNotes(patient);
     const populated = await patient.populate("assignedDoctor", "name email");
     res.status(201).json({ patient: populated });
