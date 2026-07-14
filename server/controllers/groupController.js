@@ -6,13 +6,16 @@ import confirmAppointments from "../utils/confirmAppointments.js";
 async function syncMembers(group) {
   if (!group.diagnosisFilter || !group.diagnosisFilter.trim()) return;
   const filter = group.diagnosisFilter.trim().toLowerCase();
-  const matching = await Patient.find({
+  const baseQuery = {
     $or: [
       { primaryDiagnosis: { $regex: filter, $options: "i" } },
       { chronicConditions: { $regex: filter, $options: "i" } },
     ],
     isActive: true,
-  }).select("_id");
+  };
+  if (group.organization) baseQuery.organization = group.organization;
+  if (group.specialty) baseQuery.specialty = group.specialty;
+  const matching = await Patient.find(baseQuery).select("_id");
   const matchIds = matching.map((p) => p._id.toString());
   const existingIds = group.members.map((m) => m.toString());
   const merged = new Set([...existingIds, ...matchIds]);
@@ -22,7 +25,7 @@ async function syncMembers(group) {
 
 export const getGroups = async (req, res) => {
   try {
-    const query = {};
+    const query = { ...req.tenantFilter };
     if (req.user.role !== "admin") query.createdBy = req.user._id;
     const groups = await Group.find(query)
       .populate("members", "name phone primaryDiagnosis language")
@@ -36,7 +39,7 @@ export const getGroups = async (req, res) => {
 
 export const getGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id)
+    const group = await Group.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("members", "name phone primaryDiagnosis chronicConditions language doNotCall")
       .populate("createdBy", "name");
     if (!group) return res.status(404).json({ message: "Group not found" });
@@ -48,7 +51,7 @@ export const getGroup = async (req, res) => {
 
 export const createGroup = async (req, res) => {
   try {
-    const data = { ...req.body, createdBy: req.user._id };
+    const data = { ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: req.tenantFilter?.specialty || "general" };
     if (!data.members) data.members = [];
     const group = await Group.create(data);
     if (group.diagnosisFilter) await syncMembers(group);
@@ -63,7 +66,7 @@ export const createGroup = async (req, res) => {
 
 export const updateGroup = async (req, res) => {
   try {
-    const group = await Group.findByIdAndUpdate(req.params.id, req.body, {
+    const group = await Group.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, req.body, {
       new: true,
       runValidators: true,
     });
@@ -80,7 +83,7 @@ export const updateGroup = async (req, res) => {
 
 export const deleteGroup = async (req, res) => {
   try {
-    const group = await Group.findByIdAndDelete(req.params.id);
+    const group = await Group.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     if (!group) return res.status(404).json({ message: "Group not found" });
     res.json({ message: "Group deleted" });
   } catch (error) {
@@ -90,7 +93,7 @@ export const deleteGroup = async (req, res) => {
 
 export const addMember = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!group) return res.status(404).json({ message: "Group not found" });
     const { patientId } = req.body;
     const alreadyMember = group.members.some(
@@ -113,7 +116,7 @@ export const addMember = async (req, res) => {
 
 export const removeMember = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!group) return res.status(404).json({ message: "Group not found" });
     group.members = group.members.filter(
       (m) => m.toString() !== req.params.patientId
@@ -129,7 +132,7 @@ export const removeMember = async (req, res) => {
 
 export const callGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id).populate("members", "name phone doNotCall");
+    const group = await Group.findOne({ _id: req.params.id, ...req.tenantFilter }).populate("members", "name phone doNotCall");
     if (!group) return res.status(404).json({ message: "Group not found" });
 
     const { questionnaire, scheduledAt, language, customQuestions } = req.body;
