@@ -60,10 +60,10 @@ const finalQuestion = "Do you have anything else you'd like to tell the doctor?"
 export default function MedicalTemplates() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const orgType = user?.organization?.type as string | undefined;
-  const availableTabs: ("human" | "veterinary" | "dental")[] = !orgType ? ["human", "veterinary", "dental"] :
-    orgType === "veterinary" ? ["veterinary"] :
-    orgType === "dental" ? ["dental"] :
+  const orgSpec = user?.organization?.specialty as string | undefined;
+  const availableTabs: ("human" | "veterinary" | "dental")[] = !orgSpec ? ["human", "veterinary", "dental"] :
+    orgSpec === "veterinary" ? ["veterinary"] :
+    orgSpec === "dentistry" || orgSpec === "dental" ? ["dental"] :
     ["human"];
   const defaultTab = availableTabs.includes("human") ? "human" : availableTabs[0];
   const [templateTab, setTemplateTab] = useState<"human" | "veterinary" | "dental">(defaultTab);
