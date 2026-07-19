@@ -20,6 +20,9 @@ const userSchema = new mongoose.Schema(
     tokenVersion: { type: Number, default: 0 },
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     superAdmin: { type: Boolean, default: false },
+    googleCalendarConnected: { type: Boolean, default: false },
+    googleRefreshToken: { type: String, default: "" },
+    googleCalendarEmail: { type: String, default: "" },
   },
   { timestamps: true }
 );

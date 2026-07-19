@@ -1,4 +1,5 @@
 import Notification from "../models/Notification.js";
+import User from "../models/User.js";
 import { getIo } from "./socketManager.js";
 
 export async function createNotification({ user, type, title, message, link, call, patient }) {
@@ -17,6 +18,52 @@ export async function createNotification({ user, type, title, message, link, cal
   } catch (error) {
     console.error("Notification create error:", error.message);
     return null;
+  }
+}
+
+export async function notifyForAppointment(appointment) {
+  if (!appointment) return;
+
+  try {
+    const orgId = appointment.organization;
+    const providerId = appointment.provider;
+    const patient = appointment.patient;
+
+    const aptDate = new Date(appointment.date);
+    const timeStr = aptDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    const dateStr = aptDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    const patientName = patient?.name || "A patient";
+    const link = "/calendar";
+
+    const receptionists = await User.find({ organization: orgId, role: "receptionist", isActive: true }).select("_id");
+
+    const promises = [];
+
+    for (const rec of receptionists) {
+      promises.push(createNotification({
+        user: rec._id,
+        type: "appointment_pending",
+        title: "New Appointment",
+        message: `${patientName} — ${dateStr} at ${timeStr}`,
+        link,
+        patient: patient?._id || null,
+      }));
+    }
+
+    if (providerId) {
+      promises.push(createNotification({
+        user: providerId,
+        type: "appointment_confirmed",
+        title: "Appointment Scheduled",
+        message: `${patientName} — ${dateStr} at ${timeStr}`,
+        link,
+        patient: patient?._id || null,
+      }));
+    }
+
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("notifyForAppointment error:", error.message);
   }
 }
 

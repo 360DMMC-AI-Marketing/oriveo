@@ -34,6 +34,9 @@ const patientSchema = new mongoose.Schema(
     kbNotes: { type: String, default: "" },
     doNotCall: { type: Boolean, default: false },
     doNotCallReason: { type: String, default: "" },
+    reminderPreferences: {
+      email: { type: Boolean, default: false },
+    },
 
     species: { type: String, default: "" },
     breed: { type: String, default: "" },

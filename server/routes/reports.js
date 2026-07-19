@@ -6,6 +6,7 @@ import { reportQuerySchema, signReportSchema, bulkSignSchema, bulkDeleteSchema }
 import Report from "../models/Report.js";
 import { generateReport, generateAllMissingReports } from "../services/reportGenerator.js";
 import { convertReportToFhirBundle } from "../services/fhirConverter.js";
+import { SPECIALTY_DASHBOARD_LABELS } from "../config/specialties.js";
 import PDFDocument from "pdfkit";
 
 const idParam = z.object({ id: z.string().regex(/^[a-f\d]{24}$/i, "Invalid ID") });
@@ -66,14 +67,17 @@ router.get("/:id/pdf", validate(idParam, "params"), async (req, res) => {
 
     const font = "Helvetica";
     const bold = "Helvetica-Bold";
-    const primaryColor = "#0a7c6f";
+    const specialty = report.specialty || "general-practice";
+    const clinicType = report.clinicType || "human";
+    const specialtyLabel = SPECIALTY_DASHBOARD_LABELS[specialty] || { title: "Medical Report" };
+    const primaryColor = clinicType === "dental" ? "#0d9488" : clinicType === "veterinary" ? "#7c3aed" : "#0a7c6f";
     const top = 50;
     let y = top;
 
-    doc.fontSize(20).font(bold).fillColor(primaryColor).text("Medical Call Report", { align: "left" });
+    doc.fontSize(20).font(bold).fillColor(primaryColor).text(`${specialtyLabel.title}`, { align: "left" });
     y = doc.y + 4;
     doc.fontSize(8).font(font).fillColor("#666")
-      .text(`Report ID: ${report._id.toString().slice(-8)} | ${report.callDate ? new Date(report.callDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""}`, { align: "left" });
+      .text(`Report ID: ${report._id.toString().slice(-8)} | ${report.callDate ? new Date(report.callDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""} | Specialty: ${specialtyLabel.title}`, { align: "left" });
     y = doc.y + 12;
 
     doc.moveTo(50, y).lineTo(545, y).strokeColor("#ddd").lineWidth(1).stroke();
@@ -210,6 +214,83 @@ router.get("/:id/pdf", validate(idParam, "params"), async (req, res) => {
     if (report.callSummary) {
       section("Clinical Summary");
       body(report.callSummary);
+    }
+
+    // Specialty-specific data sections
+    const sd = report.specialtyData || {};
+    if (sd.diagnosisCodes?.length) {
+      section("Diagnosis Codes");
+      for (const dx of sd.diagnosisCodes) {
+        doc.fontSize(9).font(font).fillColor("#333").text(`${dx.code} - ${dx.name}${dx.laterality && dx.laterality !== "unspecified" ? ` (${dx.laterality})` : ""}`, 50, y, { width: 495 });
+        y = doc.y + 1;
+      }
+      y += 4;
+    }
+
+    if (sd.assessmentScales?.length) {
+      section("Assessment Scales / Scores");
+      for (const scale of sd.assessmentScales) {
+        row(scale.label || scale.scaleId, `${scale.score}${scale.interpretation ? ` - ${scale.interpretation}` : ""}`);
+      }
+      y += 4;
+    }
+
+    if (sd.imagingFindings) {
+      section("Imaging Findings");
+      body(sd.imagingFindings);
+    }
+
+    if (sd.labResults) {
+      section("Laboratory Results");
+      body(sd.labResults);
+    }
+
+    if (sd.examFindings?.length) {
+      section("Specialty Examination Findings");
+      for (const exam of sd.examFindings) {
+        doc.fontSize(9).font(bold).fillColor("#333").text(exam.testName || "Finding", 50, y, { continued: true });
+        doc.font(font).fillColor("#555").text(`: ${exam.result || exam.interpretation || ""}`, { continued: false });
+        y = doc.y + 1;
+      }
+      y += 4;
+    }
+
+    if (sd.proceduresPerformed?.length) {
+      section("Procedures Performed");
+      for (const proc of sd.proceduresPerformed) {
+        doc.circle(58, y - 1, 2.5).fillColor(primaryColor).fill();
+        doc.fontSize(9).font(font).fillColor("#333").text(proc, 65, y, { width: 480 });
+        y = doc.y + 1;
+      }
+      y += 4;
+    }
+
+    if (sd.treatmentSummary) {
+      section("Treatment Summary");
+      body(sd.treatmentSummary);
+    }
+
+    if (sd.followUpRecommendation) {
+      section("Follow-Up Recommendation");
+      body(sd.followUpRecommendation);
+    }
+
+    // Vital signs block if present
+    if (report.vitals) {
+      const v = report.vitals;
+      const hasVitals = v.bpSystolic || v.bpDiastolic || v.heartRate || v.temperature || v.weight || v.spo2 || v.respiratoryRate;
+      if (hasVitals) {
+        section("Vital Signs");
+        const vitalsStr = [
+          v.bpSystolic ? `BP: ${v.bpSystolic}/${v.bpDiastolic || "?"} mmHg` : null,
+          v.heartRate ? `HR: ${v.heartRate} bpm` : null,
+          v.respiratoryRate ? `RR: ${v.respiratoryRate} /min` : null,
+          v.temperature ? `Temp: ${v.temperature}°C` : null,
+          v.spo2 ? `O2: ${v.spo2}%` : null,
+          v.weight ? `Weight: ${v.weight} kg` : null,
+        ].filter(Boolean).join("  |  ");
+        body(vitalsStr);
+      }
     }
 
     y += 8;

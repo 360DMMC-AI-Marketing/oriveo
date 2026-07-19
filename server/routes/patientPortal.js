@@ -6,9 +6,12 @@ import BookingToken from "../models/BookingToken.js";
 import Availability from "../models/Availability.js";
 import Patient from "../models/Patient.js";
 import Organization from "../models/Organization.js";
+import User from "../models/User.js";
 import { protect } from "../middleware/auth.js";
 import { sendSms } from "../services/alertService.js";
 import { sendEmail } from "../services/emailService.js";
+import { getAvailableSlots } from "../utils/slotGenerator.js";
+import { notifyForAppointment } from "../services/notificationService.js";
 
 const router = Router();
 
@@ -137,10 +140,17 @@ router.get("/booking-info/:token", async (req, res) => {
     if (bookingToken.usedAt) return res.status(400).json({ message: "This booking link has already been used" });
     if (bookingToken.expiresAt < new Date()) return res.status(400).json({ message: "This booking link has expired" });
 
+    const providers = await User.find({
+      organization: bookingToken.organization,
+      role: { $in: ["admin", "doctor"] },
+      isActive: true,
+    }).select("name specialty role");
+
     res.json({
       patient: { _id: bookingToken.patient._id, name: bookingToken.patient.name },
       organization: { _id: bookingToken.organization._id, name: bookingToken.organization.name },
       token: bookingToken.token,
+      providers: providers.map((p) => ({ _id: p._id, name: p.name, specialty: p.specialty })),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -150,43 +160,15 @@ router.get("/booking-info/:token", async (req, res) => {
 router.get("/booking-slots/:token", async (req, res) => {
   try {
     const { token } = req.params;
-    const { date } = req.query;
+    const { date, provider } = req.query;
     if (!date) return res.status(400).json({ message: "date required" });
 
     const bookingToken = await BookingToken.findOne({ token });
     if (!bookingToken) return res.status(404).json({ message: "Invalid token" });
     if (bookingToken.usedAt) return res.status(400).json({ message: "Already used" });
 
-    const dt = new Date(date + "T00:00:00");
-    const dayOfWeek = dt.getDay();
-
-    const availability = await Availability.find({
-      organization: bookingToken.organization,
-      dayOfWeek,
-      isActive: true,
-    }).sort({ startTime: 1 });
-
-    if (availability.length === 0) {
-      return res.json({ slots: [] });
-    }
-
-    const dayStart = new Date(dt);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dt);
-    dayEnd.setHours(23, 59, 59, 999);
-
-    const existingAppts = await Appointment.find({
-      organization: bookingToken.organization,
-      date: { $gte: dayStart, $lte: dayEnd },
-      status: { $nin: ["cancelled", "no-show"] },
-    });
-
-    const allSlots = [];
-    for (const avail of availability) {
-      allSlots.push(...generateTimeSlots(avail.startTime, avail.endTime, avail.slotDuration || 30, avail.bufferBetween || 0, existingAppts));
-    }
-
-    res.json({ slots: allSlots, date });
+    const slots = await getAvailableSlots(bookingToken.organization, date, provider || null);
+    res.json({ slots, date });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -194,7 +176,7 @@ router.get("/booking-slots/:token", async (req, res) => {
 
 router.post("/book", async (req, res) => {
   try {
-    const { token, date, time } = req.body;
+    const { token, date, time, provider: providerId } = req.body;
     if (!token || !date || !time) return res.status(400).json({ message: "token, date, and time required" });
 
     const bookingToken = await BookingToken.findOne({ token });
@@ -206,16 +188,15 @@ router.post("/book", async (req, res) => {
     const appointmentDate = new Date(date + "T00:00:00");
     appointmentDate.setHours(hours, minutes, 0, 0);
 
-    const existing = await Appointment.findOne({
-      organization: bookingToken.organization,
-      date: appointmentDate,
-      status: { $nin: ["cancelled", "no-show"] },
-    });
-    if (existing) return res.status(409).json({ message: "This time slot is no longer available" });
+    const slotCheck = await validateSlot2(bookingToken.organization, date, time, 30, providerId || null);
+    if (!slotCheck.valid) {
+      return res.status(409).json({ message: slotCheck.message, alternatives: slotCheck.alternatives });
+    }
 
     const appointment = await Appointment.create({
       organization: bookingToken.organization,
       patient: bookingToken.patient,
+      provider: providerId || null,
       title: "Patient Self-Scheduled",
       date: appointmentDate,
       duration: 30,
@@ -241,11 +222,21 @@ router.post("/book", async (req, res) => {
       });
     }
 
+    await Appointment.findByIdAndUpdate(appointment._id, { $push: { reminders: { channel: "email", sentAt: new Date(), type: "confirmation" } } });
+
+    const populated = await appointment.populate("patient", "name phone email");
+    notifyForAppointment(populated);
+
     res.status(201).json({ appointment, message: "Appointment booked successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+async function validateSlot2(orgId, date, time, duration, providerId) {
+  const { validateSlot } = await import("../utils/slotGenerator.js");
+  return validateSlot(orgId, date, time, duration, providerId);
+}
 
 router.get("/availability", protect, async (req, res) => {
   try {

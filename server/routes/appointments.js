@@ -1,9 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import Appointment from "../models/Appointment.js";
+import Patient from "../models/Patient.js";
 import { protect, authorize } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { createAppointmentSchema } from "../validators/appointment.js";
+import { validateSlot } from "../utils/slotGenerator.js";
+import { sendEmail } from "../services/emailService.js";
+import { sendSms } from "../services/alertService.js";
+import { notifyForAppointment } from "../services/notificationService.js";
 
 const router = Router();
 
@@ -108,12 +113,48 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", authorize("admin", "doctor", "receptionist"), validate(createAppointmentSchema), async (req, res) => {
   try {
+    const { date, time, provider } = req.body;
+    const orgId = req.user.organization;
+
+    if (date && time) {
+      const d = new Date(date);
+      const timeStr = time || `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      const slotCheck = await validateSlot(orgId, d.toISOString().split("T")[0], timeStr, req.body.duration || 30, provider || null);
+      if (!slotCheck.valid) {
+        return res.status(409).json({ message: slotCheck.message, alternatives: slotCheck.alternatives });
+      }
+    }
+
     const appointment = await Appointment.create({
       ...req.body,
-      organization: req.user.organization || null,
+      date: req.body.date ? new Date(req.body.date) : undefined,
+      organization: orgId || null,
+      provider: provider || null,
       bookedBy: req.user._id,
     });
-    const populated = await appointment.populate("patient", "name phone");
+    const populated = await appointment.populate("patient", "name phone email");
+
+    if (populated.patient?.email) {
+      const aptDate = new Date(populated.date);
+      const timeStr = aptDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      const dateStr = aptDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      sendEmail({
+        to: populated.patient.email,
+        subject: "Appointment Confirmed",
+        html: `<p>Your appointment has been scheduled:</p><p><strong>Date:</strong> ${dateStr}<br><strong>Time:</strong> ${timeStr}<br><strong>Title:</strong> ${populated.title}</p>`,
+      });
+    }
+    if (populated.patient?.phone) {
+      const aptDate = new Date(populated.date);
+      const timeStr = aptDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      const dateStr = aptDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      sendSms(populated.patient.phone, `Appointment scheduled: ${dateStr} at ${timeStr} - ${populated.title}`);
+    }
+
+    await Appointment.findByIdAndUpdate(populated._id, { $push: { reminders: { channel: "email", sentAt: new Date(), type: "confirmation" } } });
+
+    notifyForAppointment(populated);
+
     res.status(201).json({ appointment: populated });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -143,9 +184,33 @@ router.post("/batch", authorize("admin", "doctor", "receptionist"), async (req, 
 
 router.put("/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
+    const existing = await Appointment.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Appointment not found" });
+
+    const newDate = req.body.date || existing.date;
+    const newTime = req.body.time || `${new Date(newDate).getHours().toString().padStart(2, "0")}:${new Date(newDate).getMinutes().toString().padStart(2, "0")}`;
+    const newProvider = req.body.provider !== undefined ? req.body.provider : existing.provider;
+
+    if (req.body.date || req.body.time) {
+      const slotCheck = await validateSlot(
+        existing.organization,
+        new Date(newDate).toISOString().split("T")[0],
+        newTime,
+        req.body.duration || existing.duration || 30,
+        newProvider
+      );
+      if (!slotCheck.valid) {
+        return res.status(409).json({ message: slotCheck.message, alternatives: slotCheck.alternatives });
+      }
+    }
+
+    const updateData = { ...req.body };
+    if (updateData.date) updateData.date = new Date(updateData.date);
+    delete updateData.time;
+
     const appointment = await Appointment.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     ).populate("patient", "name phone");
     if (!appointment) return res.status(404).json({ message: "Appointment not found" });

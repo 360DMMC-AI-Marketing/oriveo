@@ -27,7 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
   "no-show": "bg-gray-100 text-gray-700 border-gray-200",
 };
 
-const STATUS_ACTIONS = [
+  const STATUS_ACTIONS = [
   { label: "Confirm", from: "scheduled", to: "confirmed", color: "text-indigo-600 hover:bg-indigo-50" },
   { label: "Complete", from: "confirmed", to: "completed", color: "text-emerald-600 hover:bg-emerald-50" },
   { label: "No Show", from: "confirmed", to: "no-show", color: "text-gray-600 hover:bg-gray-100" },
@@ -47,8 +47,12 @@ export default function Appointments() {
   const [form, setForm] = useState({
     patient: "", title: "", date: "", time: "09:00", duration: 30,
     type: "in-person" as "in-person" | "phone" | "video",
-    location: "", reason: "", notes: "", status: "scheduled",
+    location: "", reason: "", notes: "", status: "scheduled", provider: "",
   });
+  function setFormField(field: string, value: any) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [patientSearch, setPatientSearch] = useState("");
@@ -85,9 +89,15 @@ export default function Appointments() {
     queryFn: () => api.get("/groups").then((r) => r.data),
   });
 
+  const { data: providersData } = useQuery({
+    queryKey: ["providers"],
+    queryFn: () => api.get("/availability/providers").then((r) => r.data),
+  });
+
   const appointments = appointmentsData?.appointments || [];
   const patients = patientsData?.patients || [];
   const groups = groupsData?.groups || [];
+  const providers = providersData?.providers || [];
 
   const memberIds = new Set<string>();
   for (const g of groups) {
@@ -153,7 +163,7 @@ export default function Appointments() {
   });
 
   function resetForm() {
-    setForm({ patient: "", title: "", date: "", time: "09:00", duration: 30, type: "in-person", location: "", reason: "", notes: "", status: "scheduled" });
+    setForm({ patient: "", title: "", date: "", time: "09:00", duration: 30, type: "in-person", location: "", reason: "", notes: "", status: "scheduled", provider: "" });
   }
 
   function handleEdit(appt: any) {
@@ -169,6 +179,7 @@ export default function Appointments() {
       reason: appt.reason || "",
       notes: appt.notes || "",
       status: appt.status,
+      provider: appt.provider || "",
     });
     setEditing(appt);
     setShowForm(true);
@@ -201,6 +212,7 @@ export default function Appointments() {
       location: form.location,
       reason: form.reason,
       notes: form.notes,
+      provider: form.provider || null,
     };
     if (patientIds.length > 0) {
       createMutation.mutate({ ...base, patientIds });
@@ -352,7 +364,17 @@ export default function Appointments() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Time</Label>
-                  <Input type="time" value={form.time} onChange={(e) => setForm(f => ({ ...f, time: e.target.value }))} className="h-10 text-sm" />
+                  <Input type="time" value={form.time} onChange={(e) => setFormField("time", e.target.value)} className="h-10 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Provider</Label>
+                  <select value={form.provider} onChange={(e) => setFormField("provider", e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background">
+                    <option value="">Auto-assign</option>
+                    {providers.map((p: any) => (
+                      <option key={p._id} value={p._id}>{p.name} {p.specialty?.length ? `(${p.specialty.join(", ")})` : ""}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">

@@ -91,7 +91,7 @@ export default function PatientDetail() {
       setEditingPatient(false);
       toast.success("Patient info updated");
     },
-    onError: () => toast.error("Failed to update"),
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to update"),
   });
 
   const patient = patientData?.patient;
@@ -135,7 +135,7 @@ export default function PatientDetail() {
               {patient.patientType === "pet" && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Pet</span>
               )}
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setPatientForm({ ...patient }); setEditingPatient(true); }}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setPatientForm({ name: patient.name || "", phone: patient.phone || "", email: patient.email || "", gender: patient.gender || "", dob: patient.dob || "", bloodType: patient.bloodType || "", language: patient.language || "", address: patient.address || "", insuranceId: patient.insuranceId || "", primaryDiagnosis: patient.primaryDiagnosis || "", chronicConditions: patient.chronicConditions || "", allergies: patient.allergies || "", currentMedications: patient.currentMedications || "", pastSurgeries: patient.pastSurgeries || "", emergencyContact: patient.emergencyContact || "", emergencyContactPhone: patient.emergencyContactPhone || "", medicalNotes: patient.medicalNotes || "", assignedDoctor: patient.assignedDoctor?._id || patient.assignedDoctor || "", species: patient.species || "", breed: patient.breed || "", weight: patient.weight ?? null, color: patient.color || "", microchipId: patient.microchipId || "", ownerName: patient.ownerName || "", ownerPhone: patient.ownerPhone || "", ownerEmail: patient.ownerEmail || "", reminderPreferences: patient.reminderPreferences || { email: false } }); setEditingPatient(true); }}>
                 <Edit3 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -360,6 +360,15 @@ export default function PatientDetail() {
               <Field label="Emergency Contact"><Input value={patientForm.emergencyContact || ""} onChange={e => setPatientForm((f: any) => ({...f, emergencyContact: e.target.value}))} /></Field>
               <Field label="Emergency Phone"><Input value={patientForm.emergencyContactPhone || ""} onChange={e => setPatientForm((f: any) => ({...f, emergencyContactPhone: e.target.value}))} /></Field>
               <Field label="Medical Notes"><Textarea value={patientForm.medicalNotes || ""} onChange={e => setPatientForm((f: any) => ({...f, medicalNotes: e.target.value}))} /></Field>
+              <div className="border-t pt-3 mt-2">
+                <label className="mb-1 block text-xs font-medium text-gray-500">Reminder Preferences</label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={patientForm.reminderPreferences?.email || false}
+                    onChange={e => setPatientForm((f: any) => ({...f, reminderPreferences: { ...f.reminderPreferences, email: e.target.checked } }))}
+                    className="h-4 w-4 rounded border-gray-300 text-primary" />
+                  Send email reminders
+                </label>
+              </div>
             </div>
             <div className="flex gap-2 mt-4">
               <Button className="flex-1" onClick={() => {

@@ -2,6 +2,7 @@ import { createVoiceAgent } from "./voiceAgent.js";
 import { queryKnowledgeBase } from "./knowledgeBase.js";
 import { handleFunctionCall, voiceFunctions } from "../routes/voice.js";
 import Call from "../models/Call.js";
+import Appointment from "../models/Appointment.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
 import { createLiveTranscription } from "./deepgram.js";
@@ -10,6 +11,8 @@ import {
   createStreamState, createSharedCallbacks, attachDeepgramHandlers,
   attachWsHandlers, saveTranscript as sharedSaveTranscript, getTwilioClient,
 } from "./mediaStreamCommon.js";
+import { generateLiveNoteChunk, finalizeNote } from "./ambientNoteGenerator.js";
+import { getIo } from "./socketManager.js";
 
 const twilioClient = getTwilioClient();
 
@@ -22,10 +25,15 @@ export async function handleMediaStream(ws, req) {
   let patientInfo = "";
   let questions = [];
   let multiLangEnabled = true;
+  let currentLiveNote = null;
+  let ambientInterval = null;
+  let lastAmbientTranscript = "";
+  let patientForCall = null;
 
   try {
     const call = await Call.findById(callId).populate("patient").populate("questionnaire");
     if (call) {
+      patientForCall = call.patient;
       language = call.language || "en";
       multiLangEnabled = call.language === "multi" || !call.language || call.language === "en";
       if (language !== "multi" && language !== "en") {
@@ -46,6 +54,19 @@ export async function handleMediaStream(ws, req) {
       if (p.medicalNotes) infoParts.push(`Notes: ${p.medicalNotes}`);
       if (call.summary) infoParts.push(`Call purpose: ${call.summary}`);
       patientInfo = infoParts.join(". ");
+
+      if (call.patient) {
+        Appointment.find({
+          patient: call.patient._id,
+          date: { $gte: new Date() },
+          status: { $in: ["scheduled", "confirmed"] },
+        }).sort({ date: 1 }).limit(3).select("title date duration reason").then((appts) => {
+          if (appts.length > 0) {
+            const apptStr = appts.map((a) => `${a.title || "Appointment"} on ${a.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at ${a.date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}${a.reason ? ` (${a.reason})` : ""}`);
+            patientInfo += `. Upcoming appointments: ${apptStr.join("; ")}.`;
+          }
+        }).catch(() => {});
+      }
 
       if (call.questionnaire?.questions) {
         questions = call.questionnaire.questions.map((q) => (typeof q === "string" ? q : q.text));
@@ -81,6 +102,45 @@ export async function handleMediaStream(ws, req) {
     }),
   });
 
+  function startAmbientInterval() {
+    if (ambientInterval) return;
+    ambientInterval = setInterval(async () => {
+      if (!ctx.connectionAlive) return;
+      const fullTranscript = agent.conversationHistory.map((h) => `${h.role}: ${h.content}`).join("\n").trim();
+      if (!fullTranscript || fullTranscript === lastAmbientTranscript) return;
+      lastAmbientTranscript = fullTranscript;
+      let specialty = patientForCall?.specialty || "general-practice";
+      let clinicType = "human";
+      if (patientForCall?.patientType === "pet") clinicType = "veterinary";
+      const dentalSpecialties = ["general-dentistry", "orthodontics", "endodontics", "periodontics", "oral-surgery", "prosthodontics", "pediatric-dentistry"];
+      if (dentalSpecialties.includes(specialty)) clinicType = "dental";
+      try {
+        const note = await generateLiveNoteChunk({
+          transcriptSoFar: fullTranscript,
+          previousNote: currentLiveNote,
+          patientContext: patientInfo,
+          specialty,
+          clinicType,
+        });
+        if (note) {
+          currentLiveNote = note;
+          const io = getIo();
+          if (io) {
+            io.to(`call:${callId}`).to("supervisor-room").emit("call:note-update", {
+              callId,
+              note,
+              timestamp: Date.now(),
+              isFinal: false,
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`[ambient:${callId}] Note generation error:`, err.message);
+      }
+    }, 30000);
+  }
+  startAmbientInterval();
+
   registerCall(callId, { callSid: req.callSid, streamSid: ctx.streamSid });
 
   const dgConnection = createLiveTranscription({
@@ -108,11 +168,67 @@ export async function handleMediaStream(ws, req) {
     dgConnection,
     cleanup,
     onWsClose: async () => {
+      if (currentLiveNote) {
+        const fullTranscript = agent.conversationHistory.map((h) => `${h.role}: ${h.content}`).join("\n").trim();
+        let specialty = patientForCall?.specialty || "general-practice";
+        let clinicType = "human";
+        if (patientForCall?.patientType === "pet") clinicType = "veterinary";
+        const dentalSpecialties = ["general-dentistry", "orthodontics", "endodontics", "periodontics", "oral-surgery", "prosthodontics", "pediatric-dentistry"];
+        if (dentalSpecialties.includes(specialty)) clinicType = "dental";
+        try {
+          const finalData = await finalizeNote({
+            transcriptFull: fullTranscript,
+            patientContext: patientInfo,
+            specialty,
+            clinicType,
+            callId,
+          });
+          if (finalData) {
+            currentLiveNote = { ...currentLiveNote, ...finalData };
+            const io = getIo();
+            if (io) {
+              io.to(`call:${callId}`).to("supervisor-room").emit("call:note-update", {
+                callId,
+                note: currentLiveNote,
+                timestamp: Date.now(),
+                isFinal: true,
+              });
+            }
+            try {
+              const { default: ClinicalNote } = await import("../models/ClinicalNote.js");
+              await ClinicalNote.create({
+                patient: patientForCall?._id,
+                organization: patientForCall?.organization || null,
+                specialty,
+                clinicType,
+                encounterDate: new Date(),
+                encounterType: "phone",
+                subjective: finalData.subjective || "",
+                objective: finalData.objective || "",
+                assessment: finalData.assessment || "",
+                plan: finalData.plan || "",
+                diagnoses: finalData.diagnoses || [],
+                vitals: finalData.vitals || {},
+                createdBy: null,
+              });
+              console.log(`[ambient:${callId}] ClinicalNote saved`);
+            } catch (noteErr) {
+              console.error(`[ambient:${callId}] ClinicalNote save error:`, noteErr.message);
+            }
+          }
+        } catch (err) {
+          console.error(`[ambient:${callId}] Finalize error:`, err.message);
+        }
+      }
       await sharedSaveTranscript(callId, agent.conversationHistory);
     },
   });
 
   function cleanup() {
+    if (ambientInterval) {
+      clearInterval(ambientInterval);
+      ambientInterval = null;
+    }
     agent.reset();
     removeCall(callId);
     if (dgConnection) {

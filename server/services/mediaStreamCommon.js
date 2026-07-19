@@ -38,6 +38,22 @@ export function buildPatientInfo(patient) {
   return parts.join(". ");
 }
 
+export async function enrichPatientInfoWithAppointments(patientId, infoStr) {
+  try {
+    const { default: Appointment } = await import("../models/Appointment.js");
+    const appts = await Appointment.find({
+      patient: patientId,
+      date: { $gte: new Date() },
+      status: { $in: ["scheduled", "confirmed"] },
+    }).sort({ date: 1 }).limit(3).select("title date duration reason");
+    if (appts.length > 0) {
+      const apptStr = appts.map((a) => `${a.title || "Appointment"} on ${a.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at ${a.date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}${a.reason ? ` (${a.reason})` : ""}`);
+      return infoStr + `. Upcoming appointments: ${apptStr.join("; ")}.`;
+    }
+  } catch {}
+  return infoStr;
+}
+
 export async function getTransferAudio(text) {
   try {
     const response = await fetch(

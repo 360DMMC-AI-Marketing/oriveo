@@ -16,6 +16,8 @@ const typeConfig: Record<string, { icon: React.ElementType; color: string; bg: s
   appointment_reminder: { icon: Calendar, color: "text-indigo-600", bg: "bg-indigo-50" },
   system_alert: { icon: Info, color: "text-gray-600", bg: "bg-gray-50" },
   call_transferred: { icon: PhoneCall, color: "text-blue-600", bg: "bg-blue-50" },
+  appointment_pending: { icon: Calendar, color: "text-amber-600", bg: "bg-amber-50" },
+  appointment_confirmed: { icon: CheckCheck, color: "text-green-600", bg: "bg-green-50" },
 };
 
 function timeAgo(date: string): string {

@@ -41,8 +41,11 @@ import inboundRoutes from "./routes/inbound.js";
 import notificationRoutes from "./routes/notifications.js";
 import patientPortalRoutes from "./routes/patientPortal.js";
 import billingRoutes from "./routes/billing.js";
+import availabilityRoutes from "./routes/availability.js";
+import calendarRoutes from "./routes/calendar.js";
 import languageRoutes from "./routes/languages.js";
 import clinicalRoutes from "./routes/clinical.js";
+import clinicConfigRoutes from "./routes/clinicConfig.js";
 import automationRoutes from "./routes/automation.js";
 import tenantRoutes from "./routes/tenants.js";
 import { setIo } from "./services/socketManager.js";
@@ -131,7 +134,7 @@ app.set("trust proxy", 1);
 function createRateLimiter() {
   const config = {
     windowMs: 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX || "100"),
+    max: parseInt(process.env.RATE_LIMIT_MAX || "1000"),
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many requests, please try again later" },
@@ -237,6 +240,9 @@ app.use("/api/clinical", clinicalRoutes);
 app.use("/api/automation", automationRoutes);
 app.use("/api/org", tenantRoutes);
 app.use("/api/billing", billingRoutes);
+app.use("/api/availability", availabilityRoutes);
+app.use("/api/calendar", calendarRoutes);
+app.use("/api/clinic-config", clinicConfigRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -372,6 +378,10 @@ mongoose
     import("./services/patientVoiceAgent.js").then(({ startAutomatedCallScheduler }) => {
       startAutomatedCallScheduler();
       logger.info("Automated patient call scheduler started");
+    });
+    import("./services/calendarSync.js").then(({ startCalendarSync }) => {
+      startCalendarSync();
+      logger.info("Calendar sync started");
     });
     });
   })

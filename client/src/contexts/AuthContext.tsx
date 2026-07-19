@@ -12,14 +12,19 @@ interface User {
   specialty: string[];
   language: string;
   superAdmin?: boolean;
-  organization?: { _id: string; name: string; slug: string; specialty?: string } | null;
+  organization?: { _id: string; name: string; slug: string; specialty?: string; clinicType?: string; clinicSize?: string; billingSetup?: { codeSet: string }; hasDepartments?: boolean } | null;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (data: { name: string; email: string; password: string; role?: string; phone?: string; profession?: string; specialty?: string; clinicName?: string; clinicSlug?: string }) => Promise<void>;
+  signup: (data: {
+    name: string; email: string; password: string; role?: string; phone?: string;
+    profession?: string; specialty?: string; clinicName?: string; clinicSlug?: string;
+    clinicType?: string; clinicSize?: string; hasDepartments?: boolean;
+    staffSetup?: { doctors?: number; nurses?: number; receptionists?: number; otherStaff?: number; workstations?: number };
+  }) => Promise<void>;
   logout: () => void;
   loading: boolean;
   updateUser: (data: Partial<User>) => void;

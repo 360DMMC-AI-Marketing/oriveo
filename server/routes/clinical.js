@@ -5,6 +5,9 @@ import { suggestCptCode, getCptCodeInfo } from "../services/medicalCoding.js";
 import { SPECIALTY_TEMPLATES, getSpecialtyForKeywords } from "../config/specialtyTemplates.js";
 import Patient from "../models/Patient.js";
 import Call from "../models/Call.js";
+import ClinicalNote from "../models/ClinicalNote.js";
+import { generateLiveNoteChunk, finalizeNote } from "../services/ambientNoteGenerator.js";
+import { buildPatientInfo } from "../services/mediaStreamCommon.js";
 import {
   getClinicalNotes,
   createClinicalNote,
@@ -20,6 +23,72 @@ import {
 const router = Router();
 
 router.use(protect);
+
+// Ambient note generation from transcript
+router.post("/ambient/generate", async (req, res) => {
+  try {
+    const { transcript, previousNote, patientId, specialty, clinicType } = req.body;
+    if (!transcript?.trim()) return res.status(400).json({ message: "Transcript is required" });
+    let patientContext = "";
+    if (patientId) {
+      const patient = await Patient.findById(patientId).lean();
+      if (patient) patientContext = buildPatientInfo(patient);
+    }
+    const note = await generateLiveNoteChunk({
+      transcriptSoFar: transcript,
+      previousNote: previousNote || null,
+      patientContext,
+      specialty: specialty || "general-practice",
+      clinicType: clinicType || "human",
+    });
+    res.json({ note });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Finalize ambient note from a completed call
+router.post("/ambient/finalize", async (req, res) => {
+  try {
+    const { transcript, patientId, specialty, clinicType, callId } = req.body;
+    if (!transcript?.trim()) return res.status(400).json({ message: "Transcript is required" });
+    let patientContext = "";
+    if (patientId) {
+      const patient = await Patient.findById(patientId).lean();
+      if (patient) patientContext = buildPatientInfo(patient);
+    }
+    const finalData = await finalizeNote({
+      transcriptFull: transcript,
+      patientContext,
+      specialty: specialty || "general-practice",
+      clinicType: clinicType || "human",
+      callId: callId || null,
+    });
+    if (finalData && patientId) {
+      try {
+        await ClinicalNote.create({
+          patient: patientId,
+          specialty: specialty || "general-practice",
+          clinicType: clinicType || "human",
+          encounterDate: new Date(),
+          encounterType: "phone",
+          subjective: finalData.subjective || "",
+          objective: finalData.objective || "",
+          assessment: finalData.assessment || "",
+          plan: finalData.plan || "",
+          diagnoses: finalData.diagnoses || [],
+          vitals: finalData.vitals || {},
+          createdBy: req.user?._id,
+        });
+      } catch (noteErr) {
+        console.error("[ambient] ClinicalNote save error:", noteErr.message);
+      }
+    }
+    res.json({ note: finalData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // AI clinical query
 router.post("/query", async (req, res) => {

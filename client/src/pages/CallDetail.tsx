@@ -6,6 +6,8 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import LiveNotePanel from "@/components/ambient/LiveNotePanel";
+import { useLiveNote } from "@/hooks/useLiveNote";
 import {
   ArrowLeft, Download, Phone, AlertTriangle, CheckCircle, XCircle,
   Clock, Mic, Brain, FileText, RotateCcw, Lightbulb, Activity,
@@ -60,6 +62,8 @@ export default function CallDetail() {
   const [confirmEmergency, setConfirmEmergency] = useState<"911" | "clinic" | null>(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferReason, setTransferReason] = useState("");
+
+  const { note: liveNote, isFinal: noteIsFinal, isLive: noteIsLive, lastUpdate } = useLiveNote(id);
 
   if (isLoading) return <p className="text-gray-500">Loading...</p>;
   if (!data?.call) return <p className="text-gray-500">Call not found</p>;
@@ -336,6 +340,17 @@ export default function CallDetail() {
           </Card>
         )}
       </div>
+
+      {(liveNote || (isInProgress && noteIsLive)) && (
+        <LiveNotePanel
+          note={liveNote}
+          isLive={noteIsLive}
+          isFinal={noteIsFinal}
+          lastUpdate={lastUpdate}
+          patientName={call.patient?.name}
+          onSign={noteIsFinal ? () => toast.success("Clinical note signed") : undefined}
+        />
+      )}
 
       {(isCompleted || call.audioUrl) && (
         <Card>

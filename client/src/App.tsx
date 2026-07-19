@@ -9,7 +9,7 @@ import Features from "@/pages/Features";
 import Pricing from "@/pages/Pricing";
 import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
+import Signup from "@/pages/SignupWizard";
 import Dashboard from "@/pages/Dashboard";
 import Patients from "@/pages/Patients";
 import PatientDetail from "@/pages/PatientDetail";
@@ -34,6 +34,9 @@ import LiveMonitoring from "@/pages/LiveMonitoring";
 import Admin from "@/pages/Admin";
 import PatientBooking from "@/pages/PatientBooking";
 import OnboardingGuide from "@/pages/OnboardingGuide";
+import AdminAvailability from "@/pages/AdminAvailability";
+import CalendarSettings from "@/pages/CalendarSettings";
+import MyProfile from "@/pages/MyProfile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -83,9 +86,9 @@ function AppRoutes() {
         <Route path="/templates" element={<MedicalTemplates />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/calendar" element={<CalendarSchedule />} />
+        <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/calls/:id" element={<CallDetail />} />
         <Route path="/users" element={<Navigate to="/clinic/users" replace />} />
-        <Route path="/settings" element={<Navigate to="/clinic/settings" replace />} />
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/voice-agent" element={<CallCenter />} />
@@ -102,6 +105,8 @@ function AppRoutes() {
 
         <Route path="/onboarding-guide" element={<OnboardingGuide />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/admin/availability" element={<AdminAvailability />} />
+        <Route path="/settings/calendar" element={<CalendarSettings />} />
         <Route path="/recordings" element={<Navigate to="/call-review" replace />} />
         <Route path="/ai-qa" element={<Navigate to="/call-review" replace />} />
       </Route>

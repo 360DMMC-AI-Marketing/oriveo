@@ -16,9 +16,11 @@ export default function PatientBooking() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<"loading" | "info" | "slots" | "confirm" | "done" | "error">("loading");
+  const [step, setStep] = useState<"loading" | "info" | "provider" | "slots" | "confirm" | "done" | "error">("loading");
   const [patient, setPatient] = useState<any>(null);
   const [organization, setOrganization] = useState<any>(null);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -33,7 +35,8 @@ export default function PatientBooking() {
       if (data.patient && data.organization) {
         setPatient(data.patient);
         setOrganization(data.organization);
-        setStep("info");
+        setProviders(data.providers || []);
+        setStep(data.providers?.length > 0 ? "provider" : "info");
         const today = new Date();
         today.setDate(today.getDate() + 1);
         setSelectedDate(today.toISOString().split("T")[0]);
@@ -51,14 +54,15 @@ export default function PatientBooking() {
     if (step !== "slots" || !selectedDate) return;
     setLoadingSlots(true);
     setSelectedSlot(null);
-    apiGet(`/booking-slots/${token}?date=${selectedDate}`).then((data) => {
+    const providerParam = selectedProvider ? `&provider=${selectedProvider}` : "";
+    apiGet(`/booking-slots/${token}?date=${selectedDate}${providerParam}`).then((data) => {
       setSlots(data.slots || []);
       setLoadingSlots(false);
     }).catch(() => {
       setSlots([]);
       setLoadingSlots(false);
     });
-  }, [selectedDate, step, token]);
+  }, [selectedDate, step, token, selectedProvider]);
 
   function handleContinue() {
     if (selectedDate) setStep("slots");
@@ -67,7 +71,7 @@ export default function PatientBooking() {
   async function handleBook() {
     if (!selectedSlot) return;
     setBooking(true);
-    const data = await apiPost("/book", { token, date: selectedDate, time: selectedSlot });
+    const data = await apiPost("/book", { token, date: selectedDate, time: selectedSlot, provider: selectedProvider || null });
     if (data.appointment) {
       setStep("done");
     } else {
@@ -141,6 +145,32 @@ export default function PatientBooking() {
         </div>
 
         <div className="rounded-xl border bg-white p-6 shadow-sm">
+          {step === "provider" && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+                  {patient?.name?.charAt(0) || "?"}
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">{patient?.name}</h2>
+                  <p className="text-sm text-gray-500">Choose a provider for your appointment</p>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Select Provider</label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {providers.map((p: any) => (
+                    <button key={p._id} onClick={() => { setSelectedProvider(p._id); setStep("info"); }}
+                      className={`rounded-lg border p-3 text-left transition-colors ${selectedProvider === p._id ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-gray-200 hover:border-gray-300"}`}>
+                      <span className="block text-sm font-medium text-gray-900">{p.name}</span>
+                      {p.specialty?.length > 0 && <span className="block text-xs text-gray-500">{p.specialty.join(", ")}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {step === "info" && (
             <div className="space-y-6">
               <div className="flex items-center gap-4">

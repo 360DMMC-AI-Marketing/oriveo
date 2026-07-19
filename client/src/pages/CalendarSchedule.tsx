@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Phone, Clock,
   Plus, User, X, AlertCircle, CheckCircle, ArrowRight, TrendingUp,
-  Activity, Loader2, Repeat, Pencil
+  Activity, Loader2, Repeat, Pencil, CheckCircle2, Link2Off
 } from "lucide-react";
 import { toast } from "sonner";
 import { medicalTemplates } from "@/data/medicalTemplates";
@@ -71,6 +71,39 @@ export default function CalendarSchedule() {
     if (max >= 4) return "medium";
     return "low";
   };
+
+  const [showGcal, setShowGcal] = useState(false);
+  const [gcalSyncing, setGcalSyncing] = useState(false);
+
+  const { data: gcalData } = useQuery({
+    queryKey: ["gcal-status"],
+    queryFn: () => api.get("/calendar/status").then((r) => r.data),
+    enabled: showGcal,
+    staleTime: 120000,
+  });
+
+  const disconnectGcalMutation = useMutation({
+    mutationFn: () => api.post("/calendar/disconnect"),
+    onSuccess: () => { toast.success("Google Calendar disconnected"); },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to disconnect"),
+  });
+
+  async function handleGcalConnect() {
+    try {
+      const { data } = await api.get("/calendar/auth-url");
+      if (data.url) { window.location.href = data.url; }
+      else { toast.error("Failed to get auth URL"); }
+    } catch (err: any) { toast.error(err?.response?.data?.message || "Failed to connect"); }
+  }
+
+  async function handleGcalSync() {
+    setGcalSyncing(true);
+    try {
+      const { data } = await api.post("/calendar/sync");
+      toast.success(`Synced: ${data.outboundCreated + data.outboundUpdated} out, ${data.inboundCreated + data.inboundUpdated} in`);
+    } catch (err: any) { toast.error(err?.response?.data?.message || "Sync failed"); }
+    finally { setGcalSyncing(false); }
+  }
 
   const todayStr = today.toISOString().split("T")[0];
 
@@ -372,6 +405,40 @@ export default function CalendarSchedule() {
               </div>
             </>
           )}
+          <div className="h-4 w-px bg-gray-200" />
+          <div className="relative">
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowGcal(!showGcal)}>
+              <CalendarIcon className={`h-3.5 w-3.5 ${gcalData?.connected ? "text-emerald-500" : "text-gray-400"}`} />
+              {gcalData?.connected ? "Calendar Synced" : "Google Calendar"}
+            </Button>
+            {showGcal && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg border bg-white shadow-lg p-3 space-y-2">
+                {gcalData?.connected ? (
+                  <>
+                    <div className="flex items-center gap-2 text-xs text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Connected {gcalData.email && <span className="text-gray-400">({gcalData.email})</span>}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleGcalSync} disabled={gcalSyncing}>
+                        {gcalSyncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarIcon className="h-3 w-3" />} Sync Now
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs text-red-500" onClick={() => disconnectGcalMutation.mutate()}>
+                        <Link2Off className="h-3 w-3" /> Disconnect
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500">Sync appointments with Google Calendar</p>
+                    <Button size="sm" className="w-full h-7 text-xs" onClick={handleGcalConnect}>
+                      <CalendarIcon className="h-3 w-3 mr-1" /> Connect Google Calendar
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

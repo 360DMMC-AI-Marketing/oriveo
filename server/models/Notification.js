@@ -8,7 +8,7 @@ const notificationSchema = new mongoose.Schema(
       enum: [
         "emergency", "high_severity", "inbound_received", "inbound_completed",
         "report_ready", "call_failed", "follow_up_needed", "appointment_reminder",
-        "system_alert", "call_transferred",
+        "system_alert", "call_transferred", "appointment_pending", "appointment_confirmed",
       ],
       required: true,
       index: true,

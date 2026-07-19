@@ -4,3 +4,6 @@
 [ERROR] 11:10:06 [autoNoShow] Connection to localhost:27017 interrupted due to server monitor timeout
 [ERROR] 11:42:45 [autoNoShow] Connection to localhost:27017 interrupted due to server monitor timeout
 [ERROR] 14:13:35 [autoNoShow] Connection to localhost:27017 interrupted due to server monitor timeout
+[ERROR] 17:45:03 [autoNoShow] Connection to localhost:27017 interrupted due to server monitor timeout
+[ERROR] 20:35:48 [autoNoShow] Connection pool for localhost:27017 was cleared because another operation failed with: "connection <monitor> to 127.0.0.1:27017 timed out"
+[ERROR] PUT /api/patients/6a46932c4d17e76834390e21: Expected property name or '}' in JSON at position 4 (line 2 column 3)

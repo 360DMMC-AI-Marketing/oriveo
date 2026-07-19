@@ -4,6 +4,7 @@ const appointmentSchema = new mongoose.Schema(
   {
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     patient: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
+    provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     call: { type: mongoose.Schema.Types.ObjectId, ref: "Call", default: null },
     bookedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     title: { type: String, required: true },
@@ -24,7 +25,14 @@ const appointmentSchema = new mongoose.Schema(
     notes: { type: String, default: "" },
     reminderSent: { type: Boolean, default: false },
     reminderScheduledAt: { type: Date, default: null },
+    reminders: [{
+      channel: { type: String, enum: ["email", "sms"] },
+      sentAt: { type: Date },
+      type: { type: String, enum: ["confirmation", "reminder", "followup"] },
+    }],
     googleCalendarEventId: { type: String, default: "" },
+    googleCalendarEventLink: { type: String, default: "" },
+    googleCalendarLastSynced: { type: Date, default: null },
     reason: { type: String, default: "" },
   },
   { timestamps: true }
@@ -33,8 +41,10 @@ const appointmentSchema = new mongoose.Schema(
 appointmentSchema.index({ organization: 1, date: -1 });
 appointmentSchema.index({ patient: 1, date: -1 });
 appointmentSchema.index({ date: 1, status: 1 });
+appointmentSchema.index({ provider: 1, date: 1 });
 appointmentSchema.index({ call: 1 });
 appointmentSchema.index({ bookedBy: 1, createdAt: -1 });
+appointmentSchema.index({ googleCalendarEventId: 1 });
 appointmentSchema.index({ title: "text", description: "text" });
 
 export default mongoose.model("Appointment", appointmentSchema);

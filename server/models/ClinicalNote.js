@@ -13,10 +13,18 @@ const medicationSchema = new mongoose.Schema({
   frequency: { type: String, default: "" },
 }, { _id: false });
 
+const assessmentScaleSchema = new mongoose.Schema({
+  scaleId: { type: String },
+  label: { type: String },
+  score: { type: String },
+  interpretation: { type: String },
+}, { _id: false });
+
 const clinicalNoteSchema = new mongoose.Schema({
   patient:     { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
   organization:{ type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
-  specialty:   { type: String, default: "general" },
+  specialty:   { type: String, default: "general-practice" },
+  clinicType:  { type: String, enum: ["human", "dental", "veterinary"], default: "human" },
 
   encounterDate: { type: Date, default: Date.now },
   encounterType: { type: String, enum: ["office", "telehealth", "phone", "home", "emergency"], default: "office" },
@@ -25,6 +33,10 @@ const clinicalNoteSchema = new mongoose.Schema({
   objective:    { type: String, default: "" },
   assessment:   { type: String, default: "" },
   plan:         { type: String, default: "" },
+
+  hpi:         { type: String, default: "" },
+  ros:         { type: String, default: "" },
+  physicalExam: { type: String, default: "" },
 
   diagnoses:    [diagnosisSchema],
   medications:  [medicationSchema],
@@ -37,7 +49,16 @@ const clinicalNoteSchema = new mongoose.Schema({
     temperature: { type: Number, default: null },
     weight:      { type: Number, default: null },
     spo2:        { type: Number, default: null },
+    respiratoryRate: { type: Number, default: null },
+    painScore:   { type: Number, default: null },
   },
+
+  assessmentScales: [assessmentScaleSchema],
+
+  imagingFindings:  { type: String, default: "" },
+  labResults:       { type: String, default: "" },
+  treatmentSummary: { type: String, default: "" },
+  medicalHistory:   { type: String, default: "" },
 
   followUp: {
     recommended: { type: Boolean, default: false },
@@ -53,6 +74,7 @@ const clinicalNoteSchema = new mongoose.Schema({
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   isActive:  { type: Boolean, default: true },
+  specialtySections: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 
 clinicalNoteSchema.index({ patient: 1, encounterDate: -1 });

@@ -9,6 +9,7 @@ import { queryKnowledgeBase } from "../services/knowledgeBase.js";
 import { scheduleRetry, cancelRetry } from "../services/callScheduler.js";
 import { protect, authorize } from "../middleware/auth.js";
 import confirmAppointments from "../utils/confirmAppointments.js";
+import { validateSlot } from "../utils/slotGenerator.js";
 
 const router = Router();
 
@@ -110,6 +111,26 @@ const voiceFunctions = [
     },
   },
   {
+    name: "get_upcoming_appointments",
+    description: "Look up the patient's upcoming scheduled appointments to tell them what appointments they have",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_available_slots",
+    description: "Check what appointment times are available on a given date",
+    parameters: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format" },
+      },
+      required: ["date"],
+    },
+  },
+  {
     name: "end_call",
     description: "End the current call politely",
     parameters: {
@@ -140,8 +161,62 @@ async function handleFunctionCall(callId, functionName, args) {
         }
         return { success: true, message: "I've noted that. You will not receive further calls from us." };
       }
+      case "get_upcoming_appointments": {
+        const callForAppts = await Call.findById(callId).populate("patient");
+        if (!callForAppts?.patient) return { error: "Patient not found" };
+        const upcomingAppts = await Appointment.find({
+          patient: callForAppts.patient._id,
+          date: { $gte: new Date() },
+          status: { $in: ["scheduled", "confirmed"] },
+        }).sort({ date: 1 }).limit(5).select("title date duration reason status");
+        if (upcomingAppts.length === 0) {
+          return { appointments: [], message: "No upcoming appointments found" };
+        }
+        return {
+          appointments: upcomingAppts.map((a) => ({
+            id: a._id.toString(),
+            title: a.title,
+            date: a.date.toISOString().split("T")[0],
+            time: a.date.toTimeString().slice(0, 5),
+            reason: a.reason || "",
+            status: a.status,
+          })),
+          message: `Found ${upcomingAppts.length} upcoming appointment(s)`,
+        };
+      }
+
+      case "get_available_slots": {
+        const callForSlots = await Call.findById(callId);
+        const orgId = callForSlots?.organization || (await (await import("../models/Patient.js")).default.findById(callData.patientId))?.organization;
+        if (!orgId) return { error: "Organization not found" };
+        const { getAvailableSlots } = await import("../utils/slotGenerator.js");
+        const slots = await getAvailableSlots(orgId, args.date, null);
+        if (slots.length === 0) {
+          return { slots: [], message: "No available slots on this date" };
+        }
+        return {
+          slots: slots.map((s) => ({ time: s.time, endTime: s.endTime })),
+          date: args.date,
+          message: `Available times on ${args.date}: ${slots.map((s) => s.time).join(", ")}`,
+        };
+      }
+
       case "schedule_appointment": {
         const call = await Call.findById(callId).populate("patient");
+        const orgId = call?.organization || callData.organizationId;
+        if (!orgId) return { error: "Organization not found" };
+
+        if (args.date && args.time) {
+          const check = await validateSlot(orgId, args.date, args.time, 30, null);
+          if (!check.valid) {
+            return {
+              error: "Slot not available",
+              message: `That time is not available. Try: ${check.alternatives?.join(", ") || "a different time"}`,
+              alternatives: check.alternatives,
+            };
+          }
+        }
+
         if (call) {
           call.nextAppointmentDate = new Date(args.date);
           call.nextAppointmentPlace = args.place;
@@ -152,6 +227,7 @@ async function handleFunctionCall(callId, functionName, args) {
           : new Date(args.date);
         const appointment = await Appointment.create({
           patient: call?.patient?._id || callData.patientId,
+          organization: orgId,
           call: callId,
           title: `Follow-up: ${args.reason || "Checkup"}`,
           date: appointmentDate,
@@ -170,6 +246,18 @@ async function handleFunctionCall(callId, functionName, args) {
       case "reschedule_appointment": {
         const existing = await Appointment.findById(args.appointmentId);
         if (!existing) return { error: "Appointment not found" };
+
+        if (args.newDate && args.newTime) {
+          const check = await validateSlot(existing.organization, args.newDate, args.newTime, existing.duration || 30, existing.provider);
+          if (!check.valid) {
+            return {
+              error: "Slot not available",
+              message: `That time is not available. Try: ${check.alternatives?.join(", ") || "a different time"}`,
+              alternatives: check.alternatives,
+            };
+          }
+        }
+
         const newDate = args.newTime
           ? new Date(`${args.newDate}T${args.newTime}:00`)
           : new Date(args.newDate);

@@ -417,6 +417,7 @@ export class VoiceAgent {
       const message = choice.message;
 
       if (message.tool_calls && message.tool_calls.length > 0) {
+        this.addToHistory("assistant", message.content || "");
         for (const toolCall of message.tool_calls) {
           const fnName = toolCall.function.name;
           const fnArgs = JSON.parse(toolCall.function.arguments);
@@ -424,8 +425,41 @@ export class VoiceAgent {
           if (fnDef && this.onFunctionCall) {
             const result = await this.onFunctionCall(fnName, fnArgs);
             this.callbacks.onFunctionExecuted({ name: fnName, args: fnArgs, result });
-            this.addToHistory("assistant", `[Called function: ${fnName}]`);
+
+            messages.push({
+              role: "assistant",
+              content: null,
+              tool_calls: [{
+                id: toolCall.id,
+                type: "function",
+                function: { name: fnName, arguments: JSON.stringify(fnArgs) },
+              }],
+            });
+
+            messages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(result),
+            });
           }
+        }
+
+        try {
+          const followUpResponse = await withRetry("ai-chat", () => client.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages,
+            temperature: 0.7,
+            max_tokens: 250,
+          }), { retries: 1, backoff: 500 });
+
+          const followUpMessage = followUpResponse.choices[0]?.message;
+          if (followUpMessage?.content) {
+            this.addToHistory("assistant", followUpMessage.content);
+            this.callbacks.onResponse(followUpMessage.content);
+            await this.synthesizeSpeech(followUpMessage.content);
+          }
+        } catch (followUpError) {
+          this.callbacks.onError("Follow-up response failed");
         }
         return;
       }

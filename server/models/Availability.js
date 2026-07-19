@@ -8,6 +8,7 @@ const availabilitySchema = new mongoose.Schema({
   slotDuration: { type: Number, default: 30 },
   bufferBetween: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
+  isDefault: { type: Boolean, default: true },
 }, { timestamps: true });
 
 availabilitySchema.index({ organization: 1, dayOfWeek: 1 });

@@ -3,6 +3,7 @@ import { queryKnowledgeBase } from "./knowledgeBase.js";
 import { handleFunctionCall, voiceFunctions } from "../routes/voice.js";
 import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
+import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
@@ -12,8 +13,10 @@ import { notifyForCall } from "./notificationService.js";
 import {
   createStreamState, createSharedCallbacks, attachDeepgramHandlers,
   attachWsHandlers, saveTranscript as sharedSaveTranscript, buildPatientInfo,
-  getTwilioClient,
+  enrichPatientInfoWithAppointments, getTwilioClient,
 } from "./mediaStreamCommon.js";
+import { generateLiveNoteChunk, finalizeNote } from "./ambientNoteGenerator.js";
+import { getIo } from "./socketManager.js";
 
 const INBOUND_SYSTEM_PROMPT = `You are a warm, compassionate medical assistant working at a healthcare provider's office. A patient has called in for a health checkup.
 
@@ -58,6 +61,9 @@ export async function handleInboundMediaStream(ws, req) {
   let patientIdentified = false;
   let identifyAttempts = 0;
   let patientIdentifyTimeout = null;
+  let currentLiveNote = null;
+  let ambientInterval = null;
+  let lastAmbientTranscript = "";
 
   try {
     const call = await Call.findById(callId);
@@ -100,6 +106,48 @@ export async function handleInboundMediaStream(ws, req) {
     }),
   });
 
+  function startAmbientInterval() {
+    if (ambientInterval) return;
+    ambientInterval = setInterval(async () => {
+      if (!ctx.connectionAlive || !patientIdentified) return;
+      const fullTranscript = agent.conversationHistory.map((h) => `${h.role}: ${h.content}`).join("\n").trim();
+      if (!fullTranscript || fullTranscript === lastAmbientTranscript) return;
+      lastAmbientTranscript = fullTranscript;
+      let specialty = patientForCall?.specialty || "general-practice";
+      let clinicType = "human";
+      if (patientForCall?.patientType === "pet") clinicType = "veterinary";
+      const dentalSpecialties = ["general-dentistry", "orthodontics", "endodontics", "periodontics", "oral-surgery", "prosthodontics", "pediatric-dentistry"];
+      if (dentalSpecialties.includes(specialty)) clinicType = "dental";
+      try {
+        const note = await generateLiveNoteChunk({
+          transcriptSoFar: fullTranscript,
+          previousNote: currentLiveNote,
+          patientContext: buildPatientInfo(patientForCall),
+          specialty,
+          clinicType,
+        });
+        if (note) {
+          currentLiveNote = note;
+          const io = getIo();
+          if (io) {
+            io.to(`call:${callId}`).to("supervisor-room").emit("call:note-update", {
+              callId,
+              note,
+              timestamp: Date.now(),
+              isFinal: false,
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`[ambient:${callId}] Note generation error:`, err.message);
+      }
+    }, 30000);
+  }
+
+  if (patientIdentified) {
+    startAmbientInterval();
+  }
+
   registerCall(callId, { callSid: null, streamSid: ctx.streamSid });
 
   const dgConnection = createLiveTranscription({
@@ -119,6 +167,9 @@ export async function handleInboundMediaStream(ws, req) {
       onBeforeProcessTranscript: async (fullText) => {
         if (!patientIdentified) {
           await handlePatientIdentification(fullText, callId, agent);
+          if (patientIdentified && !ambientInterval) {
+            startAmbientInterval();
+          }
           return true;
         }
         agent.processTranscript(fullText);
@@ -162,11 +213,67 @@ export async function handleInboundMediaStream(ws, req) {
     },
     cleanup,
     onWsClose: async () => {
+      if (currentLiveNote) {
+        const fullTranscript = agent.conversationHistory.map((h) => `${h.role}: ${h.content}`).join("\n").trim();
+        let specialty = patientForCall?.specialty || "general-practice";
+        let clinicType = "human";
+        if (patientForCall?.patientType === "pet") clinicType = "veterinary";
+        const dentalSpecialties = ["general-dentistry", "orthodontics", "endodontics", "periodontics", "oral-surgery", "prosthodontics", "pediatric-dentistry"];
+        if (dentalSpecialties.includes(specialty)) clinicType = "dental";
+        try {
+          const finalData = await finalizeNote({
+            transcriptFull: fullTranscript,
+            patientContext: buildPatientInfo(patientForCall),
+            specialty,
+            clinicType,
+            callId,
+          });
+          if (finalData) {
+            currentLiveNote = { ...currentLiveNote, ...finalData };
+            const io = getIo();
+            if (io) {
+              io.to(`call:${callId}`).to("supervisor-room").emit("call:note-update", {
+                callId,
+                note: currentLiveNote,
+                timestamp: Date.now(),
+                isFinal: true,
+              });
+            }
+            try {
+              const { default: ClinicalNote } = await import("../models/ClinicalNote.js");
+              await ClinicalNote.create({
+                patient: patientForCall?._id,
+                organization: patientForCall?.organization || null,
+                specialty,
+                clinicType,
+                encounterDate: new Date(),
+                encounterType: "phone",
+                subjective: finalData.subjective || "",
+                objective: finalData.objective || "",
+                assessment: finalData.assessment || "",
+                plan: finalData.plan || "",
+                diagnoses: finalData.diagnoses || [],
+                vitals: finalData.vitals || {},
+                createdBy: null,
+              });
+              console.log(`[ambient:${callId}] ClinicalNote saved`);
+            } catch (noteErr) {
+              console.error(`[ambient:${callId}] ClinicalNote save error:`, noteErr.message);
+            }
+          }
+        } catch (err) {
+          console.error(`[ambient:${callId}] Finalize error:`, err.message);
+        }
+      }
       await sharedSaveTranscript(callId, agent.conversationHistory);
     },
   });
 
   function cleanup() {
+    if (ambientInterval) {
+      clearInterval(ambientInterval);
+      ambientInterval = null;
+    }
     agent.reset();
     removeCall(callId);
     if (patientIdentifyTimeout) {
@@ -203,6 +310,7 @@ async function handlePatientIdentification(text, callId, agent) {
 
       agent.patientName = match.name;
       agent.patientInfo = buildPatientInfo(match);
+      enrichPatientInfoWithAppointments(match._id, agent.patientInfo).then((enriched) => { agent.patientInfo = enriched; });
 
       try {
         const defaultQ = await Questionnaire.findOne({ isDefault: true }) || await Questionnaire.findOne({}).sort({ createdAt: -1 });
