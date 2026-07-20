@@ -101,7 +101,10 @@ export default function SignupWizard() {
   const typeColorClass = form.clinicType ? CLINIC_TYPE_COLORS[form.clinicType] || "bg-gray-100 text-gray-600" : "bg-gray-100 text-gray-600";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-blue-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-blue-50 p-4">
+      <a href="/" className="self-start mb-4 text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
+        <ArrowLeft className="h-4 w-4" /> Back to website
+      </a>
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-2">

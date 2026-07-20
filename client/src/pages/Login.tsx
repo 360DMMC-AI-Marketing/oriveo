@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Stethoscope } from "lucide-react";
+import { ArrowLeft, Stethoscope } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -27,7 +27,10 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-light to-white p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary-light to-white p-4">
+      <a href="/" className="self-start mb-4 text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
+        <ArrowLeft className="h-4 w-4" /> Back to website
+      </a>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">

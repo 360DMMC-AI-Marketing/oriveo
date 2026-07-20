@@ -40,6 +40,18 @@ const featureGroups = [
     ],
   },
   {
+    title: "Dashboard & Clinical Intelligence",
+    description: "Specialty-aware dashboards, condition-detection, and real-time clinical intelligence at your fingertips.",
+    features: [
+      { icon: Activity, title: "Specialty-Aware Dashboard", description: "28 specialty-specific dashboards (cardiology, neurology, dentistry, veterinary, etc.) with widgets, terminology, and metrics tailored to each field." },
+      { icon: Brain, title: "Condition-Aware Question Engine", description: "Over 100 condition-specific sub-templates across all specialties. Auto-detects conditions from patient speech and loads the right questions instantly." },
+      { icon: Mic, title: "Call Reports & Transcripts", description: "Every call gets an AI-generated summary, severity score (0–10), full transcript with Q&A timestamps, and CPT medical coding suggestions." },
+      { icon: Award, title: "Automated QA Scoring", description: "Calls are scored on accuracy, empathy, professionalism, adherence, and resolution. Triage tiers (T0 Emergency – T3 Stable) and strengths/weaknesses analysis." },
+      { icon: Radio, title: "Real-Time Live Monitoring", description: "Supervisor dashboard with WebSocket-streamed transcripts, live severity updates, emergency alerts, and mid-call intervention controls." },
+      { icon: Shield, title: "Emergency Detection & Response", description: "Tier-0 red flag keyword detection, crisis pathway activation, automatic 911 dialing, clinic alerting, and audible emergency alarms." },
+    ],
+  },
+  {
     title: "Enterprise Platform",
     description: "Scalable, secure infrastructure built for healthcare organizations of any size.",
     features: [

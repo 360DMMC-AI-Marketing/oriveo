@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Shield, Star, Quote, Award, Clock, Phone, Calendar, Activity, BarChart3, CheckCircle, ChevronRight } from "lucide-react";
+import { ArrowRight, Shield, Star, Quote, Award, Clock, Phone, Calendar, Activity, BarChart3, CheckCircle, ChevronRight, Siren, Radio, FileText, Users, Brain } from "lucide-react";
 
 const stats = [
   { value: "23+", label: "Years in Healthcare IT" },
@@ -246,6 +246,50 @@ export default function Landing() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Dashboard Showcase */}
+      <section className="py-24 bg-white">
+        <div className="mx-auto max-w-7xl px-8">
+          <div className="mx-auto max-w-2xl text-center mb-4">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">Dashboard</span>
+            <h2 className="mt-4 text-3xl font-bold text-gray-900">What you see when you log in</h2>
+            <p className="mt-4 text-gray-500 leading-relaxed">
+              Every dashboard is tailored to your specialty with real-time intelligence, condition-aware workflows, and actionable insights.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-16">
+            {[
+              { icon: Activity, title: "Specialty-Aware Dashboard", description: "Cardiology, neurology, dentistry, veterinary, and 28 more — each with specialty-specific widgets, metrics, and clinical terminology built in." },
+              { icon: Brain, title: "Condition-Specific Templates", description: "100+ condition sub-templates auto-load per call. A chest-pain patient gets MI-specific questions — not generic cardiology ones." },
+              { icon: Phone, title: "AI Voice Agent", description: "Outbound and inbound AI calling with natural conversation, 10+ languages, automatic language detection, and human handoff when needed." },
+              { icon: Siren, title: "Emergency Detection", description: "Real-time red flag detection, crisis pathway activation, tier-0 emergency alerts, and one-click 911 or clinic dispatch from the dashboard." },
+              { icon: BarChart3, title: "Severity Scoring & QA", description: "Every call gets a severity score (0–10), automated QA on accuracy/empathy/professionalism, triage tiers, and CPT coding suggestions." },
+              { icon: Radio, title: "Live Call Monitoring", description: "Supervisor dashboard with real-time transcript streaming, live severity updates, and the ability to intervene or transfer calls mid-conversation." },
+              { icon: FileText, title: "AI Clinical Notes (SOAP)", description: "Ambient clinical intelligence generates structured SOAP notes with ICD-10 codes, medications, and lab orders — signed digitally." },
+              { icon: Users, title: "Patient Management", description: "Complete patient records with PHI-grade encryption, medical history, chronic conditions, medication tracking, and do-not-call controls." },
+              { icon: Calendar, title: "Batch Campaigns & Scheduling", description: "Schedule batch campaigns to hundreds of patients, use condition-matched questionnaires, or let AI generate questions on the fly." },
+            ].map((f) => (
+              <Card key={f.title} className="border border-gray-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-5">
+                    <f.icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{f.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <Button size="lg" className="h-13 px-8 text-base bg-primary hover:bg-primary-dark" onClick={() => navigate("/signup")}>
+              Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <p className="mt-3 text-sm text-gray-400">No credit card required. HIPAA compliant. Deploy in 3 days.</p>
           </div>
         </div>
       </section>
