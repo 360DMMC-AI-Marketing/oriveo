@@ -4,7 +4,7 @@ import Call from "../models/Call.js";
 import CallEvent from "../models/CallEvent.js";
 import Report from "../models/Report.js";
 
-const MONGO_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/statvox";
+const MONGO_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/oriveo";
 
 const AUDIT_ACTIONS = [
   "patient.viewed", "patient.updated", "patient.created",
