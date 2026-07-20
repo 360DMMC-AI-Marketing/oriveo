@@ -381,29 +381,29 @@ export default function SignupWizard() {
                 links: [
                   { label: "Overview", to: "/features" },
                   { label: "Features", to: "/features" },
-                  { label: "Integrations", to: "/contact" },
-                  { label: "Security", to: "/contact" },
-                  { label: "Compliance", to: "/contact" },
+                  { label: "Integrations", to: "/integrations" },
+                  { label: "Security", to: "/security" },
+                  { label: "Compliance", to: "/compliance" },
                 ],
               },
               {
                 title: "Resources",
                 links: [
-                  { label: "Documentation", to: "/contact" },
-                  { label: "API Reference", to: "/contact" },
-                  { label: "Case Studies", to: "/contact" },
-                  { label: "Whitepapers", to: "/contact" },
-                  { label: "Blog", to: "/contact" },
+                  { label: "Documentation", to: "/documentation" },
+                  { label: "API Reference", to: "/api-reference" },
+                  { label: "Case Studies", to: "/case-studies" },
+                  { label: "Whitepapers", to: "/whitepapers" },
+                  { label: "Blog", to: "/blog" },
                 ],
               },
               {
                 title: "Company",
                 links: [
-                  { label: "About Us", to: "/contact" },
-                  { label: "Leadership", to: "/contact" },
-                  { label: "Careers", to: "/contact" },
+                  { label: "About Us", to: "/about-us" },
+                  { label: "Leadership", to: "/leadership" },
+                  { label: "Careers", to: "/careers" },
                   { label: "Contact", to: "/contact" },
-                  { label: "Partners", to: "/contact" },
+                  { label: "Partners", to: "/partners" },
                 ],
               },
             ].map((col) => (
@@ -420,10 +420,10 @@ export default function SignupWizard() {
           <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
             <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="/contact" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
-              <a href="/contact" className="hover:text-gray-300 transition-colors">Terms of Service</a>
-              <a href="/contact" className="hover:text-gray-300 transition-colors">HIPAA Notice</a>
-              <a href="/contact" className="hover:text-gray-300 transition-colors">SLA</a>
+              <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
+              <a href="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms of Service</a>
+              <a href="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA Notice</a>
+              <a href="/sla" className="hover:text-gray-300 transition-colors">SLA</a>
             </div>
           </div>
         </div>
