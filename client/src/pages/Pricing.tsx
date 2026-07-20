@@ -43,7 +43,7 @@ export default function Pricing() {
       <div className="max-w-6xl mx-auto px-4 pt-28 pb-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-3">Simple, transparent pricing</h1>
-          <p className="text-gray-500 text-lg">Start with a free trial. No credit card required.</p>
+          <p className="text-gray-500 text-lg">Enterprise pricing tailored to your organization.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {plans.map(p => (
@@ -56,7 +56,7 @@ export default function Pricing() {
                 <span className="text-gray-400 text-sm">{p.period}</span>
               </div>
               <Link to="/signup">
-                <Button className={`w-full mb-6 ${p.popular ? "" : "variant-outline"}`}>{p.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}</Button>
+                <Button className={`w-full mb-6 ${p.popular ? "" : "variant-outline"}`}>{p.name === "Enterprise" ? "Contact Sales" : "Get Started"}</Button>
               </Link>
               <ul className="space-y-2.5">
                 {p.features.map(f => (
@@ -70,6 +70,22 @@ export default function Pricing() {
           ))}
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 bg-gray-50 py-8">
+        <div className="mx-auto max-w-7xl px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white font-bold text-xs">O</div>
+            <span className="text-sm font-bold text-gray-900">Oriveo</span>
+            <span className="text-xs text-gray-400">Healthcare Platform</span>
+          </div>
+          <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-sm text-gray-400">
+            <a href="/contact" className="hover:text-gray-600 transition-colors">Privacy Policy</a>
+            <a href="/contact" className="hover:text-gray-600 transition-colors">Terms of Service</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

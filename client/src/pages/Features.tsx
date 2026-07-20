@@ -133,7 +133,7 @@ export default function Features() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-3xl px-8 text-center">
           <h2 className="text-4xl font-bold text-white">Ready to get started?</h2>
-          <p className="mt-6 text-lg text-gray-400">Try Oriveo free. No credit card required.</p>
+          <p className="mt-6 text-lg text-gray-400">Purpose-built for healthcare. Enterprise-grade. HIPAA compliant.</p>
           <Button size="lg" className="mt-10 h-14 px-10 text-base shadow-2xl shadow-primary/30 bg-gradient-to-r from-primary to-primary-dark" onClick={() => navigate("/contact")}>
             Request a Demo <ArrowRight className="ml-2 h-5 w-5" />
           </Button>

@@ -91,7 +91,6 @@ export default function Landing() {
                 </Button>
               </div>
               <div className="mt-12 flex items-center gap-6 text-sm text-gray-500">
-                <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> No credit card</span>
                 <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> HIPAA compliant</span>
                 <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> 3-day deployment</span>
               </div>
@@ -287,9 +286,9 @@ export default function Landing() {
 
           <div className="mt-12 text-center">
             <Button size="lg" className="h-13 px-8 text-base bg-primary hover:bg-primary-dark" onClick={() => navigate("/signup")}>
-              Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
+              Request a Demo <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <p className="mt-3 text-sm text-gray-400">No credit card required. HIPAA compliant. Deploy in 3 days.</p>
+            <p className="mt-3 text-sm text-gray-400">HIPAA compliant. Enterprise-grade. Deploy in 3 days.</p>
           </div>
         </div>
       </section>
@@ -383,7 +382,7 @@ export default function Landing() {
               Sign In to Existing Account
             </Button>
           </div>
-          <p className="mt-6 text-sm text-gray-500">Free trial available. No credit card required. HIPAA compliant.</p>
+          <p className="mt-6 text-sm text-gray-500">HIPAA compliant. Enterprise-grade security. Deploy in 3 days.</p>
         </div>
       </section>
 

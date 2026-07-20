@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Stethoscope } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Stethoscope, Shield } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,11 +29,31 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary-light to-white p-4">
-      <a href="/" className="self-start mb-4 text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
-        <ArrowLeft className="h-4 w-4" /> Back to website
-      </a>
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Nav */}
+      <header className="border-b border-gray-100 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-primary text-white font-bold text-lg">O</div>
+            <div>
+              <span className="text-lg font-bold text-gray-900 tracking-tight">Oriveo</span>
+              <span className="ml-3 text-xs text-gray-400 font-medium uppercase tracking-wider">Healthcare Platform</span>
+            </div>
+          </div>
+          <div className="hidden lg:flex items-center gap-8">
+            <a href="/features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
+            <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+            <a href="/contact" className="text-sm text-primary font-medium transition-colors">Contact</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => navigate("/signup")} className="text-sm font-medium">Sign up</Button>
+            <Button onClick={() => navigate("/contact")} className="bg-primary hover:bg-primary-dark text-sm px-5">Request a Demo</Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
             <Stethoscope className="h-8 w-8 text-white" />
@@ -78,8 +100,25 @@ export default function Login() {
               </a>
             </p>
           </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 bg-gray-50 py-8">
+        <div className="mx-auto max-w-7xl px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white font-bold text-xs">O</div>
+            <span className="text-sm font-bold text-gray-900">Oriveo</span>
+            <span className="text-xs text-gray-400">Healthcare Platform</span>
+          </div>
+          <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-sm text-gray-400">
+            <a href="/contact" className="hover:text-gray-600 transition-colors">Privacy Policy</a>
+            <a href="/contact" className="hover:text-gray-600 transition-colors">Terms of Service</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
