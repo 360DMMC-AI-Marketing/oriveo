@@ -1,4 +1,5 @@
 import { REPORT_TEMPLATES } from "./reportTemplates.js";
+import { getConditionQuestions, detectCondition, getAllConditionKeys, getConditionNames } from "./specialtyConditions.js";
 
 export const SPECIALTY_TEMPLATES = {
   "general-practice": {
@@ -494,3 +495,17 @@ export function getSpecialtyForKeywords(text) {
   }
   return bestMatch;
 }
+
+export function getQuestionsForCall(specialty, clinicType, patientTranscript = "") {
+  const resolved = resolveSpecialty(specialty, clinicType);
+  const conditionKey = patientTranscript ? detectCondition(resolved, patientTranscript) : null;
+  if (conditionKey) {
+    const conditionQuestions = getConditionQuestions(resolved, conditionKey);
+    if (conditionQuestions) {
+      return { questions: conditionQuestions.questions, condition: conditionKey, template: conditionQuestions.name };
+    }
+  }
+  return { questions: SPECIALTY_TEMPLATES[resolved]?.questions || SPECIALTY_TEMPLATES["general-practice"].questions, condition: null, template: null };
+}
+
+export { getConditionQuestions, detectCondition, getAllConditionKeys, getConditionNames }; 

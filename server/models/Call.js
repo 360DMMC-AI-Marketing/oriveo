@@ -73,6 +73,8 @@ const callSchema = new mongoose.Schema(
     verificationAttempts: { type: Number, default: 0 },
     transferReason: { type: String, default: "" },
     customQuestions: [{ type: String }],
+    conditionKey: { type: String, default: null },
+    conditionName: { type: String, default: null },
     qaScore: { type: qaScoreSchema, default: null },
     emotionalState: {
       primary: { type: String, default: "neutral" },

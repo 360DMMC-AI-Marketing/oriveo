@@ -3,7 +3,7 @@ import { queryKnowledgeBase } from "./knowledgeBase.js";
 import { handleFunctionCall, voiceFunctions } from "../routes/voice.js";
 import Call from "../models/Call.js";
 import Appointment from "../models/Appointment.js";
-import { getSpecialtyQuestions, resolveSpecialty } from "../config/specialtyTemplates.js";
+import { getQuestionsForCall, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
 import { createLiveTranscription } from "./deepgram.js";
@@ -74,9 +74,9 @@ export async function handleMediaStream(ws, req) {
       } else if (call.patient) {
         const spec = call.patient.specialty || "general";
         const clinicType = call.patient.patientType || "human";
-        const specialtyQs = getSpecialtyQuestions(spec, clinicType);
-        if (specialtyQs && specialtyQs.length > 0) {
-          questions = [...specialtyQs];
+        const result = getQuestionsForCall(spec, clinicType, call.summary || "");
+        if (result.questions && result.questions.length > 0) {
+          questions = [...result.questions];
         }
       }
       if (call.customQuestions?.length > 0) {

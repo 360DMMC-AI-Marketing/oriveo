@@ -5,7 +5,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
-import { getSpecialtyQuestions, resolveSpecialty } from "../config/specialtyTemplates.js";
+import { getQuestionsForCall, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
 import { createLiveTranscription } from "./deepgram.js";
@@ -317,9 +317,14 @@ async function handlePatientIdentification(text, callId, agent) {
         const patientForQ = await Patient.findById(match._id);
         const spec = patientForQ?.specialty || "general";
         const clinicType = patientForQ?.patientType || "human";
-        const specialtyQs = getSpecialtyQuestions(spec, clinicType);
-        if (specialtyQs && specialtyQs.length > 0) {
-          agent.questions = specialtyQs;
+        const transcriptSoFar = agent.transcript?.join(" ") || "";
+        const result = getQuestionsForCall(spec, clinicType, transcriptSoFar);
+        if (result.questions && result.questions.length > 0) {
+          agent.questions = result.questions;
+          if (result.condition) {
+            agent.conditionKey = result.condition;
+            agent.conditionName = result.template;
+          }
         } else {
           const defaultQ = await Questionnaire.findOne({ isDefault: true }) || await Questionnaire.findOne({}).sort({ createdAt: -1 });
           if (defaultQ?.questions) {

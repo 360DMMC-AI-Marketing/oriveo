@@ -4,7 +4,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
-import { getSpecialtyQuestions, resolveSpecialty } from "../config/specialtyTemplates.js";
+import { getQuestionsForCall, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { VoiceAgent } from "../services/voiceAgent.js";
 import { queryKnowledgeBase } from "../services/knowledgeBase.js";
 import { scheduleRetry, cancelRetry } from "../services/callScheduler.js";
@@ -383,7 +383,7 @@ router.post("/twilio/incoming", async (req, res) => {
 
   const spec = patient.specialty || "general";
   const clinicType = patient.patientType || "human";
-  const specialtyQs = getSpecialtyQuestions(spec, clinicType);
+  const result = getQuestionsForCall(spec, clinicType, patient.chiefComplaint || "");
 
   let call = await Call.findOne({ twilioCallSid: callSid });
   if (!call) {
@@ -395,7 +395,9 @@ router.post("/twilio/incoming", async (req, res) => {
       twilioCallSid: callSid,
       language: patient.language || "en",
       questionnaire: null,
-      customQuestions: specialtyQs || [],
+      customQuestions: result.questions || [],
+      conditionKey: result.condition || null,
+      conditionName: result.template || null,
       summary: `Inbound call from ${patient.name}`,
     });
   }
