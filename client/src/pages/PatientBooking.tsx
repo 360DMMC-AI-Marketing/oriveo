@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Clock, CheckCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 const API = "";
 
@@ -137,8 +138,8 @@ export default function PatientBooking() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="mx-auto max-w-2xl px-4 py-12">
         <div className="mb-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white text-lg font-bold">
-            O
+          <div className="flex justify-center">
+            <Logo size="lg" showText={false} />
           </div>
           <h1 className="mt-3 text-xl font-bold text-gray-900">{organization?.name || "Clinic"}</h1>
           <p className="text-sm text-gray-500">Book or reschedule your appointment</p>

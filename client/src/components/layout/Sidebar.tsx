@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import Logo from "@/components/ui/Logo";
 import {
   LayoutDashboard, Users, Phone, Settings, LogOut, Stethoscope,
   UserPlus, ClipboardList, Bot, BarChart3, BookOpen, ShieldCheck,
@@ -94,7 +95,7 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r bg-white">
       <div className="flex items-center gap-3 border-b px-6 py-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white font-bold text-lg">O</div>
+        <Logo size="md" variant="dark" showText={false} />
         <div>
           <h1 className="text-lg font-bold text-gray-900">Oriveo</h1>
           <p className="text-xs text-gray-500">{subtitle}</p>

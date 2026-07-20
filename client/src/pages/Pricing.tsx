@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Sparkles, ArrowLeft } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 const plans = [
   {
@@ -25,8 +26,7 @@ export default function Pricing() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold text-lg shadow-lg shadow-primary/20">O</div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight">Oriveo</span>
+            <Logo size="md" variant="dark" />
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Features</a>
@@ -76,13 +76,7 @@ export default function Pricing() {
         <div className="mx-auto max-w-7xl px-8">
           <div className="grid gap-8 md:grid-cols-5">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded bg-primary text-white font-bold text-sm">O</div>
-                <div>
-                  <span className="font-bold text-white">Oriveo</span>
-                  <span className="ml-2 text-xs text-gray-500 uppercase tracking-wider">Healthcare Platform</span>
-                </div>
-              </div>
+              <Logo size="sm" variant="light" />
               <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
                 The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
               </p>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Building2, User, CreditCard, ArrowRight, ArrowLeft, Loader2, Sparkles, Stethoscope, PawPrint, HeartPulse, Brain, Activity } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 import { PROFESSIONS } from "@/data/professions";
 
 const PROFESSION_ICONS: Record<string, any> = {
@@ -58,7 +59,7 @@ export default function Signup() {
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-2">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white font-bold text-2xl shadow-lg shadow-primary/20">O</div>
+            <Logo size="xl" showText={false} />
           </div>
           <CardTitle className="text-2xl">Get started with Oriveo</CardTitle>
           <p className="text-sm text-gray-500 mt-1">AI-powered triage for your clinic</p>

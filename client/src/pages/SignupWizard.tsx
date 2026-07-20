@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import Logo from "@/components/ui/Logo";
 import {
   Building2, User, ArrowRight, ArrowLeft, Loader2, Sparkles,
   HeartPulse, Smile, Dog, Stethoscope, Users, Check,
@@ -106,11 +107,7 @@ export default function SignupWizard() {
       <header className="border-b border-gray-100 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="flex h-10 w-10 items-center justify-center rounded bg-primary text-white font-bold text-lg">O</div>
-            <div>
-              <span className="text-lg font-bold text-gray-900 tracking-tight">Oriveo</span>
-              <span className="ml-3 text-xs text-gray-400 font-medium uppercase tracking-wider">Healthcare Platform</span>
-            </div>
+            <Logo size="md" variant="dark" />
           </div>
           <div className="hidden lg:flex items-center gap-8">
             <a href="/features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
@@ -127,9 +124,9 @@ export default function SignupWizard() {
       <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-emerald-50 via-white to-blue-50">
         <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center pb-2">
-          <div className="flex justify-center mb-2">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white font-bold text-2xl shadow-lg shadow-primary/20">O</div>
-          </div>
+            <div className="flex justify-center mb-2">
+              <Logo size="xl" showText={false} />
+            </div>
           <CardTitle className="text-2xl">Set up your clinic</CardTitle>
           <p className="text-sm text-gray-500 mt-1">AI-powered triage tailored to your practice</p>
         </CardHeader>
@@ -364,13 +361,7 @@ export default function SignupWizard() {
         <div className="mx-auto max-w-7xl px-8">
           <div className="grid gap-8 md:grid-cols-5">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded bg-primary text-white font-bold text-sm">O</div>
-                <div>
-                  <span className="font-bold text-white">Oriveo</span>
-                  <span className="ml-2 text-xs text-gray-500 uppercase tracking-wider">Healthcare Platform</span>
-                </div>
-              </div>
+              <Logo size="sm" variant="light" />
               <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
                 The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
               </p>
