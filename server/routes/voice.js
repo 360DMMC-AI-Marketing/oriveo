@@ -4,6 +4,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
+import { getSpecialtyQuestions, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { VoiceAgent } from "../services/voiceAgent.js";
 import { queryKnowledgeBase } from "../services/knowledgeBase.js";
 import { scheduleRetry, cancelRetry } from "../services/callScheduler.js";
@@ -380,10 +381,9 @@ router.post("/twilio/incoming", async (req, res) => {
     status: "scheduled",
   }).sort({ date: 1 }).limit(1);
 
-  const defaultQuestionnaire = await Questionnaire.findOne({
-    isDefault: true,
-    isActive: true,
-  }).sort({ createdAt: -1 }).limit(1);
+  const spec = patient.specialty || "general";
+  const clinicType = patient.patientType || "human";
+  const specialtyQs = getSpecialtyQuestions(spec, clinicType);
 
   let call = await Call.findOne({ twilioCallSid: callSid });
   if (!call) {
@@ -394,8 +394,8 @@ router.post("/twilio/incoming", async (req, res) => {
       startedAt: new Date(),
       twilioCallSid: callSid,
       language: patient.language || "en",
-      questionnaire: defaultQuestionnaire?._id || null,
-      customQuestions: [],
+      questionnaire: null,
+      customQuestions: specialtyQs || [],
       summary: `Inbound call from ${patient.name}`,
     });
   }

@@ -5,6 +5,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
+import { getSpecialtyQuestions, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
 import { createLiveTranscription } from "./deepgram.js";
@@ -313,9 +314,17 @@ async function handlePatientIdentification(text, callId, agent) {
       enrichPatientInfoWithAppointments(match._id, agent.patientInfo).then((enriched) => { agent.patientInfo = enriched; });
 
       try {
-        const defaultQ = await Questionnaire.findOne({ isDefault: true }) || await Questionnaire.findOne({}).sort({ createdAt: -1 });
-        if (defaultQ?.questions) {
-          agent.questions = defaultQ.questions.map((q) => (typeof q === "string" ? q : q.text));
+        const patientForQ = await Patient.findById(match._id);
+        const spec = patientForQ?.specialty || "general";
+        const clinicType = patientForQ?.patientType || "human";
+        const specialtyQs = getSpecialtyQuestions(spec, clinicType);
+        if (specialtyQs && specialtyQs.length > 0) {
+          agent.questions = specialtyQs;
+        } else {
+          const defaultQ = await Questionnaire.findOne({ isDefault: true }) || await Questionnaire.findOne({}).sort({ createdAt: -1 });
+          if (defaultQ?.questions) {
+            agent.questions = defaultQ.questions.map((q) => (typeof q === "string" ? q : q.text));
+          }
         }
       } catch {}
 
