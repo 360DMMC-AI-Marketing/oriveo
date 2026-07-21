@@ -2,10 +2,15 @@ import { Router } from "express";
 import { protect } from "../middleware/auth.js";
 import { getFeaturesForOrg } from "../middleware/features.js";
 import { CLINIC_TYPES, getSpecialtiesForType, SPECIALTY_DASHBOARD_LABELS } from "../config/specialties.js";
+import { getDepartmentsForSpecialty } from "../config/specialtyDepartments.js";
 import { getBillingCodeSet } from "../config/billing.js";
+import Organization from "../models/Organization.js";
 import Patient from "../models/Patient.js";
 import Call from "../models/Call.js";
 import Appointment from "../models/Appointment.js";
+import VitalSign from "../models/VitalSign.js";
+import MedicalRecord from "../models/MedicalRecord.js";
+import ClinicalNote from "../models/ClinicalNote.js";
 import { getReportTemplate, getTemplatesForClinicType } from "../config/reportTemplates.js";
 
 const router = Router();
@@ -58,6 +63,35 @@ router.get("/features", protect, (req, res) => {
   res.json({ features });
 });
 
+router.get("/departments", protect, async (req, res) => {
+  try {
+    const orgId = req.user?.organization;
+    if (!orgId) return res.status(400).json({ message: "No organization" });
+    const org = await Organization.findById(orgId).select("departments specialty").lean();
+    const available = getDepartmentsForSpecialty(org?.specialty || "general-practice");
+    res.json({
+      departments: org?.departments || [],
+      available,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/departments", protect, async (req, res) => {
+  try {
+    const orgId = req.user?.organization;
+    if (!orgId) return res.status(400).json({ message: "No organization" });
+    if (req.user.role !== "admin") return res.status(403).json({ message: "Admins only" });
+    const { departments } = req.body;
+    if (!Array.isArray(departments)) return res.status(400).json({ message: "departments must be an array" });
+    const org = await Organization.findByIdAndUpdate(orgId, { $set: { departments } }, { new: true }).select("departments").lean();
+    res.json({ departments: org.departments });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/dashboard-data", protect, async (req, res) => {
   try {
     const orgId = req.user?.organization;
@@ -72,6 +106,11 @@ router.get("/dashboard-data", protect, async (req, res) => {
     const weekStart = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
+    const last7days = new Date(todayStart);
+    last7days.setDate(last7days.getDate() - 7);
+    const last30days = new Date(todayStart);
+    last30days.setDate(last30days.getDate() - 30);
+
     const [
       activePatients,
       patientsToday,
@@ -81,6 +120,23 @@ router.get("/dashboard-data", protect, async (req, res) => {
       totalCallCounts,
       appointmentsToday,
       appointmentStatusCounts,
+      ecgReads,
+      bpAlerts,
+      moodAssessments,
+      medReviews,
+      adjustmentsDue,
+      xraysPending,
+      surgeriesToday,
+      postOpFollowups,
+      hygieneDue,
+      labCases,
+      vaccinationsDue,
+      farmVisits,
+      cogginsTests,
+      spayNeuterQueue,
+      dentalCleanings,
+      wellnessExams,
+      inPatients,
     ] = await Promise.all([
       Patient.countDocuments({ ...filter, isActive: true }),
       Patient.countDocuments({ ...filter, createdAt: { $gte: todayStart, $lt: todayEnd } }),
@@ -96,6 +152,23 @@ router.get("/dashboard-data", protect, async (req, res) => {
         { $match: filter },
         { $group: { _id: "$status", count: { $sum: 1 } } },
       ]),
+      VitalSign.countDocuments({ ...filter, heartRate: { $ne: null }, recordedAt: { $gte: todayStart, $lt: todayEnd } }),
+      VitalSign.countDocuments({ ...filter, $or: [{ bpSystolic: { $gte: 140 } }, { bpDiastolic: { $gte: 90 } }], recordedAt: { $gte: last7days } }),
+      ClinicalNote.countDocuments({ ...filter, encounterDate: { $gte: last30days }, isSigned: true }),
+      MedicalRecord.countDocuments({ ...filter, type: "medication", date: { $gte: last30days } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /adjustment|orthodontic/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      MedicalRecord.countDocuments({ ...filter, type: "imaging", date: { $gte: last7days } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /surgery/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /follow.?up|post.?op/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /hygiene|cleaning/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      MedicalRecord.countDocuments({ ...filter, type: "lab", date: { $gte: last30days } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /vaccin/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /farm/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /coggins/i }, date: { $gte: last30days }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /spay|neuter/i }, date: { $gte: todayStart }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /dental cleaning/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      Appointment.countDocuments({ ...filter, title: { $regex: /wellness|exam/i }, date: { $gte: todayStart, $lt: todayEnd }, status: { $in: ["scheduled", "confirmed"] } }),
+      ClinicalNote.countDocuments({ ...filter, encounterDate: { $gte: todayStart } }),
     ]);
 
     const aiAssessments = completedCalls.length;
@@ -141,23 +214,23 @@ router.get("/dashboard-data", protect, async (req, res) => {
         weeklyUnits,
         avgProgress,
         activeTreatments: activePatients,
-        ecgReads: "—",
-        bpAlerts: "—",
-        moodAssessments: "—",
-        medReviews: "—",
-        adjustmentsDue: "—",
-        xraysPending: "—",
-        surgeriesToday: "—",
-        postOpFollowups: "—",
-        hygieneDue: "—",
-        labCases: "—",
-        vaccinationsDue: "—",
-        farmVisits: "—",
-        cogginsTests: "—",
-        spayNeuterQueue: "—",
-        dentalCleanings: "—",
-        wellnessExams: "—",
-        inPatients: "—",
+        ecgReads,
+        bpAlerts,
+        moodAssessments,
+        medReviews,
+        adjustmentsDue,
+        xraysPending,
+        surgeriesToday,
+        postOpFollowups,
+        hygieneDue,
+        labCases,
+        vaccinationsDue,
+        farmVisits,
+        cogginsTests,
+        spayNeuterQueue,
+        dentalCleanings,
+        wellnessExams,
+        inPatients,
         inProgress,
         failed,
         totalCheckups,

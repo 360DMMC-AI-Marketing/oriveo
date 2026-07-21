@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
@@ -12,8 +12,14 @@ import { getVetWidgets } from "@/components/dashboards/VetDashboardWidgets";
 import {
   Phone, AlertTriangle, CheckCircle, Clock,
   Activity, Brain, Users, Calendar, TrendingUp,
-  ArrowRight, Mic, BarChart3, Siren, ShieldAlert, DollarSign
+  ArrowRight, Mic, BarChart3, Siren, ShieldAlert,
+  Heart, Stethoscope, Bell, X, MessageSquare, FileText,
+  Eye, Award
 } from "lucide-react";
+import {
+  PieChart, Pie, Cell, LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 const ICON_MAP: Record<string, any> = {
   blue: "text-blue-600 bg-blue-100",
@@ -56,7 +62,22 @@ const WIDGET_ICONS: Record<string, any> = {
   inPatients: Users,
 };
 
-import { Heart, Stethoscope } from "lucide-react";
+const NOTIF_ICONS: Record<string, any> = {
+  emergency: Siren,
+  high_severity: AlertTriangle,
+  call_failed: X,
+  report_ready: FileText,
+  follow_up_needed: Activity,
+  appointment_reminder: Calendar,
+  appointment_confirmed: CheckCircle,
+  appointment_pending: Clock,
+  system_alert: ShieldAlert,
+  inbound_received: Phone,
+  inbound_completed: CheckCircle,
+  call_transferred: MessageSquare,
+};
+
+const CHART_COLORS = ["#0a7c6f", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6"];
 
 const SPECIALTY_LABELS: Record<string, { title: string; subtitle: string }> = {
   "general-practice": { title: "General Practice Dashboard", subtitle: "Family medicine & primary care overview" },
@@ -93,6 +114,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [confirmEmergency, setConfirmEmergency] = useState<{ callId: string; target: "911" | "clinic" } | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const specialty = user?.organization?.specialty || "general-practice";
   const clinicType = user?.organization?.clinicType || "human";
@@ -109,6 +132,32 @@ export default function Dashboard() {
   const { data: patientsData, isLoading: loadingPatients } = useQuery({ queryKey: ["patients"], queryFn: () => api.get("/patients").then((r) => r.data) });
   const { data: callsData, isLoading: loadingCalls } = useQuery({ queryKey: ["calls"], queryFn: () => api.get("/calls").then((r) => r.data) });
   const { data: appointmentStats } = useQuery({ queryKey: ["appointment-stats"], queryFn: () => api.get("/appointments/stats").then((r) => r.data) });
+  const { data: qaScoresData } = useQuery({ queryKey: ["qa-scores"], queryFn: () => api.get("/qa/scores").then((r) => r.data) });
+  const { data: notifCount } = useQuery({ queryKey: ["notif-count"], queryFn: () => api.get("/notifications/unread-count").then((r) => r.data), refetchInterval: 30000 });
+  const { data: notifData } = useQuery({ queryKey: ["notifications"], queryFn: () => api.get("/notifications?limit=8").then((r) => r.data), enabled: showNotifications });
+  const { data: qaTrendsData } = useQuery({ queryKey: ["qa-trends"], queryFn: () => api.get("/qa/trends?days=14").then((r) => r.data) });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const markNotifRead = async (id: string) => {
+    await api.put(`/notifications/${id}/read`);
+    queryClient.invalidateQueries({ queryKey: ["notif-count"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  };
+
+  const markAllRead = async () => {
+    await api.put("/notifications/read-all");
+    queryClient.invalidateQueries({ queryKey: ["notif-count"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  };
 
   const emergencyMutation = useMutation({
     mutationFn: ({ callId, target }: { callId: string; target: "911" | "clinic" }) =>
@@ -151,9 +200,48 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900">{labels.title}</h1>
           <p className="text-gray-500">{labels.subtitle}</p>
         </div>
-        <div className="text-right text-sm text-gray-500">
-          <p className="font-medium text-gray-800">{user?.name}</p>
-          <p>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+        <div className="flex items-center gap-4">
+          <div className="relative" ref={notifRef}>
+            <button onClick={() => setShowNotifications(!showNotifications)} className="relative flex h-9 w-9 items-center justify-center rounded-full border bg-white hover:bg-gray-50 transition-colors">
+              <Bell className="h-4 w-4 text-gray-600" />
+              {(notifCount?.count || 0) > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{notifCount.count > 99 ? "99+" : notifCount.count}</span>
+              )}
+            </button>
+            {showNotifications && (
+              <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
+                  <button onClick={markAllRead} className="text-xs text-primary hover:underline">Mark all read</button>
+                </div>
+                <div className="max-h-80 space-y-0 overflow-y-auto">
+                  {notifData?.notifications?.length === 0 && (
+                    <div className="py-8 text-center text-sm text-gray-400">No notifications</div>
+                  )}
+                  {notifData?.notifications?.map((n: any) => {
+                    const NIcon = NOTIF_ICONS[n.type] || Bell;
+                    return (
+                      <Link key={n._id} to={n.link || "#"} onClick={() => { if (!n.read) markNotifRead(n._id); setShowNotifications(false); }} className={`flex items-start gap-3 px-4 py-3 text-sm transition-colors hover:bg-gray-50 ${!n.read ? "bg-blue-50/50" : ""}`}>
+                        <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${!n.read ? "bg-blue-100" : "bg-gray-100"}`}>
+                          <NIcon className={`h-3.5 w-3.5 ${!n.read ? "text-blue-600" : "text-gray-500"}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`truncate ${!n.read ? "font-semibold text-gray-900" : "text-gray-600"}`}>{n.title}</p>
+                          <p className="truncate text-xs text-gray-400">{n.message}</p>
+                        </div>
+                        {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+                      </Link>
+                    );
+                  })}
+                </div>
+                <Link to="/notifications" onClick={() => setShowNotifications(false)} className="block border-t px-4 py-2.5 text-center text-xs font-medium text-primary hover:bg-gray-50 rounded-b-xl">View all notifications</Link>
+              </div>
+            )}
+          </div>
+          <div className="text-right text-sm text-gray-500">
+            <p className="font-medium text-gray-800">{user?.name}</p>
+            <p>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+          </div>
         </div>
       </div>
 
@@ -262,6 +350,113 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      {dashboardData?.data || qaScoresData?.summary ? (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">No-Show Rate</p>
+                <p className="text-lg font-bold text-gray-900">{appointmentStats?.noShowRate ?? (dashboardData?.data?.noShowRate || "—")}</p>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100"><Calendar className="h-4 w-4 text-blue-600" /></div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Avg QA Score</p>
+                <p className="text-lg font-bold text-gray-900">{qaScoresData?.summary?.averageOverall ?? "—"}{qaScoresData?.summary?.averageOverall ? "%" : ""}</p>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100"><Award className="h-4 w-4 text-emerald-600" /></div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Accuracy</p>
+                <p className="text-lg font-bold text-gray-900">{qaScoresData?.summary?.averageAccuracy ?? "—"}{qaScoresData?.summary?.averageAccuracy ? "%" : ""}</p>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100"><Eye className="h-4 w-4 text-amber-600" /></div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-white border-purple-200">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Empathy</p>
+                <p className="text-lg font-bold text-gray-900">{qaScoresData?.summary?.averageEmpathy ?? "—"}{qaScoresData?.summary?.averageEmpathy ? "%" : ""}</p>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100"><Heart className="h-4 w-4 text-purple-600" /></div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {completedCalls.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> Call Volume (Last 7)</CardTitle></CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={(() => {
+                  const map: Record<string, number> = {};
+                  for (let i = 6; i >= 0; i--) {
+                    const d = new Date(); d.setDate(d.getDate() - i);
+                    map[d.toLocaleDateString("en-US", { weekday: "short" })] = 0;
+                  }
+                  calls.filter((c: any) => c.status === "completed").forEach((c: any) => {
+                    const day = new Date(c.createdAt).toLocaleDateString("en-US", { weekday: "short" });
+                    if (day in map) map[day]++;
+                  });
+                  return Object.entries(map).map(([name, value]) => ({ name, value }));
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#0a7c6f" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Severity Distribution</CardTitle></CardHeader>
+            <CardContent className="p-3 flex justify-center">
+              <ResponsiveContainer width="100%" height={130}>
+                <PieChart>
+                  <Pie data={(() => {
+                    const high = completedCalls.filter((c: any) => (c.aiSeverityScore || 0) >= 7).length;
+                    const med = completedCalls.filter((c: any) => (c.aiSeverityScore || 0) >= 4 && (c.aiSeverityScore || 0) < 7).length;
+                    const low = completedCalls.filter((c: any) => (c.aiSeverityScore || 0) < 4).length;
+                    return [
+                      { name: "Low", value: low || 1 },
+                      { name: "Medium", value: med || 1 },
+                      { name: "High", value: high || 1 },
+                    ];
+                  })()} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={2}>
+                    {["Low", "Medium", "High"].map((_, i) => <Cell key={i} fill={["#10b981", "#f59e0b", "#ef4444"][i]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> QA Score Trend</CardTitle></CardHeader>
+            <CardContent className="p-3">
+              <ResponsiveContainer width="100%" height={130}>
+                <LineChart data={qaTrendsData?.trends?.slice(-7) || []}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })} />
+                  <YAxis hide domain={[0, 100]} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="avgScore" stroke="#0a7c6f" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
@@ -398,6 +593,27 @@ export default function Dashboard() {
                   <span className="text-sm text-gray-600">Failed</span>
                 </div>
                 <span className="font-bold text-red-600">{failedCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-violet-500" />
+                  <span className="text-sm text-gray-600">No-Show Rate</span>
+                </div>
+                <span className="font-bold">{dashboardData?.data?.noShowRate || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-cyan-500" />
+                  <span className="text-sm text-gray-600">Active Patients</span>
+                </div>
+                <span className="font-bold">{dashboardData?.data?.activeTreatments || 0}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm text-gray-600">Total AI Checkups</span>
+                </div>
+                <span className="font-bold">{dashboardData?.data?.aiAssessments || completedCalls.length}</span>
               </div>
             </CardContent>
           </Card>

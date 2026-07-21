@@ -28,6 +28,7 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
       label: "Overview", icon: LayoutDashboard, roles: ["admin", "doctor", "nurse", "receptionist"],
       children: [
         { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin", "doctor", "nurse", "receptionist"] },
+        { to: "/command-center", icon: Radio, label: "Command Center", roles: ["admin", "doctor"] },
         { to: "/analytics", icon: BarChart3, label: "Analytics", roles: ["admin", "doctor"] },
         { to: "/reports", icon: FileText, label: "Reports", roles: ["admin", "doctor"] },
       ],
@@ -50,13 +51,13 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
         { to: "/templates", icon: ClipboardList, label: "Templates & Forms", roles: ["admin", "doctor", "nurse"] },
       ],
     },
-    ...(isLarge ? [{
+    {
       label: "Departments", icon: Building2, roles: ["admin"] as string[],
       children: [
-        { to: "/departments", icon: Building2, label: "Departments", roles: ["admin"] as string[] },
-        { to: "/rooms", icon: Building2, label: "Room Management", roles: ["admin"] as string[] },
+        { to: "/departments", icon: Building2, label: "Departments & Staff Groups", roles: ["admin"] as string[] },
+        ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Room Management", roles: ["admin"] as string[] }] : []),
       ],
-    }] : []),
+    },
     {
       label: "Organization", icon: Building2, roles: ["admin"],
       children: [

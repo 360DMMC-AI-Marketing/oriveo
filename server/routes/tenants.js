@@ -47,11 +47,16 @@ router.put("/settings", requireOrgAdmin, async (req, res) => {
 router.get("/users", requireOrgAdmin, async (req, res) => {
   try {
     const users = await User.find({ organization: req.user.organization })
-      .select("name email role isActive phone specialty language createdAt lastLogin")
+      .select("name email role department isActive phone specialty language createdAt lastLogin")
       .sort({ createdAt: -1 })
       .lean();
     const sub = await Subscription.findOne({ organization: req.user.organization }).lean();
-    res.json({ users, maxUsers: sub?.limits?.maxUsers || 5 });
+    const org = await Organization.findById(req.user.organization).select("departments").lean();
+    res.json({
+      users,
+      maxUsers: sub?.limits?.maxUsers || 5,
+      departments: org?.departments?.filter((d) => d.isActive) || [],
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -59,7 +64,7 @@ router.get("/users", requireOrgAdmin, async (req, res) => {
 
 router.post("/users/invite", requireOrgAdmin, async (req, res) => {
   try {
-    const { name, email, role } = req.body;
+    const { name, email, role, department } = req.body;
     if (!name || !email || !role) return res.status(400).json({ message: "Name, email, and role required" });
     const org = await Organization.findById(req.user.organization).lean();
     const sub = await Subscription.findOne({ organization: req.user.organization }).lean();
@@ -71,9 +76,9 @@ router.post("/users/invite", requireOrgAdmin, async (req, res) => {
     const tempPassword = Math.random().toString(36).slice(2, 10) + "A1!";
     const user = await User.create({
       name, email, password: tempPassword, role: role || "doctor",
-      organization: req.user.organization, isActive: true,
+      department: department || "", organization: req.user.organization, isActive: true,
     });
-    res.status(201).json({ user: { id: user._id, name: user.name, email: user.email, role: user.role, tempPassword } });
+    res.status(201).json({ user: { id: user._id, name: user.name, email: user.email, role: user.role, department: user.department, tempPassword } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -90,6 +95,21 @@ router.put("/users/:userId/role", requireOrgAdmin, async (req, res) => {
       { role },
       { new: true }
     ).select("name email role isActive");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.put("/users/:userId/department", requireOrgAdmin, async (req, res) => {
+  try {
+    const { department } = req.body;
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.userId, organization: req.user.organization },
+      { department: department || "" },
+      { new: true }
+    ).select("name email role department isActive");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json({ user });
   } catch (err) {

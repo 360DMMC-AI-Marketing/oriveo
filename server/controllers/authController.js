@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import Organization from "../models/Organization.js";
 import Subscription from "../models/Subscription.js";
 import { SPECIALTIES_BY_TYPE, getSpecialty } from "../config/specialties.js";
+import { getDepartmentsForSpecialty } from "../config/specialtyDepartments.js";
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -75,6 +76,14 @@ export const signup = async (req, res) => {
       specialty: Array.isArray(specialty) ? specialty : (specialty ? [specialty] : []),
       organization: organization._id,
     });
+
+    // Auto-create departments based on specialty
+    const departments = getDepartmentsForSpecialty(specialty).map((d) => ({
+      id: d.id, label: d.label, roles: d.roles, description: d.description, isActive: true,
+    }));
+    if (departments.length > 0) {
+      await Organization.findByIdAndUpdate(organization._id, { $set: { departments } });
+    }
 
     if (clinicSize === "small" && staffSetup) {
       const staffToCreate = [];

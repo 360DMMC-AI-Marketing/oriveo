@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
     language: { type: String, default: "en" },
     avatar: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
+    department: { type: String, default: "" },
     tokenVersion: { type: Number, default: 0 },
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     superAdmin: { type: Boolean, default: false },

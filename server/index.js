@@ -48,6 +48,7 @@ import clinicalRoutes from "./routes/clinical.js";
 import clinicConfigRoutes from "./routes/clinicConfig.js";
 import automationRoutes from "./routes/automation.js";
 import tenantRoutes from "./routes/tenants.js";
+import populationHealthRoutes from "./routes/populationHealth.js";
 import { setIo } from "./services/socketManager.js";
 
 import helmet from "helmet";
@@ -243,6 +244,7 @@ app.use("/api/billing", billingRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/clinic-config", clinicConfigRoutes);
+app.use("/api/population-health", populationHealthRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({

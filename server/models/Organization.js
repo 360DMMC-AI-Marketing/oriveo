@@ -42,6 +42,13 @@ const organizationSchema = new mongoose.Schema({
   defaultSlotDuration: { type: Number, default: 30 },
   defaultBufferBetween: { type: Number, default: 0 },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  departments: [{
+    id: { type: String, required: true },
+    label: { type: String, required: true },
+    roles: [{ type: String }],
+    description: { type: String, default: "" },
+    isActive: { type: Boolean, default: true },
+  }],
 }, { timestamps: true });
 
 organizationSchema.pre("validate", function (next) {

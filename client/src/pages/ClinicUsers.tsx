@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, X, Loader2, UserPlus, Shield, Stethoscope, User as UserIcon } from "lucide-react";
+import { Users, X, Loader2, UserPlus, Shield, Stethoscope, User as UserIcon, Building2, ChevronDown, ChevronRight } from "lucide-react";
 
 const ROLE_ICONS: Record<string, any> = {
   admin: Shield,
@@ -14,7 +14,6 @@ const ROLE_ICONS: Record<string, any> = {
   nurse: Users,
   receptionist: UserIcon,
 };
-
 const ROLE_COLORS: Record<string, string> = {
   admin: "text-purple-600 bg-purple-50",
   doctor: "text-blue-600 bg-blue-50",
@@ -22,12 +21,25 @@ const ROLE_COLORS: Record<string, string> = {
   receptionist: "text-amber-600 bg-amber-50",
 };
 
+const DEPT_ICONS: Record<string, string> = {
+  medical: "🩺", nursing: "🏥", admin: "📋", support: "🔧", lab: "🔬",
+  imaging: "📡", "child-life": "🧸", "neuro-dx": "🧠", therapy: "💬",
+  aesthetics: "✨", aides: "🤝", endoscopy: "🔦", "diabetes-ed": "🍎",
+  infusion: "💉", "social-work": "🤗", dialysis: "🩸", "resp-therapy": "🫁",
+  optometry: "👁️", audiology: "👂", hygiene: "🦷", assisting: "🪑",
+  surgical: "🏨", "surgical-nursing": "🏨", anesthesia: "😷",
+  "child-care": "🧒", tech: "🔧", surgery: "🏨", kennel: "🐾",
+  grooming: "✂️", farriery: "🐴", barn: "🌾", "farm-svc": "🚜",
+  clinical: "🩺", lab: "🔬", orthodontic: "😁",
+};
+
 export default function ClinicUsers() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: "", email: "", role: "doctor" });
+  const [inviteForm, setInviteForm] = useState({ name: "", email: "", role: "doctor", department: "" });
   const [inviteResult, setInviteResult] = useState<any>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["org", "users"],
@@ -39,7 +51,7 @@ export default function ClinicUsers() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["org", "users"] });
       setInviteResult(res.data.user);
-      setInviteForm({ name: "", email: "", role: "doctor" });
+      setInviteForm({ name: "", email: "", role: "doctor", department: "" });
       toast.success("User invited");
     },
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),
@@ -51,20 +63,38 @@ export default function ClinicUsers() {
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),
   });
 
+  const changeDept = useMutation({
+    mutationFn: ({ userId, department }: any) => api.put(`/org/users/${userId}/department`, { department }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["org", "users"] }); toast.success("Department updated"); },
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message),
+  });
+
   const deactivateUser = useMutation({
     mutationFn: (userId: string) => api.put(`/org/users/${userId}/deactivate`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["org", "users"] }); toast.success("User deactivated"); },
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),
   });
 
-  const users = data?.users || [];
+  const users: any[] = data?.users || [];
+  const departments: any[] = data?.departments || [];
+
+  const grouped = useMemo(() => {
+    const groups: Record<string, any[]> = { _undefined: [] };
+    for (const d of departments) groups[d.id] = [];
+    for (const u of users) {
+      if (u.department && groups[u.department]) groups[u.department].push(u);
+      else groups._undefined.push(u);
+    }
+    return groups;
+  }, [users, departments]);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Team Members</h1>
-          <p className="text-gray-500 text-sm">{users.length} / {data?.maxUsers || 5} members</p>
+          <p className="text-gray-500 text-sm">{users.length} / {data?.maxUsers || 5} members across {departments.length} departments</p>
         </div>
         <Button onClick={() => { setShowInvite(!showInvite); setInviteResult(null); }} className="gap-1">
           {showInvite ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
@@ -72,6 +102,7 @@ export default function ClinicUsers() {
         </Button>
       </div>
 
+      {/* Invite Form */}
       {showInvite && (
         <Card className="border-blue-200">
           <CardContent className="p-4 space-y-3">
@@ -81,12 +112,13 @@ export default function ClinicUsers() {
                 <p className="font-medium">User invited successfully!</p>
                 <p>Email: <strong>{inviteResult.email}</strong></p>
                 <p>Temporary password: <code className="bg-green-100 px-1.5 py-0.5 rounded text-xs">{inviteResult.tempPassword}</code></p>
+                {inviteResult.department && <p>Department: {departments.find(d => d.id === inviteResult.department)?.label || inviteResult.department}</p>}
                 <p className="text-xs mt-1 text-green-600">Share this password securely with the new user.</p>
                 <Button size="sm" variant="outline" className="mt-2" onClick={() => setInviteResult(null)}>Invite Another</Button>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-gray-500">Name</label>
                     <Input value={inviteForm.name} onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder="John Doe" />
@@ -105,6 +137,16 @@ export default function ClinicUsers() {
                       <option value="admin">Admin</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Department</label>
+                    <select value={inviteForm.department} onChange={e => setInviteForm({ ...inviteForm, department: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option value="">Auto (by role)</option>
+                      {departments.map((d: any) => (
+                        <option key={d.id} value={d.id}>{DEPT_ICONS[d.id] || "📋"} {d.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="flex justify-end">
                   <Button size="sm" onClick={() => inviteMutation.mutate(inviteForm)} disabled={!inviteForm.name || !inviteForm.email || inviteMutation.isPending}>
@@ -118,58 +160,170 @@ export default function ClinicUsers() {
         </Card>
       )}
 
+      {/* Department Sections */}
       {isLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
       ) : (
-        <div className="space-y-2">
-          {users.map((u: any) => {
-            const RoleIcon = ROLE_ICONS[u.role] || UserIcon;
-            const roleColor = ROLE_COLORS[u.role] || "text-gray-600 bg-gray-50";
-            const isSelf = u._id === currentUser?._id;
+        <div className="space-y-6">
+          {departments.map((dept: any) => {
+            const members = grouped[dept.id] || [];
+            const isCollapsed = collapsed[dept.id];
             return (
-              <Card key={u._id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${roleColor}`}>
-                        <RoleIcon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{u.name} {isSelf && <span className="text-xs text-gray-400">(you)</span>}</p>
-                        <p className="text-sm text-gray-500">{u.email}</p>
-                      </div>
+              <Card key={dept.id} className="overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b cursor-pointer hover:bg-gray-100/50 transition-colors"
+                  onClick={() => setCollapsed({ ...collapsed, [dept.id]: !isCollapsed })}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0a7c6f]/10 text-lg">
+                      {DEPT_ICONS[dept.id] || "📋"}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${u.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {u.role}
-                      </span>
-                      {u.isActive ? (
-                        <span className="flex h-2 w-2 rounded-full bg-green-500" title="Active" />
-                      ) : (
-                        <span className="flex h-2 w-2 rounded-full bg-gray-300" title="Inactive" />
-                      )}
+                    <div>
+                      <h3 className="font-semibold text-gray-800 text-sm">{dept.label}</h3>
+                      <p className="text-xs text-gray-500">{members.length} member{members.length !== 1 ? "s" : ""} — {dept.description}</p>
                     </div>
                   </div>
-                  {!isSelf && currentUser?.role === "admin" && (
-                    <div className="mt-2 flex gap-2">
-                      <select value={u.role} onChange={e => changeRole.mutate({ userId: u._id, role: e.target.value })}
-                        className="text-xs border rounded px-2 py-1">
-                        <option value="admin">Admin</option>
-                        <option value="doctor">Doctor</option>
-                        <option value="nurse">Nurse</option>
-                        <option value="receptionist">Receptionist</option>
-                      </select>
-                      {u.isActive && (
-                        <Button size="sm" variant="outline" className="text-xs text-red-600" onClick={() => deactivateUser.mutate(u._id)}>
-                          Deactivate
-                        </Button>
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      {(dept.roles || []).map((role: string) => (
+                        <span key={role} className="inline-flex items-center gap-0.5 rounded bg-white border px-1.5 py-0.5 text-[10px] text-gray-500">
+                          {ROLE_ICONS[role] ? <ROLE_ICONS[role] className="h-3 w-3" /> : null} {role}
+                        </span>
+                      ))}
                     </div>
-                  )}
-                </CardContent>
+                    {isCollapsed ? <ChevronRight className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                  </div>
+                </div>
+                {!isCollapsed && (
+                  <CardContent className="p-0">
+                    {members.length === 0 ? (
+                      <div className="text-center py-6 text-sm text-gray-400">
+                        <Users className="h-8 w-8 mx-auto mb-1 text-gray-300" />
+                        <p>No staff assigned to this department yet.</p>
+                        <p className="text-xs mt-0.5">Invite members or edit existing users to assign them here.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {members.map((u: any) => {
+                          const RoleIcon = ROLE_ICONS[u.role] || UserIcon;
+                          const roleColor = ROLE_COLORS[u.role] || "text-gray-600 bg-gray-50";
+                          const isSelf = u._id === currentUser?._id;
+                          return (
+                            <div key={u._id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className={`flex h-9 w-9 items-center justify-center rounded-full ${roleColor}`}>
+                                  <RoleIcon className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-800">
+                                    {u.name} {isSelf && <span className="text-xs text-gray-400 font-normal">(you)</span>}
+                                  </p>
+                                  <p className="text-xs text-gray-500">{u.email}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {u.isActive ? (
+                                  <span className="flex h-2 w-2 rounded-full bg-green-500" title="Active" />
+                                ) : (
+                                  <span className="flex h-2 w-2 rounded-full bg-gray-300" title="Inactive" />
+                                )}
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${u.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                                  {u.role}
+                                </span>
+                                {!isSelf && currentUser?.role === "admin" && u.isActive && (
+                                  <>
+                                    <select value={u.role} onChange={e => changeRole.mutate({ userId: u._id, role: e.target.value })}
+                                      className="text-xs border rounded px-2 py-1 text-gray-600">
+                                      <option value="admin">Admin</option>
+                                      <option value="doctor">Doctor</option>
+                                      <option value="nurse">Nurse</option>
+                                      <option value="receptionist">Receptionist</option>
+                                    </select>
+                                    <select value={u.department || ""} onChange={e => changeDept.mutate({ userId: u._id, department: e.target.value })}
+                                      className="text-xs border rounded px-2 py-1 text-gray-600 max-w-[130px]">
+                                      <option value="">No department</option>
+                                      {departments.map((d: any) => (
+                                        <option key={d.id} value={d.id}>{d.label}</option>
+                                      ))}
+                                    </select>
+                                    <Button size="sm" variant="outline" className="text-xs text-red-600" onClick={() => deactivateUser.mutate(u._id)}>
+                                      Deactivate
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                )}
               </Card>
             );
           })}
+
+          {/* No Department */}
+          {(grouped._undefined || []).length > 0 && (
+            <Card className="overflow-hidden border-dashed">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50/50 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                    <UserIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-500 text-sm">Unassigned</h3>
+                    <p className="text-xs text-gray-400">{grouped._undefined.length} member{grouped._undefined.length !== 1 ? "s" : ""} without department</p>
+                  </div>
+                </div>
+              </div>
+              <CardContent className="p-0 divide-y divide-dashed">
+                {grouped._undefined.map((u: any) => {
+                  const RoleIcon = ROLE_ICONS[u.role] || UserIcon;
+                  const roleColor = ROLE_COLORS[u.role] || "text-gray-600 bg-gray-50";
+                  const isSelf = u._id === currentUser?._id;
+                  return (
+                    <div key={u._id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-9 w-9 items-center justify-center rounded-full ${roleColor}`}>
+                          <RoleIcon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {u.name} {isSelf && <span className="text-xs text-gray-400 font-normal">(you)</span>}
+                          </p>
+                          <p className="text-xs text-gray-500">{u.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {u.isActive ? (
+                          <span className="flex h-2 w-2 rounded-full bg-green-500" title="Active" />
+                        ) : (
+                          <span className="flex h-2 w-2 rounded-full bg-gray-300" title="Inactive" />
+                        )}
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${u.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {u.role}
+                        </span>
+                        {!isSelf && currentUser?.role === "admin" && u.isActive && (
+                          <>
+                            <select value={u.department || ""} onChange={e => changeDept.mutate({ userId: u._id, department: e.target.value })}
+                              className="text-xs border rounded px-2 py-1 text-gray-600 max-w-[130px]">
+                              <option value="">No department</option>
+                              {departments.map((d: any) => (
+                                <option key={d.id} value={d.id}>{d.label}</option>
+                              ))}
+                            </select>
+                            <Button size="sm" variant="outline" className="text-xs text-red-600" onClick={() => deactivateUser.mutate(u._id)}>
+                              Deactivate
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
           {users.length === 0 && (
             <div className="text-center py-12 text-gray-400">
               <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
