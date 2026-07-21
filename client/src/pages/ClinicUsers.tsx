@@ -30,7 +30,7 @@ const DEPT_ICONS: Record<string, string> = {
   surgical: "🏨", "surgical-nursing": "🏨", anesthesia: "😷",
   "child-care": "🧒", tech: "🔧", surgery: "🏨", kennel: "🐾",
   grooming: "✂️", farriery: "🐴", barn: "🌾", "farm-svc": "🚜",
-  clinical: "🩺", lab: "🔬", orthodontic: "😁",
+  clinical: "🩺", orthodontic: "😁",
 };
 
 export default function ClinicUsers() {

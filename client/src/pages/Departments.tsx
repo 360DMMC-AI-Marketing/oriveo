@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Building2, Loader2, Plus, X, Check, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ROLE_ICONS: Record<string, string> = {
   doctor: "🩺",
@@ -56,7 +57,6 @@ const DEPT_ICONS: Record<string, string> = {
   "farm-svc": "🚜",
   clinical: "🩺",
   "orthodontic": "😁",
-  lab: "🔬",
 };
 
 export default function Departments() {
