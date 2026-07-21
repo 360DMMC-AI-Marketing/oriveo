@@ -183,11 +183,14 @@ export default function ClinicUsers() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
-                      {(dept.roles || []).map((role: string) => (
-                        <span key={role} className="inline-flex items-center gap-0.5 rounded bg-white border px-1.5 py-0.5 text-[10px] text-gray-500">
-                          {ROLE_ICONS[role] ? <ROLE_ICONS[role] className="h-3 w-3" /> : null} {role}
-                        </span>
-                      ))}
+                      {(dept.roles || []).map((role: string) => {
+                        const RI = ROLE_ICONS[role];
+                        return (
+                          <span key={role} className="inline-flex items-center gap-0.5 rounded bg-white border px-1.5 py-0.5 text-[10px] text-gray-500">
+                            {RI ? <RI className="h-3 w-3" /> : null} {role}
+                          </span>
+                        );
+                      })}
                     </div>
                     {isCollapsed ? <ChevronRight className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                   </div>
