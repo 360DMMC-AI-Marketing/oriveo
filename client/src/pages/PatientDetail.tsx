@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3 } from "lucide-react";
+import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import SummaryTab from "@/components/patients/SummaryTab";
@@ -34,6 +34,48 @@ export default function PatientDetail() {
   const [kbDraft, setKbDraft] = useState("");
   const [editingPatient, setEditingPatient] = useState(false);
   const [patientForm, setPatientForm] = useState<any>({});
+  const [showErasureConfirm, setShowErasureConfirm] = useState(false);
+
+  const { data: consentsData } = useQuery({
+    queryKey: ["patient-consents", id],
+    queryFn: () => api.get(`/patients/${id}/consents`).then((r) => r.data),
+    enabled: !!id,
+  });
+
+  const consentMutation = useMutation({
+    mutationFn: ({ type, granted }: { type: string; granted: boolean }) =>
+      api.post(`/patients/${id}/consent`, { type, granted }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-consents", id] });
+      toast.success("Consent updated");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to update consent"),
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: () => api.get(`/patients/${id}/export`).then((r) => r.data),
+    onSuccess: (data) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `patient-${id}-data.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Data exported");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Export failed"),
+  });
+
+  const erasureMutation = useMutation({
+    mutationFn: () => api.delete(`/patients/${id}/erase`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      setShowErasureConfirm(false);
+      toast.success("Patient data erased");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Erasure failed"),
+  });
 
   const { data: patientData } = useQuery({
     queryKey: ["patient", id],
@@ -264,6 +306,7 @@ export default function PatientDetail() {
           <TabsTrigger value="visits">Visits</TabsTrigger>
           <TabsTrigger value="reports">AI Reports</TabsTrigger>
           <TabsTrigger value="clinical">Clinical</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
@@ -325,7 +368,74 @@ export default function PatientDetail() {
         <TabsContent value="clinical">
           <ClinicalTab patientId={id!} specialty={patient?.specialty} />
         </TabsContent>
+        <TabsContent value="compliance">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5" /> Compliance & Data Privacy</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="font-medium mb-3 flex items-center gap-2"><CheckSquare className="h-4 w-4" /> Consent Management</h3>
+                <div className="space-y-2">
+                  {[
+                    { key: "phone", label: "Phone calls" },
+                    { key: "email", label: "Email communication" },
+                    { key: "sms", label: "SMS / text messages" },
+                    { key: "recording", label: "Call recording" },
+                    { key: "telehealth", label: "Telehealth services" },
+                    { key: "data_processing", label: "Data processing & storage" },
+                  ].map((c) => {
+                    const consent = (consentsData?.consents || []).find((co: any) => co.type === c.key);
+                    const granted = consent?.granted ?? false;
+                    return (
+                      <div key={c.key} className="flex items-center justify-between rounded-lg border p-3">
+                        <span className="text-sm">{c.label}</span>
+                        <Button
+                          variant={granted ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => consentMutation.mutate({ type: c.key, granted: !granted })}
+                          disabled={consentMutation.isPending}
+                        >
+                          {granted ? "Granted" : "Not Granted"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-3 flex items-center gap-2"><Download className="h-4 w-4" /> Data Portability</h3>
+                <p className="text-sm text-gray-500 mb-3">Download all patient data in JSON format (GDPR Article 20).</p>
+                <Button variant="outline" onClick={() => exportMutation.mutate()} disabled={exportMutation.isPending}>
+                  <Download className="mr-2 h-4 w-4" /> {exportMutation.isPending ? "Exporting..." : "Export Patient Data"}
+                </Button>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-3 flex items-center gap-2 text-red-600"><Trash2 className="h-4 w-4" /> Right to Erasure</h3>
+                <p className="text-sm text-gray-500 mb-3">Permanently erase all personal data for this patient (GDPR Article 17). This action cannot be undone.</p>
+                <Button variant="destructive" onClick={() => setShowErasureConfirm(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Erase Patient Data
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {showErasureConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowErasureConfirm(false)}>
+          <div className="max-w-sm w-full mx-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-red-600 mb-2">Confirm Erasure</h3>
+            <p className="text-sm text-gray-600 mb-4">This will permanently delete all personal data for <strong>{patient.name}</strong>. Call recordings, documents, and audit logs will be anonymized. This cannot be undone.</p>
+            <div className="flex gap-2">
+              <Button variant="destructive" className="flex-1" onClick={() => erasureMutation.mutate()} disabled={erasureMutation.isPending}>
+                <Trash2 className="mr-2 h-4 w-4" /> {erasureMutation.isPending ? "Erasing..." : "Confirm Erasure"}
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowErasureConfirm(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingPatient && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-10" onClick={() => setEditingPatient(false)}>
