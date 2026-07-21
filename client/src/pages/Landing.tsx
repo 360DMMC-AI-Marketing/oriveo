@@ -133,10 +133,6 @@ export default function Landing() {
             <Logo size="md" variant="dark" />
           </div>
           <div className="hidden lg:flex items-center gap-8">
-            <a href="#platform" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
-            <a href="#workflow" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">How It Works</a>
-            <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
-            <a href="#specialties" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Specialties</a>
             <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
             <a href="/contact" className="text-sm text-primary font-medium transition-colors">Contact</a>
           </div>
