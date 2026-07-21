@@ -385,6 +385,10 @@ mongoose
       startCalendarSync();
       logger.info("Calendar sync started");
     });
+    import("./utils/dataRetention.js").then(({ startDataRetentionScheduler }) => {
+      startDataRetentionScheduler();
+      logger.info("Data retention scheduler started");
+    });
     });
   })
   .catch((err) => {

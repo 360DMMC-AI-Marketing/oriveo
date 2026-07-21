@@ -23,8 +23,11 @@ export default function Layout() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="ml-64 flex flex-1 flex-col">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:border focus:rounded-lg focus:text-primary focus:font-medium">
+          Skip to main content
+        </a>
         <Navbar />
-        <main className="flex-1 p-6">
+        <main id="main-content" className="flex-1 p-6" role="main">
           <Outlet />
         </main>
       </div>

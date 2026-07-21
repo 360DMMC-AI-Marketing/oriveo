@@ -24,6 +24,12 @@ import {
 import { protect, authorize } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { createPatientSchema, updatePatientSchema } from "../validators/patient.js";
+import {
+  getConsents,
+  setConsent,
+  erasePatient,
+  exportPatientData,
+} from "../controllers/patientGDPRController.js";
 
 const docDir = "uploads/documents";
 fs.mkdirSync(docDir, { recursive: true });
@@ -78,5 +84,12 @@ router.put("/:id", authorize("admin", "doctor", "nurse"), validate(updatePatient
 router.delete("/:id/records/:rid", authorize("admin", "doctor"), deleteMedicalRecord);
 router.delete("/:id/documents/:did", authorize("admin", "doctor"), deleteDocument);
 router.delete("/:id", authorize("admin"), deletePatient);
+
+router.get("/:id/consents", authorize("admin", "doctor"), getConsents);
+router.post("/:id/consents", authorize("admin", "doctor"), setConsent);
+
+router.delete("/:id/erasure", authorize("admin"), erasePatient);
+
+router.get("/:id/export", authorize("admin", "doctor"), exportPatientData);
 
 export default router;

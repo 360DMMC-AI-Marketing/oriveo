@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Phone, Users, Megaphone, ShieldCheck, BarChart3, ClipboardList, Calendar, UserPlus, LayoutDashboard, Search, ChevronDown, ScrollText, Siren, Bell, PhoneForwarded, Eye, DollarSign, Building2, Mail } from "lucide-react";
+import { BookOpen, Phone, Users, Megaphone, ShieldCheck, BarChart3, ClipboardList, Calendar, UserPlus, LayoutDashboard, Search, ChevronDown, ScrollText, Siren, Bell, PhoneForwarded, Eye, DollarSign, Building2, Mail, Lock, Database, Download, Trash2, CheckSquare } from "lucide-react";
 
 const sections = [
   {
@@ -11,6 +11,7 @@ const sections = [
       "Check 'Needs Attention' for urgent/severe cases requiring immediate follow-up.",
       "Active Emergencies banner appears at the top when red-flag keywords are detected — click to call 911 or the clinic.",
       "Browse recent completed and upcoming scheduled calls below the cards.",
+      "Compliance badge in the header shows audit status — click to open the full HIPAA Audit Log.",
       "Click any card or link to dive deeper into a section.",
     ],
   },
@@ -41,7 +42,7 @@ const sections = [
   {
     icon: Users,
     title: "Patients",
-    desc: "Manage patient records, medical history, contact info, DNC status, and send booking links.",
+    desc: "Manage patient records, medical history, contact info, DNC status, consent tracking, and data privacy tools.",
     steps: [
       "Click 'Add Patient' to create a new record with full medical details (name, phone, DOB, gender, blood type, address, insurance, etc.).",
       "Use the search bar to find patients by name or phone instantly.",
@@ -49,6 +50,9 @@ const sections = [
       "Edit All button in Patient Detail toggles all fields editable — language, gender, blood type, DOB, insurance ID, address, diagnosis, conditions, allergies, medications, surgeries, emergency contact, and medical notes.",
       "Toggle Do Not Call (DNC) flag on a patient to opt them out of outbound calls.",
       "Send Booking Link button generates a magic link for the patient to self-schedule an appointment via SMS or email.",
+      "Consent Management tab shows all patient consent records (phone, email, SMS, recording, telehealth, data processing) with grant/revoke dates.",
+      "Export Patient Data button downloads a structured JSON with all patient records, calls, notes, appointments, vitals, and consent history for data portability compliance.",
+      "Permanently Delete button triggers the right-to-erasure workflow — removes the patient and all associated data (calls, notes, documents, appointments, audit logs) from the system.",
     ],
   },
   {
@@ -187,7 +191,7 @@ const sections = [
   {
     icon: Building2,
     title: "Settings",
-    desc: "Company profile, API integrations, service credentials, and system configuration.",
+    desc: "Company profile, API integrations, service credentials, security, and data governance.",
     steps: [
       "Company Profile section lets you set practice name, phone number, and website URL.",
       "Use the 'Scrape & Auto-fill' button to automatically detect company info from your website URL.",
@@ -196,6 +200,7 @@ const sections = [
       "Configure AWS S3 for cloud storage, Azure ACS for email, Slack for notifications, Sentry for error monitoring.",
       "Set up EHR integrations: athenahealth (OAuth2) or generic FHIR R4 endpoint.",
       "Security settings: JWT expiration time, PHI encryption key (64 hex chars).",
+      "Data Retention: configure how long call recordings, documents, and audit logs are kept before automatic cleanup (set via DATA_RETENTION_DAYS and AUDIT_RETENTION_DAYS).",
     ],
   },
   {
@@ -224,15 +229,32 @@ const sections = [
     ],
   },
   {
+    icon: Lock,
+    title: "Compliance & Data Privacy",
+    desc: "HIPAA and GDPR compliance features — consent management, right to erasure, data portability, and retention controls.",
+    steps: [
+      "Consent Management: grant or revoke patient consent for each channel (phone, email, SMS, recording, telehealth, data processing) from the Patient Detail page.",
+      "Each consent action is timestamped with the user's IP and stored permanently in the audit trail for compliance verification.",
+      "Right to Erasure: delete a patient and all associated data (calls, medical records, clinical notes, documents, appointments, vitals, notifications, audit logs) with one action. Only accessible by admin role.",
+      "Data Portability: export a patient's complete data as structured JSON — includes profile, all calls, medical records, clinical notes, appointments, vital signs, and consent history. Usable for EHR migration or patient requests.",
+      "Data Retention: the system automatically purges call recordings, patient documents, and audit logs older than the configured retention period (default: 365 days for calls, 730 days for audit logs). Retention runs daily in the background.",
+      "PHI Encryption: all 17 sensitive patient fields (name, phone, email, address, emergency contact, insurance ID, medical notes, etc.) are encrypted at rest using AES-256-GCM with a configurable encryption key.",
+      "Role-Based Access: 6 roles (admin, doctor, nurse, receptionist, staff, user) control what each staff member can see and do. Patient data is scoped per organization for multi-tenant isolation.",
+      "Audit trails track every PHI access with user, timestamp, IP address, and user agent — filterable by action type and date range for compliance reporting.",
+      "Accessibility: the interface includes skip-to-content navigation, ARIA landmark roles, focus indicators, screen-reader labels on interactive elements, and keyboard-operable controls.",
+    ],
+  },
+  {
     icon: ScrollText,
     title: "Audit Log",
-    desc: "HIPAA-compliant audit trail tracking every PHI access and system change by user.",
+    desc: "HIPAA and GDPR compliant audit trail tracking every PHI access and system change by user.",
     steps: [
       "Only admins can access the Audit Log — visible in the sidebar under Clinic.",
-      "Every patient view, call access, setting change, and EHR sync is automatically logged with user, timestamp, and IP.",
+      "Every patient view, call access, setting change, consent action, and EHR sync is automatically logged with user, timestamp, and IP.",
       "Filter events by action type using the dropdown and select time range: 24h, 7 days, 30 days, or 90 days.",
       "Summary cards at the top show the most frequent event types for quick oversight.",
       "The log is immutable — entries cannot be deleted or modified, ensuring a reliable compliance record.",
+      "Audit logs are automatically pruned after the configured retention period (default 730 days) via the data retention scheduler.",
       "Required for HIPAA compliance — demonstrates who accessed what patient data and when.",
     ],
   },
@@ -249,6 +271,7 @@ const quickLinks = [
   { label: "Live Monitoring", href: "/live-monitoring" },
   { label: "Notifications", href: "/notifications" },
   { label: "Settings", href: "/clinic/settings" },
+  { label: "Compliance", href: "#" },
 ];
 
 export default function OnboardingGuide() {

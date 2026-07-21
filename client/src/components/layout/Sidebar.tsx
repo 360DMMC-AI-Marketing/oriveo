@@ -94,7 +94,7 @@ export default function Sidebar() {
   const subtitle = TYPE_SUBTITLES[clinicType] || TYPE_SUBTITLES.human;
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r bg-white">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r bg-white" role="navigation" aria-label="Main navigation">
       <div className="flex items-center gap-3 border-b px-6 py-5">
         <Logo size="md" variant="dark" showText={false} />
         <div>
@@ -111,7 +111,7 @@ export default function Sidebar() {
           const isGroupActive = visibleChildren.some((child) => location.pathname.startsWith(child.to));
           return (
             <div key={group.label}>
-              <button onClick={() => toggleGroup(group.label)}
+              <button onClick={() => toggleGroup(group.label)} aria-expanded={isExpanded} aria-label={`${group.label} section`}
                 className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer",
                   isGroupActive ? "bg-primary-light text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 )}>

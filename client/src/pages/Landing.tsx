@@ -41,15 +41,16 @@ const testimonials = [
 ];
 
 const certifications = [
-  "HIPAA Compliant", "SOC 2 Type II", "HITRUST CSF Certified",
-  "GDPR Compliant", "FHIR R4 Certified", "ISO 27001 Certified",
-  "ONC Certified EHR", "CLIA Compliant",
+  "HIPAA Compliant", "AES-256-GCM Encryption", "RBAC Access Control",
+  "GDPR Compliant", "FHIR R4 Certified", "PHI Encrypted at Rest",
+  "Audit Trail Logging", "Data Retention Controls",
 ];
 
 const faqs = [
   { q: "How long does deployment take?", a: "Most organizations are live in 3 days. Our purpose-built healthcare platform includes pre-built templates, EHR integrations, and configurable workflows that eliminate protracted implementation cycles." },
-  { q: "Is Oriveo HIPAA compliant?", a: "Yes. Oriveo is fully HIPAA compliant with executed Business Associate Agreements, AES-256-GCM encryption at rest, TLS 1.3 in transit, SOC 2 Type II certification, and HITRUST CSF certification." },
-  { q: "What EHR systems do you integrate with?", a: "Oriveo integrates with Athenahealth, Epic, Cerner, eClinicalWorks, Practice Fusion, AdvancedMD, and more. Bi-directional data sync ensures patient records stay current." },
+  { q: "Is Oriveo HIPAA compliant?", a: "Yes. Oriveo features AES-256-GCM encryption of all PHI fields at rest, TLS in transit, role-based access controls (6 roles), comprehensive audit trails tracking every PHI access, token-based session management with revocation, security headers via Helmet, rate limiting, and NoSQL injection prevention. A Business Associate Agreement is available for all covered entities." },
+  { q: "How does Oriveo handle GDPR compliance?", a: "Oriveo supports GDPR requirements with AES-256-GCM encryption of personal data, explicit consent management (phone, email, SMS, recording, data processing, telehealth), right-to-erasure endpoint for permanent deletion of all patient data, data portability export in structured JSON format, configurable data retention policies (auto-purge after N days), and role-based access limiting data exposure." },
+  { q: "What EHR systems do you integrate with?", a: "Oriveo integrates with Athenahealth, Epic, Cerner, eClinicalWorks, Practice Fusion, AdvancedMD, and more via HL7 FHIR R4. Bi-directional data sync ensures patient records stay current. Our FHIR adapter supports Patient, Appointment, Observation, and CarePlan resources." },
   { q: "How many languages does the AI support?", a: "The AI voice agent supports 10+ languages including English, Spanish, French, German, Italian, Portuguese, Arabic, Mandarin, Japanese, Korean, and Dutch with automatic language detection." },
   { q: "Can we customize the questionnaires?", a: "Yes. You can create custom condition-specific questionnaires, use our 100+ specialty sub-templates, or let the AI generate questions on the fly based on patient responses." },
   { q: "What kind of analytics are available?", a: "Real-time dashboards with call volume, severity trends, QA scores, no-show reduction metrics, patient satisfaction, ROI calculators, and exportable reports with drill-down capability." },
@@ -177,9 +178,11 @@ export default function Landing() {
               </div>
               <div className="mt-12 flex flex-wrap items-center gap-6 text-sm text-gray-500">
                 <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> HIPAA compliant</span>
-                <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> 3-day deployment</span>
+                <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> GDPR ready</span>
+                <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> AES-256-GCM</span>
                 <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> 99.97% uptime</span>
                 <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> 10+ languages</span>
+                <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> FHIR R4</span>
               </div>
             </div>
             <div className="hidden lg:block">
@@ -309,7 +312,7 @@ export default function Landing() {
               { icon: Phone, title: "AI Voice Communication", description: "Intelligent outbound and inbound calling with natural language, multi-lingual support, automatic language detection, and seamless human handoff.", gradient: "from-blue-500 to-cyan-500" },
               { icon: Brain, title: "Clinical Intelligence", description: "Real-time severity scoring, condition-specific triage, automated QA, emergency detection, and AI-generated SOAP notes with ICD-10 coding.", gradient: "from-purple-500 to-pink-500" },
               { icon: Monitor, title: "Specialty Dashboards", description: "28 specialty-aware dashboards with condition-specific widgets, metrics, and clinical terminology. Cardiology, neurology, dentistry, veterinary, and more.", gradient: "from-primary to-emerald-500" },
-              { icon: Lock, title: "Enterprise Security", description: "HIPAA-compliant with PHI encryption, SOC 2 Type II, HITRUST CSF, role-based access, audit trails, and BAAs for all covered entities.", gradient: "from-amber-500 to-orange-500" },
+              { icon: Lock, title: "Enterprise Security", description: "HIPAA-compliant with AES-256-GCM PHI encryption, RBAC with 6 roles, comprehensive audit trails, consent management, data retention controls, right-to-erasure, and data portability — all built-in.", gradient: "from-amber-500 to-orange-500" },
             ].map((f) => (
               <Card key={f.title} className="group border-0 bg-gray-50 hover:bg-white shadow-sm hover:shadow-xl transition-all duration-500 cursor-default">
                 <CardContent className="p-8">
@@ -382,7 +385,7 @@ export default function Landing() {
               { icon: BarChart3, title: "QA & Severity Scoring", description: "Every call scored 0–10 for severity. Automated QA across accuracy, empathy, professionalism, adherence, and resolution with drill-down analytics." },
               { icon: Radio, title: "Live Call Monitoring", description: "Supervisor dashboard with real-time transcript streaming, live severity updates, call recording playback, and mid-call intervention capabilities." },
               { icon: FileText, title: "AI Clinical Notes (SOAP)", description: "Ambient clinical intelligence generates structured SOAP notes with ICD-10 codes, medications, lab orders, and digital signatures — ready for EHR sync." },
-              { icon: Users, title: "Patient Records Management", description: "Complete patient profiles with PHI-grade encryption, medical history, chronic conditions, medication tracking, DNC controls, and family/guardian linkages." },
+              { icon: Users, title: "Patient Records Management", description: "Complete patient profiles with AES-256-GCM encrypted PHI fields, medical history, chronic conditions, medication tracking, DNC controls, consent management, and data export/erasure tools." },
               { icon: Calendar, title: "Batch Campaigns & Scheduling", description: "Schedule batch campaigns to hundreds of patients, use condition-matched questionnaires, and let AI generate dynamic questions based on live responses." },
               { icon: Globe, title: "Multi-Language Support", description: "10+ languages with automatic language detection. Patients speak their preferred language; the AI detects, responds, and documents in the same language." },
               { icon: Database, title: "EHR Integration Hub", description: "Bi-directional sync with Athenahealth, Epic, Cerner, eClinicalWorks, Practice Fusion, and AdvancedMD. Patient data and clinical notes sync automatically." },
@@ -647,7 +650,8 @@ export default function Landing() {
           </div>
           <div className="mt-8 flex items-center justify-center gap-6 text-sm text-gray-500">
             <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> HIPAA compliant</span>
-            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> Enterprise security</span>
+            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> GDPR ready</span>
+            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> AES-256-GCM</span>
             <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-primary" /> 3-day deployment</span>
           </div>
         </div>

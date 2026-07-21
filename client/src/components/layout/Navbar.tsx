@@ -10,7 +10,7 @@ export default function Navbar() {
   if (!user) return null;
 
   return (
-    <header className="flex items-center justify-between border-b bg-white px-6 py-3">
+    <header className="flex items-center justify-between border-b bg-white px-6 py-3" role="banner">
       <div>
         <p className="text-sm text-gray-500">{user.organization?.name || "Workspace"}</p>
         <p className="text-sm font-semibold text-gray-900">{user.name}</p>
