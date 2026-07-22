@@ -145,6 +145,7 @@ export default function CommandCenter() {
   const [tvMode, setTvMode] = useState(false);
   const [tvView, setTvView] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const containerRef = useRef<HTMLDivElement>(null);
   const rotateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -173,6 +174,11 @@ export default function CommandCenter() {
     return () => { if (rotateTimer.current) clearTimeout(rotateTimer.current); };
   }, [tvMode, paused]);
 
+  const handleManualRefresh = useCallback(() => {
+    refetch();
+    setLastRefreshed(new Date());
+  }, [refetch]);
+
   const toggleTvMode = useCallback(async () => {
     if (!tvMode) {
       setTvView(0); setTvMode(true);
@@ -188,6 +194,14 @@ export default function CommandCenter() {
     const handler = () => { if (!document.fullscreenElement) setTvMode(false); };
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
+  }, [tvMode]);
+
+  useEffect(() => {
+    if (!tvMode) return;
+    const interval = setInterval(() => {
+      window.location.reload();
+    }, 3600000);
+    return () => clearInterval(interval);
   }, [tvMode]);
 
   const breakdown = useMemo(() => indexBreakdown ? [
@@ -669,6 +683,9 @@ export default function CommandCenter() {
             <span className="text-sm font-bold text-white">O</span>
           </div>
           <span className="text-sm font-semibold tracking-wide text-gray-800">{tvMode ? "" : "Command Center"}</span>
+          {tvMode && (
+            <span className="text-[10px] text-gray-400 ml-2">Updated {lastRefreshed.toLocaleTimeString()}</span>
+          )}
           {!tvMode && practiceStats && (
             <div className="hidden md:flex items-center gap-3 ml-4 text-[11px] text-gray-400">
               <span>{practiceStats.totalPatients} patients</span>
@@ -684,11 +701,9 @@ export default function CommandCenter() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {!tvMode && (
-            <button onClick={() => refetch()} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors shadow-sm" title="Refresh">
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <button onClick={handleManualRefresh} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors shadow-sm" title="Refresh">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
           <button onClick={toggleTvMode} className="flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors shadow-sm">
             {tvMode ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             {tvMode ? "Exit" : "TV Mode"}
