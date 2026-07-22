@@ -23,10 +23,12 @@ router.get("/summary", async (req, res) => {
     const thirtyDaysAgo = new Date(todayStart);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    const { specialty: _specialty, ...noSpecialtyFilter } = filter;
+
     const [patients, calls, appointments, users, subscription] = await Promise.all([
       Patient.find({ ...filter, isActive: true }).select("name primaryDiagnosis").lean(),
-      Call.find(filter).select("patient status aiSeverityScore createdAt aiSummary qaScore emergencyDetected emergencyActionTaken startedBy duration").sort({ createdAt: -1 }).lean(),
-      Appointment.find({ ...filter, date: { $gte: thirtyDaysAgo } }).select("status date").lean(),
+      Call.find(noSpecialtyFilter).select("patient status aiSeverityScore createdAt aiSummary qaScore emergencyDetected emergencyActionTaken startedBy duration").sort({ createdAt: -1 }).lean(),
+      Appointment.find({ ...noSpecialtyFilter, date: { $gte: thirtyDaysAgo } }).select("status date").lean(),
       User.find({ ...filter, isActive: true }).select("role").lean(),
       orgId ? Subscription.findOne({ organization: orgId }).lean() : null,
     ]);
@@ -73,7 +75,7 @@ router.get("/summary", async (req, res) => {
     for (const c of calls) statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
 
     // --- Appointment Stats (today) ---
-    const apptsToday = await Appointment.find({ ...filter, date: { $gte: todayStart, $lt: todayEnd } }).select("status").lean();
+    const apptsToday = await Appointment.find({ ...noSpecialtyFilter, date: { $gte: todayStart, $lt: todayEnd } }).select("status").lean();
     const apptStatusCounts = {};
     for (const a of apptsToday) apptStatusCounts[a.status] = (apptStatusCounts[a.status] || 0) + 1;
 
