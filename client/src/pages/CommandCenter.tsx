@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import Logo from "@/components/ui/Logo";
 import {
   Activity, AlertTriangle, ArrowUp, BarChart3, Calendar, ChevronRight, Clock, Eye,
   Heart, Maximize2, Minimize2, Phone, Radio, RefreshCw, Shield, TrendingUp, Users, X,
@@ -679,10 +680,7 @@ export default function CommandCenter() {
       {/* Header */}
       <div className={`flex items-center justify-between ${tvMode ? "px-4 pt-4 pb-2" : "mb-5"}`}>
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0a7c6f] to-emerald-500 shadow-sm">
-            <span className="text-sm font-bold text-white">O</span>
-          </div>
-          <span className="text-sm font-semibold tracking-wide text-gray-800">{tvMode ? "" : "Command Center"}</span>
+          <Logo size="sm" showText={!tvMode} variant="dark" />
           {tvMode && (
             <span className="text-[10px] text-gray-400 ml-2">Updated {lastRefreshed.toLocaleTimeString()}</span>
           )}
