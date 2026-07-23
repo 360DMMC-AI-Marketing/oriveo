@@ -19,7 +19,6 @@ import Appointments from "@/pages/Appointments";
 import CalendarSchedule from "@/pages/CalendarSchedule";
 import CallDetail from "@/pages/CallDetail";
 import ClinicDashboard from "@/pages/ClinicDashboard";
-import ClinicSettingsPage from "@/pages/ClinicSettings";
 import ClinicUsers from "@/pages/ClinicUsers";
 
 import CallCenter from "@/pages/CallCenter";
@@ -102,7 +101,7 @@ function AppRoutes() {
         <Route path="/knowledge-base" element={<KnowledgeBase />} />
 
         <Route path="/clinic" element={<ClinicDashboard />} />
-        <Route path="/clinic/settings" element={<ClinicSettingsPage />} />
+        <Route path="/clinic/settings" element={<Navigate to="/clinic" replace />} />
         <Route path="/clinic/users" element={<ClinicUsers />} />
 
         <Route path="/onboarding-guide" element={<OnboardingGuide />} />
