@@ -478,255 +478,310 @@ async function buildReportData(orgId) {
   const dayRow = data.dayDist.map((d) => `<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">${d.label}</div><div style="height:48px;background:#f1f5f9;border-radius:4px;position:relative;overflow:hidden;"><div style="position:absolute;bottom:0;left:0;right:0;height:${Math.round(d.count / data.maxDayCount * 100)}%;background:linear-gradient(180deg,#3b82f6,#2563eb);border-radius:4px;"></div></div><div style="font-size:13px;font-weight:700;margin-top:3px;">${d.count}</div></div>`).join("");
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${data.orgName} — ${data.monthName} Report</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; color: #1e293b; line-height: 1.5; background: #f8fafc; }
-  .page { max-width: 820px; margin: 0 auto; padding: 32px 24px; }
-  .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 16px; padding: 36px 32px; margin-bottom: 24px; color: #fff; position: relative; overflow: hidden; }
-  .header::after { content: ''; position: absolute; top: -50%; right: -20%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%); border-radius: 50%; }
-  .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; position: relative; }
-  .header .sub { color: #94a3b8; font-size: 14px; margin-top: 4px; position: relative; }
-  .header .badge { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.08); padding: 4px 14px; border-radius: 20px; font-size: 11px; color: #94a3b8; margin-top: 12px; position: relative; }
-  .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; margin-bottom: 18px; }
-  .section-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: #0f172a; }
-  .section-title .ct { background: #2563eb; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
-  .section-title .ct.green { background: #059669; }
-  .section-title .ct.amber { background: #d97706; }
-  .section-title .ct.purple { background: #7c3aed; }
-  .section-title .ct.red { background: #dc2626; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
-  .kpi { text-align: center; padding: 16px 8px; background: #f8fafc; border-radius: 10px; }
-  .kpi .kv { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
-  .kpi .kl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; margin-top: 4px; }
-  .kpi .ks { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-  .primary { color: #2563eb; } .green { color: #059669; } .red { color: #dc2626; } .amber { color: #d97706; } .purple { color: #7c3aed; }
-  .sr { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-  .sr:last-child { border-bottom: none; }
-  .sr .sl { color: #475569; } .sr .sv { font-weight: 600; }
-  .bg { margin-bottom: 8px; }
-  .bl { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; color: #475569; }
-  .br { height: 7px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
-  .bf { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2563eb, #3b82f6); }
-  .bf.green { background: linear-gradient(90deg, #059669, #10b981); }
-  .bf.amber { background: linear-gradient(90deg, #d97706, #f59e0b); }
-  .bf.red { background: linear-gradient(90deg, #dc2626, #ef4444); }
-  .bf.purple { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
-  .roi { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; border-radius: 14px; padding: 24px; text-align: center; margin-bottom: 18px; }
-  .roi .rv { font-size: 42px; font-weight: 800; color: #059669; letter-spacing: -1px; }
-  .roi .rl { font-size: 14px; color: #047857; font-weight: 600; margin-top: 2px; }
-  .roi .rs { font-size: 12px; color: #6ee7b7; margin-top: 4px; }
-  .pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-  .pill.green { background: #d1fae5; color: #065f46; }
-  .pill.red { background: #fee2e2; color: #991b1b; }
-  .pill.amber { background: #fef3c7; color: #92400e; }
-  .pill.blue { background: #dbeafe; color: #1e40af; }
-  .pill.purple { background: #ede9fe; color: #5b21b6; }
-  .footer { text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; margin-top: 10px; }
-  .footer p { color: #94a3b8; font-size: 11px; }
-  .footer .logo { font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 4px; }
-  .tag { font-size: 11px; color: #94a3b8; }
-  .dw { display: flex; gap: 4px; align-items: flex-end; }
-  .dw > div { flex: 1; text-align: center; }
-  .dw .bar-vis { height: 48px; background: #f1f5f9; border-radius: 4px; position: relative; overflow: hidden; }
-  .dw .bar-vis .fill { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 4px; background: linear-gradient(180deg, #3b82f6, #2563eb); }
-  .dw .lbl { font-size: 10px; color: #94a3b8; margin-bottom: 2px; }
-  .dw .val { font-size: 13px; font-weight: 700; margin-top: 3px; }
-  .alert-box { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; font-size: 13px; }
-  .alert-box.amber { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fde68a; }
-  .alert-box.blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe; }
-  @media print { .page { padding: 0; } }
-  @media (max-width: 600px) { .grid-4 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: 1fr 1fr; } .grid-2 { grid-template-columns: 1fr; } }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#111827;line-height:1.6;background:#f0f2f5;-webkit-font-smoothing:antialiased}
+  .page{max-width:860px;margin:0 auto;padding:28px 20px}
+
+  /* ── HERO HEADER ── */
+  .hero{background:linear-gradient(135deg,#0c1222 0%,#162032 40%,#1a2a44 100%);border-radius:20px;padding:44px 40px 36px;margin-bottom:28px;color:#fff;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;top:-80px;right:-60px;width:340px;height:340px;background:radial-gradient(circle,rgba(59,130,246,0.12) 0%,transparent 70%);pointer-events:none}
+  .hero::after{content:'';position:absolute;bottom:-60px;left:40%;width:260px;height:260px;background:radial-gradient(circle,rgba(139,92,246,0.08) 0%,transparent 70%);pointer-events:none}
+  .hero-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;position:relative}
+  .hero-brand{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.45)}
+  .hero-date{font-size:12px;color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:5px 14px;border-radius:20px}
+  .hero h1{font-size:30px;font-weight:800;letter-spacing:-0.8px;line-height:1.2;position:relative;margin-bottom:6px}
+  .hero .hero-sub{font-size:16px;color:rgba(255,255,255,0.55);font-weight:400;position:relative}
+  .hero .hero-sub strong{color:rgba(255,255,255,0.85);font-weight:600}
+  .hero-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:28px;position:relative}
+  .hero-kpi{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;backdrop-filter:blur(10px)}
+  .hero-kpi .hkv{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1}
+  .hero-kpi .hkl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);font-weight:600;margin-top:6px}
+  .hero-kpi .hks{font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px}
+  .c-blue{color:#60a5fa}.c-green{color:#34d399}.c-purple{color:#a78bfa}.c-amber{color:#fbbf24}.c-red{color:#f87171}.c-white{color:#fff}
+
+  /* ── SECTION CARDS ── */
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .card-title{font-size:16px;font-weight:700;color:#111827;display:flex;align-items:center;gap:10px}
+  .card-title .icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+  .card-title .icon.blue{background:#eff6ff;color:#2563eb}
+  .card-title .icon.green{background:#ecfdf5;color:#059669}
+  .card-title .icon.purple{background:#f5f3ff;color:#7c3aed}
+  .card-title .icon.amber{background:#fffbeb;color:#d97706}
+  .card-title .icon.red{background:#fef2f2;color:#dc2626}
+  .card-title .icon.slate{background:#f8fafc;color:#475569}
+  .badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:4px}
+  .badge.blue{background:#eff6ff;color:#1d4ed8}.badge.green{background:#ecfdf5;color:#047857}.badge.purple{background:#f5f3ff;color:#5b21b6}.badge.amber{background:#fffbeb;color:#92400e}.badge.red{background:#fef2f2;color:#991b1b}.badge.slate{background:#f8fafc;color:#475569}
+
+  /* ── STAT ROWS ── */
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+  .stat-row:last-child{border-bottom:none}
+  .stat-label{color:#6b7280;font-weight:500}
+  .stat-value{font-weight:700;color:#111827}
+
+  /* ── MINI KPI GRID ── */
+  .kpi-grid{display:grid;gap:12px}
+  .kpi-grid.c2{grid-template-columns:1fr 1fr}.kpi-grid.c3{grid-template-columns:1fr 1fr 1fr}.kpi-grid.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+  .mini-kpi{background:#f9fafb;border:1px solid #f3f4f6;border-radius:12px;padding:16px 12px;text-align:center}
+  .mini-kpi .mkv{font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1}
+  .mini-kpi .mkl{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#9ca3af;font-weight:600;margin-top:5px}
+  .mini-kpi .mks{font-size:11px;color:#d1d5db;margin-top:2px}
+
+  /* ── PROGRESS BARS ── */
+  .progress-wrap{margin-bottom:14px}.progress-wrap:last-child{margin-bottom:0}
+  .progress-head{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;color:#6b7280}
+  .progress-head span:last-child{font-weight:700;color:#374151}
+  .progress-track{height:8px;background:#f3f4f6;border-radius:6px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:6px;transition:width .3s}
+  .pf-blue{background:linear-gradient(90deg,#2563eb,#3b82f6)}.pf-green{background:linear-gradient(90deg,#059669,#34d399)}.pf-amber{background:linear-gradient(90deg,#d97706,#fbbf24)}.pf-red{background:linear-gradient(90deg,#dc2626,#f87171)}.pf-purple{background:linear-gradient(90deg,#7c3aed,#a78bfa)}
+
+  /* ── BAR CHART (days) ── */
+  .bar-chart{display:flex;gap:6px;align-items:flex-end;height:120px;padding:0 4px}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .bar-track{width:100%;background:#f3f4f6;border-radius:6px;position:relative;overflow:hidden;min-height:4px}
+  .bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:6px;background:linear-gradient(180deg,#3b82f6,#2563eb)}
+  .bar-label{font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:500}
+  .bar-value{font-size:12px;font-weight:700;color:#374151;margin-top:6px}
+
+  /* ── STAFF CARDS ── */
+  .staff-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .staff-card{background:#f9fafb;border:1px solid #f3f4f6;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+  .staff-name{font-size:13px;font-weight:600;color:#111827}.staff-meta{font-size:11px;color:#9ca3af;margin-top:1px}
+  .staff-pct{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+
+  /* ── ROI BOX ── */
+  .roi-box{background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 50%,#a7f3d0 100%);border:1px solid #6ee7b7;border-radius:16px;padding:28px;text-align:center;margin-bottom:20px}
+  .roi-val{font-size:46px;font-weight:900;color:#047857;letter-spacing:-1.5px;line-height:1}
+  .roi-label{font-size:14px;font-weight:600;color:#059669;margin-top:4px}
+  .roi-sub{font-size:12px;color:#6ee7b7;margin-top:6px}
+
+  /* ── LANGUAGE PILLS ── */
+  .lang-pills{display:flex;flex-wrap:wrap;gap:8px}
+  .lang-pill{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:6px 14px;font-size:12px;font-weight:600;color:#374151;display:flex;align-items:center;gap:6px}
+  .lang-pill .lc{font-size:10px;color:#9ca3af;font-weight:500}
+
+  /* ── FOOTER ── */
+  .footer{margin-top:28px;padding:24px 0 8px;border-top:1px solid #e5e7eb;text-align:center}
+  .footer-brand{font-size:16px;font-weight:800;color:#111827;letter-spacing:-0.3px}
+  .footer-brand span{color:#2563eb}
+  .footer p{font-size:11px;color:#9ca3af;margin-top:4px}
+  .footer-line{width:40px;height:3px;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:3px;margin:12px auto 0}
+
+  @media print{.page{padding:0}.card{box-shadow:none;break-inside:avoid}}
+  @media(max-width:640px){.hero-kpis,.kpi-grid.c4{grid-template-columns:1fr 1fr}.staff-grid{grid-template-columns:1fr}.hero{padding:28px 20px 24px}.hero h1{font-size:22px}}
 </style>
 </head>
 <body>
 <div class="page">
 
-  <div class="header">
-    <h1>Oriveo &mdash; Monthly Performance Report</h1>
-    <div class="sub">${data.orgName} &bull; ${data.monthName}</div>
-    <div class="badge">Generated ${data.generatedAt} &bull; Confidential</div>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-top">
+      <div class="hero-brand">Oriveo</div>
+      <div class="hero-date">${data.generatedAt}</div>
+    </div>
+    <h1>Monthly Performance Report</h1>
+    <div class="hero-sub"><strong>${data.orgName}</strong> &bull; ${data.monthName}</div>
+    <div class="hero-kpis">
+      <div class="hero-kpi"><div class="hkv c-blue">${s(data.totalCalls)}</div><div class="hkl">Total Calls</div><div class="hks">${s(data.callGrowth) >= 0 ? '+' : ''}${s(data.callGrowth)}% vs prev</div></div>
+      <div class="hero-kpi"><div class="hkv c-green">${s(data.answerRate)}%</div><div class="hkl">Answer Rate</div><div class="hks">${s(data.answeredCalls)} answered</div></div>
+      <div class="hero-kpi"><div class="hkv c-purple">${s(data.avgQAOverall) || '—'}</div><div class="hkl">QA Score</div><div class="hks">${s(data.scoredCalls)} scored</div></div>
+      <div class="hero-kpi"><div class="hkv c-white">${s(data.voiceMinutes)}</div><div class="hkl">Voice Min</div><div class="hks">${s(data.avgDuration)}s avg</div></div>
+    </div>
   </div>
 
-  <!-- EXECUTIVE SUMMARY -->
-  <div class="roi">
-    <div class="rv">${s(data.noShowSavings) >= 0 ? '$' + s(data.noShowSavings).toLocaleString() : '$0'}</div>
-    <div class="rl">Estimated Cost Savings This Month</div>
-    <div class="rs">No-show reduction vs ${data.prevMonthName} &bull; \$150 avg/missed appointment &bull; ${s(data.prevNoShowRate)}% &#8594; ${s(data.noShowRate)}%</div>
-  </div>
-
-  <div class="grid-4">
-    <div class="kpi"><div class="kv primary">${s(data.totalCalls)}</div><div class="kl">Total Calls</div><div class="ks">${s(data.callGrowth) >= 0 ? '+' : ''}${s(data.callGrowth)}% vs prev</div></div>
-    <div class="kpi"><div class="kv green">${s(data.answerRate)}%</div><div class="kl">Answer Rate</div><div class="ks">${s(data.answeredCalls)} patients answered</div></div>
-    <div class="kpi"><div class="kv purple">${s(data.avgQAOverall)}</div><div class="kl">Avg QA Score</div><div class="ks">${s(data.scoredCalls)} calls scored</div></div>
-    <div class="kpi"><div class="kv">${s(data.voiceMinutes)}</div><div class="kl">Voice Minutes</div><div class="ks">${s(data.avgDuration)}s avg call</div></div>
+  <!-- SAVINGS -->
+  <div class="roi-box">
+    <div class="roi-val">${s(data.noShowSavings) >= 0 ? '$' + s(data.noShowSavings).toLocaleString() : '$0'}</div>
+    <div class="roi-label">Estimated Cost Savings This Month</div>
+    <div class="roi-sub">No-show reduction vs ${data.prevMonthName} &bull; $150 avg/missed &bull; ${s(data.prevNoShowRate)}% → ${s(data.noShowRate)}%</div>
   </div>
 
   <!-- CALL VOLUME BY DAY -->
-  <div class="section">
-    <div class="section-title">Call Volume by Day of Week</div>
-    <div class="dw">${dayRow}</div>
-    <div style="margin-top:8px;font-size:12px;color:#64748b;text-align:center;">
-      ${s(data.peakHour) !== null ? `Peak hour: ${s(data.peakHour).toString().padStart(2,'0')}:00 &bull; ${s(data.peakHourCount)} calls` : 'No call data'}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon blue">📊</span> Call Volume by Day</div>
+      ${s(data.peakHour) !== null ? `<span class="badge blue">Peak: ${s(data.peakHour).toString().padStart(2,'0')}:00</span>` : ''}
+    </div>
+    <div class="bar-chart">
+      ${data.dayDist.map((d) => `<div class="bar-col"><div class="bar-label">${d.label}</div><div class="bar-track" style="height:100%"><div class="bar-fill" style="height:${Math.round(d.count / data.maxDayCount * 100)}%"></div></div><div class="bar-value">${d.count}</div></div>`).join("")}
     </div>
   </div>
 
   <!-- CALL OPERATIONS -->
-  <div class="section">
-    <div class="section-title">Call Operations <span class="ct">${s(data.totalCalls)}</span></div>
-    <div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon green">📞</span> Call Operations</div>
+      <span class="badge green">${s(data.totalCalls)} total</span>
+    </div>
+    <div class="kpi-grid c2">
       <div>
-        <div class="sr"><span class="sl">Completed</span><span class="sv green">${s(data.completed)} (${s(data.completionRate)}%)</span></div>
-        <div class="sr"><span class="sl">Failed</span><span class="sv red">${s(data.failed)}</span></div>
-        <div class="sr"><span class="sl">In Progress</span><span class="sv primary">${s(data["in-progress"])}</span></div>
-        <div class="sr"><span class="sl">Scheduled</span><span class="sv amber">${s(data.scheduled)}</span></div>
-        <div class="sr"><span class="sl">Transferred / Cancelled</span><span class="sv">${s(data.transferred)} / ${s(data.cancelled)}</span></div>
+        <div class="stat-row"><span class="stat-label">Completed</span><span class="stat-value" style="color:#059669">${s(data.completed)} (${s(data.completionRate)}%)</span></div>
+        <div class="stat-row"><span class="stat-label">Failed</span><span class="stat-value" style="color:#dc2626">${s(data.failed)}</span></div>
+        <div class="stat-row"><span class="stat-label">In Progress</span><span class="stat-value" style="color:#2563eb">${s(data["in-progress"])}</span></div>
+        <div class="stat-row"><span class="stat-label">Scheduled</span><span class="stat-value" style="color:#d97706">${s(data.scheduled)}</span></div>
+        <div class="stat-row"><span class="stat-label">Transferred / Cancelled</span><span class="stat-value">${s(data.transferred)} / ${s(data.cancelled)}</span></div>
       </div>
       <div>
-        <div class="sr"><span class="sl">Outbound / Inbound</span><span class="sv">${s(data.outboundCalls)} / ${s(data.inboundCalls)}</span></div>
-        <div class="sr"><span class="sl">Emergencies Detected</span><span class="sv"><span class="pill red">${s(data.emergencyCalls)}</span></span></div>
-        <div class="sr"><span class="sl">High Severity (7+)</span><span class="sv red">${s(data.highSeverityCalls)}</span></div>
-        <div class="sr"><span class="sl">Avg AI Severity</span><span class="sv">${data.avgSeverity}/10</span></div>
-        <div class="sr"><span class="sl">Recalls (total)</span><span class="sv">${s(data.recalls)}</span></div>
+        <div class="stat-row"><span class="stat-label">Outbound / Inbound</span><span class="stat-value">${s(data.outboundCalls)} / ${s(data.inboundCalls)}</span></div>
+        <div class="stat-row"><span class="stat-label">Emergencies Detected</span><span class="stat-value"><span class="badge red">${s(data.emergencyCalls)}</span></span></div>
+        <div class="stat-row"><span class="stat-label">High Severity (7+)</span><span class="stat-value" style="color:#dc2626">${s(data.highSeverityCalls)}</span></div>
+        <div class="stat-row"><span class="stat-label">Avg AI Severity</span><span class="stat-value">${data.avgSeverity}/10</span></div>
+        <div class="stat-row"><span class="stat-label">Recalls (total)</span><span class="stat-value">${s(data.recalls)}</span></div>
       </div>
     </div>
-    <div style="margin-top:10px">
-      <div class="bg">
-        <div class="bl"><span>Completion Rate</span><span>${s(data.completionRate)}% ${s(data.completionGrowth) >= 0 ? '&#8593;' : '&#8595;'} ${Math.abs(s(data.completionGrowth))}%</span></div>
-        <div class="br"><div class="bf" style="width:${s(data.completionRate)}%"></div></div>
+    <div style="margin-top:18px">
+      <div class="progress-wrap">
+        <div class="progress-head"><span>Completion Rate</span><span>${s(data.completionRate)}% ${s(data.completionGrowth) >= 0 ? '↑' : '↓'} ${Math.abs(s(data.completionGrowth))}%</span></div>
+        <div class="progress-track"><div class="progress-fill pf-blue" style="width:${s(data.completionRate)}%"></div></div>
       </div>
-      <div class="bg">
-        <div class="bl"><span>Answer Rate</span><span>${s(data.answerRate)}%</span></div>
-        <div class="br"><div class="bf green" style="width:${s(data.answerRate)}%"></div></div>
+      <div class="progress-wrap">
+        <div class="progress-head"><span>Answer Rate</span><span>${s(data.answerRate)}%</span></div>
+        <div class="progress-track"><div class="progress-fill pf-green" style="width:${s(data.answerRate)}%"></div></div>
       </div>
     </div>
   </div>
 
-  <!-- TRIAGE DISTRIBUTION -->
-  <div class="section">
-    <div class="section-title">Triage &amp; Severity <span class="ct ${s(data.highSeverityCalls) > 0 ? 'red' : 'green'}">${s(data.highSeverityCalls)} high</span></div>
-    <div class="grid-3">
-      <div class="kpi"><div class="kv green">${s(data.triageCounts[1])}</div><div class="kl">Tier 1 (Urgent)</div><div class="ks">Immediate attention</div></div>
-      <div class="kpi"><div class="kv amber">${s(data.triageCounts[2])}</div><div class="kl">Tier 2 (Moderate)</div><div class="ks">Needs follow-up</div></div>
-      <div class="kpi"><div class="kv primary">${s(data.triageCounts[3])}</div><div class="kl">Tier 3 (Routine)</div><div class="ks">Standard calls</div></div>
+  <!-- TRIAGE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon ${s(data.highSeverityCalls) > 0 ? 'red' : 'green'}">⚡</span> Triage &amp; Severity</div>
+      <span class="badge ${s(data.highSeverityCalls) > 0 ? 'red' : 'green'}">${s(data.highSeverityCalls)} high-priority</span>
+    </div>
+    <div class="kpi-grid c3">
+      <div class="mini-kpi"><div class="mkv" style="color:#059669">${s(data.triageCounts[1])}</div><div class="mkl">Tier 1 · Urgent</div><div class="mks">Immediate attention</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#d97706">${s(data.triageCounts[2])}</div><div class="mkl">Tier 2 · Moderate</div><div class="mks">Needs follow-up</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#2563eb">${s(data.triageCounts[3])}</div><div class="mkl">Tier 3 · Routine</div><div class="mks">Standard calls</div></div>
     </div>
   </div>
 
   <!-- STAFF PERFORMANCE -->
   ${s(data.staffPerformance.length) > 0 ? `
-  <div class="section">
-    <div class="section-title">Staff Performance <span class="ct purple">${s(data.staffPerformance.length)} active</span></div>
-    <div class="grid-2">
-      ${data.staffPerformance.map((sp) => `
-      <div class="kpi" style="text-align:left;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
-        <div><div class="kl" style="text-transform:none;letter-spacing:0;font-size:13px;color:#1e293b;">${sp.name}</div><div class="ks">${sp.calls} calls &bull; ${sp.completed} completed</div></div>
-        <div class="kv primary" style="font-size:20px;">${sp.calls > 0 ? Math.round(sp.completed / sp.calls * 100) : 0}%</div>
-      </div>
-      `).join("")}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon purple">👥</span> Staff Performance</div>
+      <span class="badge purple">${s(data.staffPerformance.length)} active</span>
+    </div>
+    <div class="staff-grid">
+      ${data.staffPerformance.map((sp) => `<div class="staff-card"><div><div class="staff-name">${sp.name}</div><div class="staff-meta">${sp.calls} calls · ${sp.completed} completed</div></div><div class="staff-pct" style="color:#2563eb">${sp.calls > 0 ? Math.round(sp.completed / sp.calls * 100) : 0}%</div></div>`).join("")}
     </div>
   </div>
   ` : ""}
 
   <!-- TOP PATIENTS -->
   ${s(data.topPatients.length) > 0 ? `
-  <div class="section">
-    <div class="section-title">Most Engaged Patients</div>
-    <div class="grid-2">
-      ${data.topPatients.map((tp) => `
-      <div class="sr"><span class="sl">${tp.name}</span><span class="sv">${tp.calls} calls ${s(tp.emergencies) > 0 ? '<span class="pill red" style="margin-left:6px;">'+tp.emergencies+' emerg.</span>' : ''}</span></div>
-      `).join("")}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon amber">🩺</span> Most Engaged Patients</div>
     </div>
+    ${data.topPatients.map((tp) => `<div class="stat-row"><span class="stat-label">${tp.name}</span><span class="stat-value">${tp.calls} calls ${s(tp.emergencies) > 0 ? '<span class="badge red" style="margin-left:8px">'+tp.emergencies+' emerg.</span>' : ''}</span></div>`).join("")}
   </div>
   ` : ""}
 
-  <!-- QUALITY ASSURANCE -->
-  <div class="section">
-    <div class="section-title">Quality Assurance <span class="ct purple">${s(data.scoredCalls)} scored</span></div>
-    <div class="grid-4">
-      <div class="kpi"><div class="kv purple">${s(data.avgQAOverall)}</div><div class="kl">Overall</div></div>
-      <div class="kpi"><div class="kv primary">${s(data.avgQAAccuracy)}</div><div class="kl">Accuracy</div></div>
-      <div class="kpi"><div class="kv green">${s(data.avgQAEmpathy)}</div><div class="kl">Empathy</div></div>
-      <div class="kpi"><div class="kv amber">${s(data.avgQAProfessionalism)}</div><div class="kl">Professionalism</div></div>
+  <!-- QA -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon purple">🎯</span> Quality Assurance</div>
+      <span class="badge purple">${s(data.scoredCalls)} scored</span>
     </div>
-    <div style="margin-top:4px">
-      <div class="bg"><div class="bl"><span>Accuracy</span><span>${s(data.avgQAAccuracy)}%</span></div><div class="br"><div class="bf primary" style="width:${s(data.avgQAAccuracy)}%"></div></div></div>
-      <div class="bg"><div class="bl"><span>Empathy</span><span>${s(data.avgQAEmpathy)}%</span></div><div class="br"><div class="bf green" style="width:${s(data.avgQAEmpathy)}%"></div></div></div>
-      <div class="bg"><div class="bl"><span>Professionalism</span><span>${s(data.avgQAProfessionalism)}%</span></div><div class="br"><div class="bf amber" style="width:${s(data.avgQAProfessionalism)}%"></div></div></div>
-      <div class="bg"><div class="bl"><span>Resolution</span><span>${s(data.avgQAResolution)}%</span></div><div class="br"><div class="bf purple" style="width:${s(data.avgQAResolution)}%"></div></div></div>
+    <div class="kpi-grid c4">
+      <div class="mini-kpi"><div class="mkv" style="color:#7c3aed">${s(data.avgQAOverall)}</div><div class="mkl">Overall</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#2563eb">${s(data.avgQAAccuracy)}</div><div class="mkl">Accuracy</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#059669">${s(data.avgQAEmpathy)}</div><div class="mkl">Empathy</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#d97706">${s(data.avgQAProfessionalism)}</div><div class="mkl">Professionalism</div></div>
+    </div>
+    <div style="margin-top:18px">
+      <div class="progress-wrap"><div class="progress-head"><span>Accuracy</span><span>${s(data.avgQAAccuracy)}%</span></div><div class="progress-track"><div class="progress-fill pf-blue" style="width:${s(data.avgQAAccuracy)}%"></div></div></div>
+      <div class="progress-wrap"><div class="progress-head"><span>Empathy</span><span>${s(data.avgQAEmpathy)}%</span></div><div class="progress-track"><div class="progress-fill pf-green" style="width:${s(data.avgQAEmpathy)}%"></div></div></div>
+      <div class="progress-wrap"><div class="progress-head"><span>Professionalism</span><span>${s(data.avgQAProfessionalism)}%</span></div><div class="progress-track"><div class="progress-fill pf-amber" style="width:${s(data.avgQAProfessionalism)}%"></div></div></div>
+      <div class="progress-wrap"><div class="progress-head"><span>Resolution</span><span>${s(data.avgQAResolution)}%</span></div><div class="progress-track"><div class="progress-fill pf-purple" style="width:${s(data.avgQAResolution)}%"></div></div></div>
     </div>
   </div>
 
   <!-- APPOINTMENTS -->
-  <div class="section">
-    <div class="section-title">Appointment Management <span class="ct">${s(data.totalAppointments)}</span></div>
-    <div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon blue">📅</span> Appointments</div>
+      <span class="badge blue">${s(data.totalAppointments)} total</span>
+    </div>
+    <div class="kpi-grid c2">
       <div>
-        <div class="sr"><span class="sl">Completed</span><span class="sv green">${s(data.completedAppts)} (${s(data.scheduleFillRate)}%)</span></div>
-        <div class="sr"><span class="sl">No-Shows</span><span class="sv red">${s(data.noShows)} (${s(data.noShowRate)}%)</span></div>
-        <div class="sr"><span class="sl">Cancelled</span><span class="sv amber">${s(data.cancellations)}</span></div>
+        <div class="stat-row"><span class="stat-label">Completed</span><span class="stat-value" style="color:#059669">${s(data.completedAppts)} (${s(data.scheduleFillRate)}%)</span></div>
+        <div class="stat-row"><span class="stat-label">No-Shows</span><span class="stat-value" style="color:#dc2626">${s(data.noShows)} (${s(data.noShowRate)}%)</span></div>
+        <div class="stat-row"><span class="stat-label">Cancelled</span><span class="stat-value" style="color:#d97706">${s(data.cancellations)}</span></div>
       </div>
       <div>
-        <div class="sr"><span class="sl">In-Person</span><span class="sv">${s(data.typeCounts["in-person"])}</span></div>
-        <div class="sr"><span class="sl">Phone</span><span class="sv">${s(data.typeCounts["phone"])}</span></div>
-        <div class="sr"><span class="sl">Video</span><span class="sv">${s(data.typeCounts["video"])}</span></div>
+        <div class="stat-row"><span class="stat-label">In-Person</span><span class="stat-value">${s(data.typeCounts["in-person"])}</span></div>
+        <div class="stat-row"><span class="stat-label">Phone</span><span class="stat-value">${s(data.typeCounts["phone"])}</span></div>
+        <div class="stat-row"><span class="stat-label">Video</span><span class="stat-value">${s(data.typeCounts["video"])}</span></div>
       </div>
     </div>
-    <div class="grid-2" style="margin-top:10px">
-      <div class="bg"><div class="bl"><span>Last Month No-Show</span><span>${s(data.prevNoShowRate)}%</span></div><div class="br"><div class="bf amber" style="width:${s(data.prevNoShowRate)}%"></div></div></div>
-      <div class="bg"><div class="bl"><span>This Month No-Show</span><span>${s(data.noShowRate)}%</span></div><div class="br"><div class="bf ${s(data.noShowRate) <= s(data.prevNoShowRate) ? 'green' : 'red'}" style="width:${s(data.noShowRate)}%"></div></div></div>
+    <div style="margin-top:16px">
+      <div class="progress-wrap"><div class="progress-head"><span>Last Month No-Show</span><span>${s(data.prevNoShowRate)}%</span></div><div class="progress-track"><div class="progress-fill pf-amber" style="width:${s(data.prevNoShowRate)}%"></div></div></div>
+      <div class="progress-wrap"><div class="progress-head"><span>This Month No-Show</span><span>${s(data.noShowRate)}%</span></div><div class="progress-track"><div class="progress-fill ${s(data.noShowRate) <= s(data.prevNoShowRate) ? 'pf-green' : 'pf-red'}" style="width:${s(data.noShowRate)}%"></div></div></div>
     </div>
     ${s(data.topReasons.length) > 0 ? `
-    <div style="margin-top:12px">
-      <div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Top Appointment Reasons</div>
-      ${data.topReasons.map(([reason, count]) => `<div class="sr"><span class="sl">${reason}</span><span class="sv">${count}</span></div>`).join("")}
+    <div style="margin-top:18px">
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px">Top Reasons</div>
+      ${data.topReasons.map(([reason, count]) => `<div class="stat-row"><span class="stat-label">${reason}</span><span class="stat-value">${count}</span></div>`).join("")}
     </div>
     ` : ""}
   </div>
 
   <!-- PATIENTS & STAFF -->
-  <div class="section">
-    <div class="section-title">Patients &amp; Staff</div>
-    <div class="grid-3">
-      <div class="kpi"><div class="kv primary">${s(data.patientCount)}</div><div class="kl">Active Patients</div><div class="ks">${s(data.newPatients)} new this month</div></div>
-      <div class="kpi"><div class="kv green">${s(data.userCount)}</div><div class="kl">Active Staff</div><div class="ks">${s(data.adminCount)} admin &bull; ${s(data.staffCount)} staff</div></div>
-      <div class="kpi"><div class="kv purple">${s(data.portalBookings)}</div><div class="kl">Portal Bookings</div><div class="ks">Patient self-scheduled</div></div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon green">🏥</span> Patients &amp; Staff</div>
+    </div>
+    <div class="kpi-grid c3">
+      <div class="mini-kpi"><div class="mkv" style="color:#2563eb">${s(data.patientCount)}</div><div class="mkl">Active Patients</div><div class="mks">${s(data.newPatients)} new</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#059669">${s(data.userCount)}</div><div class="mkl">Active Staff</div><div class="mks">${s(data.adminCount)} admin · ${s(data.staffCount)} staff</div></div>
+      <div class="mini-kpi"><div class="mkv" style="color:#7c3aed">${s(data.portalBookings)}</div><div class="mkl">Portal Bookings</div><div class="mks">Self-scheduled</div></div>
     </div>
   </div>
 
-  <!-- LANGUAGE DISTRIBUTION -->
+  <!-- LANGUAGES -->
   ${s(data.langDist.length) > 1 ? `
-  <div class="section">
-    <div class="section-title">Languages Used</div>
-    <div class="grid-2">
-      ${data.langDist.map(([lang, count]) => `<div class="sr"><span class="sl">${lang.toUpperCase()}</span><span class="sv">${count} calls</span></div>`).join("")}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon slate">🌐</span> Languages Used</div>
+    </div>
+    <div class="lang-pills">
+      ${data.langDist.map(([lang, count]) => `<div class="lang-pill">${lang.toUpperCase()} <span class="lc">${count} calls</span></div>`).join("")}
     </div>
   </div>
   ` : ""}
 
   <!-- RESOURCES & ACTIVITY -->
-  <div class="section">
-    <div class="section-title">Resources &amp; Activity</div>
-    <div class="grid-4">
-      <div class="kpi"><div class="kv">${s(data.questionnaireCount)}</div><div class="kl">Templates</div><div class="ks">${s(data.defaultTemplates)} default</div></div>
-      <div class="kpi"><div class="kv">${s(data.docCount)}</div><div class="kl">Knowledge Docs</div><div class="ks">Medical references</div></div>
-      <div class="kpi"><div class="kv">${s(data.reportsGenerated)}</div><div class="kl">Reports</div><div class="ks">Generated this month</div></div>
-      <div class="kpi"><div class="kv">${s(data.notificationsSent)}</div><div class="kl">Notifications</div><div class="ks">Sent this month</div></div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon slate">⚙️</span> Resources &amp; Activity</div>
     </div>
-    <div class="grid-2" style="margin-top:8px">
-      <div class="sr"><span class="sl">Audit Log Entries</span><span class="sv">${s(data.auditLogCount)}</span></div>
-      <div class="sr"><span class="sl">Total Voice Duration</span><span class="sv">${s(data.voiceMinutes)} min</span></div>
+    <div class="kpi-grid c4">
+      <div class="mini-kpi"><div class="mkv">${s(data.questionnaireCount)}</div><div class="mkl">Templates</div><div class="mks">${s(data.defaultTemplates)} default</div></div>
+      <div class="mini-kpi"><div class="mkv">${s(data.docCount)}</div><div class="mkl">Knowledge Docs</div><div class="mks">References</div></div>
+      <div class="mini-kpi"><div class="mkv">${s(data.reportsGenerated)}</div><div class="mkl">Reports</div><div class="mks">Generated</div></div>
+      <div class="mini-kpi"><div class="mkv">${s(data.notificationsSent)}</div><div class="mkl">Notifications</div><div class="mks">Sent</div></div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="stat-row"><span class="stat-label">Audit Log Entries</span><span class="stat-value">${s(data.auditLogCount)}</span></div>
+      <div class="stat-row"><span class="stat-label">Total Voice Duration</span><span class="stat-value">${s(data.voiceMinutes)} min</span></div>
     </div>
   </div>
 
+  <!-- FOOTER -->
   <div class="footer">
-    <div class="logo">Oriveo Healthcare Platform</div>
-    <p>Automatically generated from your workspace on ${data.generatedAt}.</p>
-    <p>For questions: support@oriveo.io</p>
+    <div class="footer-brand">Oriveo <span>Healthcare Platform</span></div>
+    <p>Automatically generated on ${data.generatedAt} &bull; Confidential</p>
+    <p>Questions? Contact support@oriveo.io</p>
+    <div class="footer-line"></div>
   </div>
 
 </div>
