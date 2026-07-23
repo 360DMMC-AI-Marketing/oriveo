@@ -685,7 +685,7 @@ export default function CallCenter() {
                   <select value={batchQId} onChange={(e) => setBatchQId(e.target.value)}
                     className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm">
                     <option value="">No template</option>
-                    {savedQuestionnaires.map((q: any) => <option key={q._id} value={q._id}>{q.name}</option>)}
+                    {savedQuestionnaires.map((q: any) => <option key={q._id} value={q._id}>{q.title}</option>)}
                   </select>
                   <div className="text-center text-[10px] text-muted-foreground">&mdash; or add custom questions &mdash;</div>
                   {customQuestions.length > 0 && (
