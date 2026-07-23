@@ -1,33 +1,63 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import api from "@/lib/api";
+import { getSocket } from "@/lib/socket";
 import VoiceAgent from "@/components/VoiceAgent";
+import VoiceInputButton from "@/components/VoiceInputButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Search, Phone, Bot, Headphones, Settings2, Activity, Globe,
-  ChevronDown, X, Users, Calendar,
-  User, Loader2, Plus, FileText
+  ChevronDown, ChevronRight, X, Users, Calendar, User, Loader2, Plus, FileText,
+  PhoneIncoming, PhoneOutgoing, CheckCircle, Clock, XCircle, Siren,
+  Star, Brain, ArrowRight, AlertTriangle, Radio
 } from "lucide-react";
 import { medicalTemplates } from "@/data/medicalTemplates";
 
 const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "it", label: "Italian" },
-  { code: "pt", label: "Portuguese" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ar", label: "Arabic" },
-  { code: "hi", label: "Hindi" },
+  { code: "en", label: "English" }, { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" }, { code: "de", label: "German" },
+  { code: "it", label: "Italian" }, { code: "pt", label: "Portuguese" },
+  { code: "zh", label: "Chinese" }, { code: "ja", label: "Japanese" },
+  { code: "ar", label: "Arabic" }, { code: "hi", label: "Hindi" },
 ];
 
-type Tab = "quick" | "batch";
+type Tab = "quick" | "batch" | "live" | "history";
+
+interface ActiveCall {
+  callId: string;
+  callSid: string;
+  startedAt: number;
+  duration: number;
+  patient: { _id: string; name: string; phone: string } | null;
+  status: string;
+  direction: string;
+  language: string;
+  severity: number | null;
+  lastTranscript: { question?: string; answer?: string } | null;
+}
+
+interface TranscriptEvent {
+  callId: string;
+  role: "patient" | "ai";
+  text: string;
+  timestamp: number;
+}
+
+interface SeverityEvent {
+  callId: string;
+  tier: number;
+  from: number;
+  isCrisis: boolean;
+  timestamp: number;
+}
+
+const callTranscripts: Record<string, TranscriptEvent[]> = {};
+const callSeverities: Record<string, number> = {};
 
 export default function CallCenter() {
   const queryClient = useQueryClient();
@@ -54,6 +84,15 @@ export default function CallCenter() {
   const [customQuestions, setCustomQuestions] = useState<string[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
 
+  // ===== Live Monitoring state =====
+  const [expandedCalls, setExpandedCalls] = useState<Record<string, boolean>>({});
+  const [liveTranscripts, setLiveTranscripts] = useState<Record<string, TranscriptEvent[]>>({});
+  const [liveSeverities, setLiveSeverities] = useState<Record<string, number>>({});
+
+  // ===== History state =====
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyTab, setHistoryTab] = useState("all");
+
   // ===== Shared queries =====
   const { data: patientsData } = useQuery({
     queryKey: ["patients"],
@@ -72,17 +111,57 @@ export default function CallCenter() {
     queryFn: () => api.get("/groups").then((r) => r.data),
   });
 
+  const { data: activeCallsData, isLoading: loadingActive, refetch: refetchActive } = useQuery({
+    queryKey: ["active-calls"],
+    queryFn: () => api.get("/calls/active").then((r) => r.data),
+    refetchInterval: 5000,
+  });
+
+  const { data: historyData, isLoading: loadingHistory } = useQuery({
+    queryKey: ["calls", "history"],
+    queryFn: () => api.get("/calls?direction=inbound").then((r) => r.data),
+  });
+
   const patients = patientsData?.patients || [];
   const activeCalls = callsData?.calls || [];
   const savedQuestionnaires = questionnairesData?.questionnaires || [];
   const groups = groupsRes?.groups || [];
+  const realtimeCalls: ActiveCall[] = activeCallsData?.activeCalls || [];
+  const historyCalls = historyData?.calls || [];
 
   const memberIds = new Set<string>();
   for (const g of groups) {
     for (const m of g.members || []) memberIds.add(m._id);
   }
 
-  // ===== Quick Call handlers =====
+  // ===== Live Monitoring WebSocket =====
+  useEffect(() => {
+    if (tab !== "live") return;
+    const socket = getSocket();
+    if (!socket) return;
+    socket.emit("join-supervisor");
+
+    const handleTranscript = (event: TranscriptEvent) => {
+      const { callId } = event;
+      if (!callTranscripts[callId]) callTranscripts[callId] = [];
+      callTranscripts[callId].push(event);
+      if (callTranscripts[callId].length > 50) callTranscripts[callId].shift();
+      setLiveTranscripts({ ...callTranscripts });
+    };
+    const handleSeverity = (event: SeverityEvent) => {
+      callSeverities[event.callId] = event.tier;
+      setLiveSeverities({ ...callSeverities });
+    };
+    socket.on("call:transcript", handleTranscript);
+    socket.on("call:severity", handleSeverity);
+    return () => {
+      socket.emit("leave-supervisor");
+      socket.off("call:transcript", handleTranscript);
+      socket.off("call:severity", handleSeverity);
+    };
+  }, [tab]);
+
+  // ===== URL params (from Appointments "Call" button) =====
   useEffect(() => {
     const patientId = searchParams.get("patientId");
     const patientName = searchParams.get("patientName");
@@ -99,6 +178,7 @@ export default function CallCenter() {
     }
   }, [patients, searchParams, tab]);
 
+  // ===== Quick Call handlers =====
   const filteredPatients = patients.filter((p: any) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.phone.includes(search)
@@ -213,13 +293,88 @@ export default function CallCenter() {
     });
   }
 
+  // ===== Live Monitoring helpers =====
+  const toggleExpandLive = (callId: string) => {
+    setExpandedCalls((prev) => ({ ...prev, [callId]: !prev[callId] }));
+  };
+
+  const getSeverityColor = (severity: number | null) => {
+    if (severity === null) return "text-gray-400";
+    if (severity <= 2) return "text-emerald-600";
+    if (severity <= 5) return "text-amber-600";
+    return "text-red-600";
+  };
+
+  const getSeverityBg = (severity: number | null) => {
+    if (severity === null) return "bg-gray-100";
+    if (severity <= 2) return "bg-emerald-50 border-emerald-200";
+    if (severity <= 5) return "bg-amber-50 border-amber-200";
+    return "bg-red-50 border-red-200";
+  };
+
+  const formatDuration = (ms: number) => {
+    const secs = Math.floor(ms / 1000);
+    const mins = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${mins.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // ===== History helpers =====
+  const historyFiltered = historyCalls.filter((c: any) => {
+    const name = c.patient?.name || "Unknown";
+    const phone = c.patient?.phone || "";
+    const s = historySearch.toLowerCase();
+    return name.toLowerCase().includes(s) || phone.includes(s);
+  });
+
+  const isAnswered = (c: any) => c.patientResponded === true;
+  const isUnanswered = (c: any) => c.patientResponded === false || c.status === "failed";
+  const isEmergency = (c: any) => c.emergencyDetected || (c.aiSeverityScore || 0) >= 7;
+
+  const historyTabCalls = (() => {
+    switch (historyTab) {
+      case "answered": return historyFiltered.filter(isAnswered);
+      case "unanswered": return historyFiltered.filter(isUnanswered);
+      case "emergency": return historyFiltered.filter(isEmergency);
+      default: return historyFiltered;
+    }
+  })();
+
+  const getStatusBadge = (call: any) => {
+    if (call.emergencyDetected) {
+      return <Badge className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><Siren className="h-3 w-3" /> Emergency</Badge>;
+    }
+    switch (call.status) {
+      case "completed": return <Badge className="bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Completed</Badge>;
+      case "in-progress": return <Badge className="bg-blue-100 text-blue-700 flex items-center gap-1"><Clock className="h-3 w-3" /> In Progress</Badge>;
+      case "failed": return <Badge className="bg-red-100 text-red-700 flex items-center gap-1"><XCircle className="h-3 w-3" /> Failed</Badge>;
+      case "transferred": return <Badge className="bg-blue-100 text-blue-700 flex items-center gap-1"><Headphones className="h-3 w-3" /> Transferred</Badge>;
+      default: return <Badge className="bg-gray-100 text-gray-700">{call.status}</Badge>;
+    }
+  };
+
+  const getQAScore = (call: any) => {
+    if (call.qaScore?.overall) return call.qaScore.overall;
+    if (!call.aiSummary) return null;
+    return Math.min(100, Math.max(60,
+      70 + (call.patientResponded ? 10 : 0) + (call.duration > 30 ? 10 : 0) + ((call.aiSeverityScore || 0) > 0 ? 10 : 0)
+    ));
+  };
+
+  const TAB_CONFIG = [
+    { id: "quick" as Tab, label: "Quick Call", icon: Phone },
+    { id: "batch" as Tab, label: "Batch", icon: Users },
+    { id: "live" as Tab, label: "Live", icon: Radio, badge: realtimeCalls.length || undefined },
+    { id: "history" as Tab, label: "History", icon: FileText, badge: historyCalls.length || undefined },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Call Center</h1>
-          <p className="text-muted-foreground text-sm">Quick-call patients or schedule batch campaigns</p>
+          <p className="text-muted-foreground text-sm">Make calls, monitor live conversations, and review history</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm">
@@ -232,12 +387,16 @@ export default function CallCenter() {
             </select>
           </div>
           <Button variant="outline" size="sm" className="gap-1" onClick={() => toast.info("Agent settings available in the Settings page")}>
-            <Settings2 className="h-4 w-4" />
-            Settings
+            <Settings2 className="h-4 w-4" /> Settings
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowTestPanel(!showTestPanel)}>
-            {showTestPanel ? "Hide Test" : "Test Agent"}
-          </Button>
+          {tab === "quick" && (
+            <Button variant="outline" size="sm" onClick={() => setShowTestPanel(!showTestPanel)}>
+              {showTestPanel ? "Hide Test" : "Test Agent"}
+            </Button>
+          )}
+          {tab === "live" && (
+            <Button variant="outline" size="sm" onClick={() => refetchActive()}>Refresh</Button>
+          )}
         </div>
       </div>
 
@@ -248,23 +407,26 @@ export default function CallCenter() {
             <CardTitle className="text-xs font-medium">Active Calls</CardTitle>
             <Phone className="h-3.5 w-3.5 text-blue-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{activeCalls.length}</div>
-          </CardContent>
+          <CardContent><div className="text-xl font-bold">{activeCalls.length}</div></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Total Calls</CardTitle>
+            <FileText className="h-3.5 w-3.5 text-emerald-600" />
+          </CardHeader>
+          <CardContent><div className="text-xl font-bold">{historyCalls.length}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium">Patients</CardTitle>
-            <Activity className="h-3.5 w-3.5 text-emerald-600" />
+            <Activity className="h-3.5 w-3.5 text-purple-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{patients.length}</div>
-          </CardContent>
+          <CardContent><div className="text-xl font-bold">{patients.length}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium">Status</CardTitle>
-            <Bot className="h-3.5 w-3.5 text-purple-600" />
+            <Bot className="h-3.5 w-3.5 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1.5">
@@ -273,47 +435,31 @@ export default function CallCenter() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium">Voice</CardTitle>
-            <Headphones className="h-3.5 w-3.5 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">ElevenLabs</div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Tabs: Quick Call | Batch Schedule */}
+      {/* Tab bar */}
       <div className="flex gap-1 border-b">
-        <button
-          onClick={() => setTab("quick")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "quick"
-              ? "border-primary text-primary"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <Phone className="h-4 w-4 inline mr-1.5" />
-          Quick Call
-        </button>
-        <button
-          onClick={() => setTab("batch")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "batch"
-              ? "border-primary text-primary"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <Users className="h-4 w-4 inline mr-1.5" />
-          Batch Schedule
-        </button>
+        {TAB_CONFIG.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                tab === t.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              <Icon className="h-4 w-4" /> {t.label}
+              {t.badge !== undefined && (
+                <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">{t.badge}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* ============ TAB: Quick Call ============ */}
       {tab === "quick" && (
         <>
-          {/* Quick-call widget */}
           <Card className="border-primary/20">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-end gap-3">
@@ -345,7 +491,6 @@ export default function CallCenter() {
                     </div>
                   )}
                 </div>
-
                 <div className="w-56 relative">
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Template (optional)</label>
                   <button onClick={() => setShowTemplatePanel(!showTemplatePanel)}
@@ -385,17 +530,13 @@ export default function CallCenter() {
                     </div>
                   )}
                 </div>
-
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">&nbsp;</label>
-                  <Button onClick={handleQuickCall} disabled={!selectedPatient}
-                    className="h-10 gap-2 px-6">
-                    <Phone className="h-4 w-4" />
-                    Call Now
+                  <Button onClick={handleQuickCall} disabled={!selectedPatient} className="h-10 gap-2 px-6">
+                    <Phone className="h-4 w-4" /> Call Now
                   </Button>
                 </div>
               </div>
-
               {selectedPatient && (
                 <div className="mt-3 flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
                   <div className="flex-1">
@@ -410,7 +551,6 @@ export default function CallCenter() {
                   </Button>
                 </div>
               )}
-
               {selectedQuestions.length > 0 && (
                 <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
                   <div className="flex items-center justify-between">
@@ -429,18 +569,14 @@ export default function CallCenter() {
               <CardContent className="py-3 flex items-center gap-3">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-sm font-medium">Active call with {selectedPatient.name}</span>
-                <Button variant="outline" size="sm" className="ml-auto" onClick={() => { setActiveCallId(null); }}>
-                  End Call
-                </Button>
+                <Button variant="outline" size="sm" className="ml-auto" onClick={() => setActiveCallId(null)}>End Call</Button>
               </CardContent>
             </Card>
           )}
 
           {activeCalls.length > 0 && !activeCallId && (
             <Card>
-              <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-sm">Active Calls on Server</CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-2 pt-3"><CardTitle className="text-sm">Active Calls on Server</CardTitle></CardHeader>
               <CardContent className="pb-3 space-y-2">
                 {activeCalls.map((call: any) => (
                   <div key={call._id} className="flex items-center justify-between rounded-lg border px-3 py-2">
@@ -461,11 +597,7 @@ export default function CallCenter() {
                 </Button>
               </CardHeader>
               <CardContent className="pb-3">
-                <VoiceAgent
-                  language={callLanguage}
-                  questions={selectedQuestions}
-                  onCallEnd={() => setActiveCallId(null)}
-                />
+                <VoiceAgent language={callLanguage} questions={selectedQuestions} onCallEnd={() => setActiveCallId(null)} />
               </CardContent>
             </Card>
           )}
@@ -481,7 +613,6 @@ export default function CallCenter() {
               <Input placeholder="Search patients..." className="pl-10" value={batchSearch}
                 onChange={(e) => setBatchSearch(e.target.value)} />
             </div>
-
             {groups.length > 0 && (
               <div className="space-y-1">
                 <h2 className="text-sm font-semibold text-gray-500 flex items-center gap-1">
@@ -494,8 +625,7 @@ export default function CallCenter() {
                     const partial = isGroupPartiallySelected(g);
                     return (
                       <label key={g._id} className="flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                        <input type="checkbox"
-                          checked={checked}
+                        <input type="checkbox" checked={checked}
                           ref={(el) => { if (el) el.indeterminate = partial; }}
                           onChange={() => toggleGroup(g)}
                           className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0" />
@@ -508,18 +638,14 @@ export default function CallCenter() {
                 </div>
               </div>
             )}
-
             <div className="space-y-1">
               <h2 className="text-sm font-semibold text-gray-500 flex items-center gap-1">
-                <User className="h-4 w-4" /> Patients
-                <span className="text-xs text-muted-foreground font-normal">({batchFilteredPatients.length})</span>
+                <User className="h-4 w-4" /> Patients <span className="text-xs text-muted-foreground font-normal">({batchFilteredPatients.length})</span>
               </h2>
               <div className="grid gap-1 sm:grid-cols-2">
                 {batchFilteredPatients.map((p: any) => (
                   <label key={p._id} className="flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                    <input type="checkbox"
-                      checked={selectedIds.has(p._id)}
-                      onChange={() => togglePatient(p._id)}
+                    <input type="checkbox" checked={selectedIds.has(p._id)} onChange={() => togglePatient(p._id)}
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate">{p.name}</div>
@@ -537,7 +663,6 @@ export default function CallCenter() {
               </div>
             </div>
           </div>
-
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3 pt-4"><CardTitle className="text-sm">Campaign Settings</CardTitle></CardHeader>
@@ -547,30 +672,22 @@ export default function CallCenter() {
                   <Input placeholder="e.g., Weekly Checkup" value={campaignName}
                     onChange={(e) => setCampaignName(e.target.value)} className="h-9 text-sm" />
                 </div>
-
                 <div className="space-y-1">
-                  <label className="text-xs font-medium flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> Schedule
-                  </label>
+                  <label className="text-xs font-medium flex items-center gap-1"><Calendar className="h-3 w-3" /> Schedule</label>
                   <div className="grid grid-cols-2 gap-2">
                     <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="h-9 text-sm" />
                     <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="h-9 text-sm" />
                   </div>
                   {!scheduleDate && <p className="text-[10px] text-muted-foreground">Leave empty to call immediately</p>}
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-xs font-medium flex items-center gap-1">
-                    <FileText className="h-3 w-3" /> Questions to Ask
-                  </label>
+                  <label className="text-xs font-medium flex items-center gap-1"><FileText className="h-3 w-3" /> Questions to Ask</label>
                   <select value={batchQId} onChange={(e) => setBatchQId(e.target.value)}
                     className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm">
                     <option value="">No template</option>
                     {savedQuestionnaires.map((q: any) => <option key={q._id} value={q._id}>{q.name}</option>)}
                   </select>
-
                   <div className="text-center text-[10px] text-muted-foreground">&mdash; or add custom questions &mdash;</div>
-
                   {customQuestions.length > 0 && (
                     <div className="space-y-1 max-h-32 overflow-y-auto">
                       {customQuestions.map((q, i) => (
@@ -583,7 +700,6 @@ export default function CallCenter() {
                       ))}
                     </div>
                   )}
-
                   <div className="flex gap-1">
                     <Input placeholder="Type a question..." value={newQuestion}
                       onChange={(e) => setNewQuestion(e.target.value)}
@@ -595,7 +711,6 @@ export default function CallCenter() {
                     </Button>
                   </div>
                 </div>
-
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Selected patients</span>
@@ -619,7 +734,6 @@ export default function CallCenter() {
                     </div>
                   )}
                 </div>
-
                 <Button className="w-full gap-2" disabled={startCampaign.isPending || selectedIds.size === 0}
                   onClick={handleScheduleSubmit}>
                   {startCampaign.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
@@ -629,6 +743,224 @@ export default function CallCenter() {
             </Card>
           </div>
         </div>
+      )}
+
+      {/* ============ TAB: Live ============ */}
+      {tab === "live" && (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Badge className="bg-blue-100 text-blue-700 text-sm px-3 py-1.5 gap-1.5">
+                <Activity className="h-4 w-4" /> {realtimeCalls.length} Active
+              </Badge>
+            </div>
+          </div>
+
+          {loadingActive ? (
+            <p className="text-gray-500 py-8 text-center">Loading active calls...</p>
+          ) : realtimeCalls.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Headphones className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                <p className="text-gray-500 font-medium">No active calls</p>
+                <p className="text-sm text-gray-400 mt-1">Active AI calls will appear here in real-time</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {realtimeCalls.map((call) => {
+                const isExpanded = expandedCalls[call.callId];
+                const severity = liveSeverities[call.callId] ?? call.severity;
+                const transcripts = liveTranscripts[call.callId] || [];
+                const lastTranscript = transcripts.length > 0 ? transcripts[transcripts.length - 1] : null;
+                return (
+                  <Card key={call.callId} className={`border-l-4 ${getSeverityBg(severity)}`}>
+                    <CardContent className="p-0">
+                      <button onClick={() => toggleExpandLive(call.callId)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                            call.direction === "inbound" ? "bg-blue-100" : "bg-emerald-100"
+                          }`}>
+                            {call.direction === "inbound"
+                              ? <PhoneIncoming className="h-5 w-5 text-blue-600" />
+                              : <PhoneOutgoing className="h-5 w-5 text-emerald-600" />}
+                          </div>
+                          <div className="min-w-0 flex-1 text-left">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-900">{call.patient?.name || "Unknown Patient"}</span>
+                              <span className={`text-xs font-medium ${getSeverityColor(severity)}`}>
+                                {severity != null ? `Severity: ${severity}` : "Severity: —"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDuration(call.duration)}</span>
+                              <span className="capitalize">{call.direction}</span>
+                              <span>{call.language.toUpperCase()}</span>
+                              {lastTranscript && (
+                                <span className="truncate max-w-[300px] text-gray-400">&ldquo;{lastTranscript.text.substring(0, 80)}...&rdquo;</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <Link to={`/calls/${call.callId}`}>
+                            <Button variant="ghost" size="sm" className="gap-1"><Phone className="h-3.5 w-3.5" /> View</Button>
+                          </Link>
+                          {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-400" /> : <ChevronRight className="h-5 w-5 text-gray-400" />}
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <div className="border-t px-4 py-3 space-y-3">
+                          {transcripts.length === 0 ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                              <Brain className="h-4 w-4" /><span>Waiting for transcript data...</span>
+                            </div>
+                          ) : (
+                            <div className="max-h-64 overflow-y-auto space-y-2">
+                              {transcripts.map((t, i) => (
+                                <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded ${
+                                  t.role === "ai" ? "bg-primary/5" : "bg-gray-50"
+                                }`}>
+                                  <span className={`shrink-0 font-bold text-xs uppercase ${
+                                    t.role === "ai" ? "text-primary" : "text-gray-500"
+                                  }`}>{t.role === "ai" ? "AI" : "P"}</span>
+                                  <span className="text-gray-700">{t.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {call.patient && (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 border-t pt-2">
+                              <User className="h-3 w-3" /><span>{call.patient.name} &middot; {call.patient.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ============ TAB: History ============ */}
+      {tab === "history" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-base">Call History</CardTitle>
+              <div className="relative flex-1 max-w-xs flex gap-2 items-center justify-end">
+                <div className="relative flex-1 max-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Search by patient name or phone..." value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)} className="pl-9 h-9 text-sm" />
+                </div>
+                <VoiceInputButton onResult={(text) => setHistorySearch(text)} size="sm" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-1 border-b mb-4">
+              {[
+                { value: "all", label: "All", count: historyFiltered.length },
+                { value: "answered", label: "Answered", count: historyFiltered.filter(isAnswered).length },
+                { value: "unanswered", label: "Unanswered", count: historyFiltered.filter(isUnanswered).length },
+                { value: "emergency", label: "Emergency", count: historyFiltered.filter(isEmergency).length, danger: true },
+              ].map((t) => (
+                <button key={t.value} onClick={() => setHistoryTab(t.value)}
+                  className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                    historyTab === t.value
+                      ? t.danger ? "border-red-500 text-red-600" : "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}>
+                  {t.label} ({t.count})
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              {loadingHistory ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+              ) : historyTabCalls.length === 0 ? (
+                <div className="py-12 text-center text-gray-400">
+                  <PhoneIncoming className="mx-auto h-10 w-10 mb-2" />
+                  <p className="text-sm">No calls found</p>
+                </div>
+              ) : (
+                historyTabCalls.map((call: any) => (
+                  <Link key={call._id} to={`/calls/${call._id}`}
+                    className="block rounded-lg border p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                        call.emergencyDetected ? "bg-red-100" :
+                        isAnswered(call) ? "bg-emerald-100" :
+                        call.status === "in-progress" ? "bg-blue-100" : "bg-gray-100"
+                      }`}>
+                        {call.emergencyDetected ? (
+                          <Siren className="h-5 w-5 text-red-600" />
+                        ) : (
+                          <PhoneIncoming className={`h-5 w-5 ${
+                            isAnswered(call) ? "text-emerald-600" :
+                            call.status === "in-progress" ? "text-blue-600" : "text-gray-400"
+                          }`} />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-gray-900 truncate">{call.patient?.name || "Unknown Caller"}</span>
+                          {getStatusBadge(call)}
+                          {call.aiSeverityScore && (
+                            <span className={`text-xs font-medium ${
+                              call.aiSeverityScore >= 7 ? "text-red-600" :
+                              call.aiSeverityScore >= 4 ? "text-amber-600" : "text-emerald-600"
+                            }`}>{call.aiSeverityScore}/10</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500 flex-wrap">
+                          <span>{call.patient?.phone || "No caller ID"}</span>
+                          <span>&middot;</span>
+                          <span>{new Date(call.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        {call.emergencyActionTaken !== "none" && (
+                          <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-2 py-1">
+                            {call.emergencyActionTaken === "called_911" ? "911 Called" :
+                             call.emergencyActionTaken === "called_clinic" ? "Clinic Called" : "Action Taken"}
+                          </span>
+                        )}
+                        <ArrowRight className="h-4 w-4 text-gray-300" />
+                      </div>
+                    </div>
+                    {call.duration > 0 && (
+                      <div className="mt-2 ml-13 pl-13 border-t border-gray-100 pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-1"><Clock className="h-3 w-3 text-gray-400" /><span>{Math.floor(call.duration / 60)}m {call.duration % 60}s</span></div>
+                        {call.transcript && call.transcript.length > 0 && (
+                          <div className="flex items-center gap-1"><FileText className="h-3 w-3 text-gray-400" /><span>{call.transcript.length} Q&A</span></div>
+                        )}
+                        {getQAScore(call) && (
+                          <div className="flex items-center gap-1">
+                            <Star className={`h-3 w-3 ${(getQAScore(call) || 0) >= 85 ? "text-emerald-500" : (getQAScore(call) || 0) >= 70 ? "text-amber-500" : "text-gray-400"}`} />
+                            <span>{getQAScore(call)}%</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {call.aiSummary && (
+                      <div className="mt-1.5 ml-13 pl-13 flex items-start gap-1.5">
+                        <Brain className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                        <p className="text-xs text-gray-500 line-clamp-2">{call.aiSummary}</p>
+                      </div>
+                    )}
+                  </Link>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

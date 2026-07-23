@@ -29,9 +29,7 @@ import CallReview from "@/pages/CallReview";
 
 import AuditLog from "@/pages/AuditLog";
 import Reports from "@/pages/Reports";
-import InboundCalls from "@/pages/InboundCalls";
 import Notifications from "@/pages/Notifications";
-import LiveMonitoring from "@/pages/LiveMonitoring";
 import CommandCenter from "@/pages/CommandCenter";
 import Admin from "@/pages/Admin";
 import PatientBooking from "@/pages/PatientBooking";
@@ -97,8 +95,8 @@ function AppRoutes() {
         <Route path="/voice-agent" element={<CallCenter />} />
         <Route path="/schedule-call" element={<CallCenter />} />
         <Route path="/call-review" element={<CallReview />} />
-        <Route path="/inbound-calls" element={<InboundCalls />} />
-        <Route path="/live-monitoring" element={<LiveMonitoring />} />
+        <Route path="/inbound-calls" element={<Navigate to="/voice-agent" replace />} />
+        <Route path="/live-monitoring" element={<Navigate to="/voice-agent" replace />} />
         <Route path="/command-center" element={<CommandCenter />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/knowledge-base" element={<KnowledgeBase />} />

@@ -36,9 +36,7 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
     {
       label: "Communications", icon: Phone, roles: ["admin", "doctor", "nurse"],
       children: [
-        { to: "/voice-agent", icon: Bot, label: "Voice Agent", roles: ["admin", "doctor", "nurse"] },
-        { to: "/live-monitoring", icon: Radio, label: "Live Monitoring", roles: ["admin", "doctor"] },
-        { to: "/inbound-calls", icon: PhoneIncoming, label: "Inbound Calls", roles: ["admin", "doctor", "nurse"] },
+        { to: "/voice-agent", icon: Phone, label: "Call Center", roles: ["admin", "doctor", "nurse"] },
         { to: "/call-review", icon: ShieldCheck, label: "Call Review", roles: ["admin", "doctor", "nurse"] },
       ],
     },
