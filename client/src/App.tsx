@@ -33,7 +33,6 @@ import InboundCalls from "@/pages/InboundCalls";
 import Notifications from "@/pages/Notifications";
 import LiveMonitoring from "@/pages/LiveMonitoring";
 import CommandCenter from "@/pages/CommandCenter";
-import Departments from "@/pages/Departments";
 import Admin from "@/pages/Admin";
 import PatientBooking from "@/pages/PatientBooking";
 import OnboardingGuide from "@/pages/OnboardingGuide";
@@ -101,7 +100,6 @@ function AppRoutes() {
         <Route path="/inbound-calls" element={<InboundCalls />} />
         <Route path="/live-monitoring" element={<LiveMonitoring />} />
         <Route path="/command-center" element={<CommandCenter />} />
-        <Route path="/departments" element={<Departments />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/knowledge-base" element={<KnowledgeBase />} />
 

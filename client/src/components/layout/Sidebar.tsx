@@ -52,18 +52,12 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
       ],
     },
     {
-      label: "Departments", icon: Building2, roles: ["admin"] as string[],
-      children: [
-        { to: "/departments", icon: Building2, label: "Departments & Staff Groups", roles: ["admin"] as string[] },
-        ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Room Management", roles: ["admin"] as string[] }] : []),
-      ],
-    },
-    {
       label: "Organization", icon: Building2, roles: ["admin"],
       children: [
         { to: "/clinic", icon: Building2, label: "Clinic Dashboard", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/clinic/settings", icon: Settings, label: "Settings", roles: ["admin"] },
         { to: "/clinic/users", icon: UserPlus, label: "Team", roles: ["admin"] },
+        ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Room Management", roles: ["admin"] as string[] }] : []),
         { to: "/audit-log", icon: ScrollText, label: "Audit Log", roles: ["admin"] },
       ],
     },

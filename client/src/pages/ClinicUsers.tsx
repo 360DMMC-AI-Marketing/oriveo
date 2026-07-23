@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, X, Loader2, UserPlus, Shield, Stethoscope, User as UserIcon, Building2, ChevronDown, ChevronRight } from "lucide-react";
+import { Users, X, Loader2, UserPlus, Shield, Stethoscope, User as UserIcon, Building2, ChevronDown, ChevronRight, Plus, Check, AlertCircle, Settings } from "lucide-react";
 
 const ROLE_ICONS: Record<string, any> = {
   admin: Shield,
@@ -40,6 +40,44 @@ export default function ClinicUsers() {
   const [inviteForm, setInviteForm] = useState({ name: "", email: "", role: "doctor", department: "" });
   const [inviteResult, setInviteResult] = useState<any>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [showManageTeams, setShowManageTeams] = useState(false);
+
+  const { data: deptData, isLoading: loadingDepts } = useQuery({
+    queryKey: ["org-departments"],
+    queryFn: () => api.get("/clinic-config/departments").then((r) => r.data),
+  });
+
+  const saveDeptMutation = useMutation({
+    mutationFn: (depts: any[]) => api.put("/clinic-config/departments", { departments: depts }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-departments"] });
+      queryClient.invalidateQueries({ queryKey: ["org", "users"] });
+      toast.success("Teams updated");
+    },
+    onError: () => toast.error("Failed to update teams"),
+  });
+
+  const allDepartments: any[] = deptData?.departments || [];
+  const available: any[] = deptData?.available || [];
+  const activeDepts = allDepartments.filter((d) => d.isActive);
+  const availableToAdd = available.filter((a) => !allDepartments.find((d) => d.id === a.id));
+
+  const addTeam = (dept: any) => {
+    const exists = allDepartments.find((d) => d.id === dept.id);
+    if (exists) {
+      saveDeptMutation.mutate(allDepartments.map((d) => d.id === dept.id ? { ...d, isActive: true } : d));
+    } else {
+      saveDeptMutation.mutate([...allDepartments, { ...dept, isActive: true }]);
+    }
+  };
+
+  const removeTeam = (id: string) => {
+    saveDeptMutation.mutate(allDepartments.filter((d) => d.id !== id));
+  };
+
+  const toggleTeam = (id: string) => {
+    saveDeptMutation.mutate(allDepartments.map((d) => d.id === id ? { ...d, isActive: !d.isActive } : d));
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["org", "users"],
@@ -76,7 +114,7 @@ export default function ClinicUsers() {
   });
 
   const users: any[] = data?.users || [];
-  const departments: any[] = data?.departments || [];
+  const departments = activeDepts;
 
   const grouped = useMemo(() => {
     const groups: Record<string, any[]> = { _undefined: [] };
@@ -101,6 +139,55 @@ export default function ClinicUsers() {
           {showInvite ? "Close" : "Invite Member"}
         </Button>
       </div>
+
+      {/* Manage Teams */}
+      {currentUser?.role === "admin" && (
+        <Card className="border-dashed">
+          <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50/50 transition-colors"
+            onClick={() => setShowManageTeams(!showManageTeams)}>
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Manage Teams</span>
+              <span className="text-xs text-gray-400">({activeDepts.length} active, {availableToAdd.length} available)</span>
+            </div>
+            {showManageTeams ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+          </div>
+          {showManageTeams && (
+            <CardContent className="pt-0 space-y-4">
+              {activeDepts.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Active Teams</p>
+                  <div className="flex flex-wrap gap-2">
+                    {activeDepts.map((dept: any) => (
+                      <span key={dept.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#0a7c6f]/20 bg-[#0a7c6f]/5 px-3 py-1.5 text-xs font-medium text-[#0a7c6f]">
+                        {DEPT_ICONS[dept.id] || "📋"} {dept.label}
+                        <button onClick={(e) => { e.stopPropagation(); removeTeam(dept.id); }}
+                          className="ml-1 rounded-full p-0.5 hover:bg-[#0a7c6f]/10 transition-colors">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {availableToAdd.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Available to Add</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableToAdd.map((dept: any) => (
+                      <button key={dept.id} onClick={() => addTeam(dept)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-500 hover:border-[#0a7c6f]/30 hover:bg-[#0a7c6f]/5 hover:text-[#0a7c6f] transition-colors">
+                        {DEPT_ICONS[dept.id] || "📋"} {dept.label}
+                        <Plus className="h-3 w-3 ml-0.5" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Invite Form */}
       {showInvite && (
