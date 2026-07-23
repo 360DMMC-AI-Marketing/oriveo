@@ -141,10 +141,12 @@ export default function ClinicUsers() {
               {showManageTeams ? "Close" : "Manage Teams"}
             </Button>
           )}
-          <Button onClick={() => { setShowInvite(!showInvite); setInviteResult(null); if (!showInvite) setShowManageTeams(false); }} className="gap-1">
-            {showInvite ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-            {showInvite ? "Close" : "Invite Member"}
-          </Button>
+          {currentUser?.role === "admin" && (
+            <Button onClick={() => { setShowInvite(!showInvite); setInviteResult(null); if (!showInvite) setShowManageTeams(false); }} className="gap-1">
+              {showInvite ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {showInvite ? "Close" : "Invite Member"}
+            </Button>
+          )}
         </div>
       </div>
 
