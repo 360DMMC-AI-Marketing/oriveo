@@ -134,58 +134,55 @@ export default function ClinicUsers() {
           <h1 className="text-2xl font-bold">Team Members</h1>
           <p className="text-gray-500 text-sm">{users.length} / {data?.maxUsers || 5} members across {departments.length} departments</p>
         </div>
-        <Button onClick={() => { setShowInvite(!showInvite); setInviteResult(null); }} className="gap-1">
-          {showInvite ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-          {showInvite ? "Close" : "Invite Member"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {currentUser?.role === "admin" && (
+            <Button variant="outline" onClick={() => { setShowManageTeams(!showManageTeams); if (!showManageTeams) { setShowInvite(false); setInviteResult(null); } }} className="gap-1">
+              {showManageTeams ? <X className="h-4 w-4" /> : <Settings className="h-4 w-4" />}
+              {showManageTeams ? "Close" : "Manage Teams"}
+            </Button>
+          )}
+          <Button onClick={() => { setShowInvite(!showInvite); setInviteResult(null); if (!showInvite) setShowManageTeams(false); }} className="gap-1">
+            {showInvite ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+            {showInvite ? "Close" : "Invite Member"}
+          </Button>
+        </div>
       </div>
 
-      {/* Manage Teams */}
-      {currentUser?.role === "admin" && (
+      {/* Manage Teams Panel */}
+      {showManageTeams && currentUser?.role === "admin" && (
         <Card className="border-dashed">
-          <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50/50 transition-colors"
-            onClick={() => setShowManageTeams(!showManageTeams)}>
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Manage Teams</span>
-              <span className="text-xs text-gray-400">({activeDepts.length} active, {availableToAdd.length} available)</span>
-            </div>
-            {showManageTeams ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
-          </div>
-          {showManageTeams && (
-            <CardContent className="pt-0 space-y-4">
-              {activeDepts.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Active Teams</p>
-                  <div className="flex flex-wrap gap-2">
-                    {activeDepts.map((dept: any) => (
-                      <span key={dept.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#0a7c6f]/20 bg-[#0a7c6f]/5 px-3 py-1.5 text-xs font-medium text-[#0a7c6f]">
-                        {DEPT_ICONS[dept.id] || "📋"} {dept.label}
-                        <button onClick={(e) => { e.stopPropagation(); removeTeam(dept.id); }}
-                          className="ml-1 rounded-full p-0.5 hover:bg-[#0a7c6f]/10 transition-colors">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {availableToAdd.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Available to Add</p>
-                  <div className="flex flex-wrap gap-2">
-                    {availableToAdd.map((dept: any) => (
-                      <button key={dept.id} onClick={() => addTeam(dept)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-500 hover:border-[#0a7c6f]/30 hover:bg-[#0a7c6f]/5 hover:text-[#0a7c6f] transition-colors">
-                        {DEPT_ICONS[dept.id] || "📋"} {dept.label}
-                        <Plus className="h-3 w-3 ml-0.5" />
+          <CardContent className="pt-4 space-y-4">
+            {activeDepts.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Active Teams</p>
+                <div className="flex flex-wrap gap-2">
+                  {activeDepts.map((dept: any) => (
+                    <span key={dept.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#0a7c6f]/20 bg-[#0a7c6f]/5 px-3 py-1.5 text-xs font-medium text-[#0a7c6f]">
+                      {DEPT_ICONS[dept.id] || "📋"} {dept.label}
+                      <button onClick={() => removeTeam(dept.id)}
+                        className="ml-1 rounded-full p-0.5 hover:bg-[#0a7c6f]/10 transition-colors">
+                        <X className="h-3 w-3" />
                       </button>
-                    ))}
-                  </div>
+                    </span>
+                  ))}
                 </div>
-              )}
-            </CardContent>
-          )}
+              </div>
+            )}
+            {availableToAdd.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Available to Add</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableToAdd.map((dept: any) => (
+                    <button key={dept.id} onClick={() => addTeam(dept)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-500 hover:border-[#0a7c6f]/30 hover:bg-[#0a7c6f]/5 hover:text-[#0a7c6f] transition-colors">
+                      {DEPT_ICONS[dept.id] || "📋"} {dept.label}
+                      <Plus className="h-3 w-3 ml-0.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
         </Card>
       )}
 
