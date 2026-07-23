@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare } from "lucide-react";
+import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import SummaryTab from "@/components/patients/SummaryTab";
@@ -18,6 +18,7 @@ import VitalsTab from "@/components/patients/VitalsTab";
 import VisitsTab from "@/components/patients/VisitsTab";
 import ReportsTab from "@/components/patients/ReportsTab";
 import ClinicalTab from "@/components/patients/ClinicalTab";
+import VoiceBiomarkersTab from "@/components/patients/VoiceBiomarkersTab";
 
 export default function PatientDetail() {
   const { id } = useParams();
@@ -306,6 +307,7 @@ export default function PatientDetail() {
           <TabsTrigger value="visits">Visits</TabsTrigger>
           <TabsTrigger value="reports">AI Reports</TabsTrigger>
           <TabsTrigger value="clinical">Clinical</TabsTrigger>
+          <TabsTrigger value="voice-biomarkers"><Activity className="h-3.5 w-3.5 mr-1" />Voice Biomarkers</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
@@ -368,6 +370,10 @@ export default function PatientDetail() {
         <TabsContent value="clinical">
           <ClinicalTab patientId={id!} specialty={patient?.specialty} />
         </TabsContent>
+        <TabsContent value="voice-biomarkers">
+          <VoiceBiomarkersTab patientId={id!} />
+        </TabsContent>
+
         <TabsContent value="compliance">
           <Card>
             <CardHeader>

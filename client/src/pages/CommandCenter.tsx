@@ -6,7 +6,7 @@ import Logo from "@/components/ui/Logo";
 import {
   Activity, AlertTriangle, ArrowUp, BarChart3, Calendar, ChevronRight, Clock, Eye,
   Heart, Maximize2, Minimize2, Phone, Radio, RefreshCw, Shield, TrendingUp, Users, X,
-  DollarSign, UserCheck, FileText, Building2,
+  DollarSign, UserCheck, FileText, Building2, Brain, TrendingDown,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -154,6 +154,18 @@ export default function CommandCenter() {
     queryKey: ["population-health"],
     queryFn: () => api.get("/population-health/summary").then((r) => r.data),
     refetchInterval: tvMode ? 30000 : 15000,
+  });
+
+  const { data: biomarkerData } = useQuery({
+    queryKey: ["biomarkers", "flagged"],
+    queryFn: () => api.get("/biomarkers/flagged").then((r) => r.data),
+    refetchInterval: tvMode ? 60000 : 30000,
+  });
+
+  const { data: biomarkerStats } = useQuery({
+    queryKey: ["biomarkers", "stats"],
+    queryFn: () => api.get("/biomarkers/stats").then((r) => r.data),
+    refetchInterval: tvMode ? 60000 : 30000,
   });
 
   const d = data || {} as any;
@@ -551,6 +563,113 @@ export default function CommandCenter() {
             {riskPredictions.length === 0 && (
               <div className="flex items-center w-full justify-center py-6 text-xs text-gray-400">
                 <Shield className="h-5 w-5 mr-1.5 text-emerald-400" /> All patients stable
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ SECTION 5: VOICE BIOMARKERS ═══ */}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Biomarker Stats */}
+        <div className="col-span-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="h-3.5 w-3.5 text-purple-500" />
+            <h3 className="text-xs font-semibold text-gray-500 tracking-wider">VOICE BIOMARKERS</h3>
+          </div>
+          {biomarkerStats ? (
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Calls Analyzed</span>
+                <span className="font-semibold text-gray-800">{biomarkerStats.totalCalls || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Avg Health Index</span>
+                <span className={`font-semibold ${(biomarkerStats.avgHealthIndex || 0) >= 70 ? "text-emerald-600" : (biomarkerStats.avgHealthIndex || 0) >= 45 ? "text-amber-600" : "text-red-600"}`}>
+                  {Math.round(biomarkerStats.avgHealthIndex || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Declining</span>
+                <span className="font-semibold text-red-600">{biomarkerStats.decliningCount || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Improving</span>
+                <span className="font-semibold text-emerald-600">{biomarkerStats.improvingCount || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Recent Flags (7d)</span>
+                <span className="font-semibold text-amber-600">{biomarkerStats.recentFlags || 0}</span>
+              </div>
+              {biomarkerStats.totalBillable > 0 && (
+                <div className="pt-2 border-t border-gray-100">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500 flex items-center gap-1"><DollarSign className="h-3 w-3" />Billable Touchpoints</span>
+                    <span className="font-bold text-emerald-600">${biomarkerStats.totalBillable}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[120px] text-xs text-gray-400">No biomarker data yet</div>
+          )}
+        </div>
+
+        {/* Flagged Patients */}
+        <div className="col-span-8 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              <h3 className="text-xs font-semibold text-gray-500 tracking-wider">BIOMARKER FLAGGED PATIENTS</h3>
+            </div>
+            {biomarkerData?.flagged?.length > 0 && (
+              <span className="text-[10px] font-semibold text-red-500">{biomarkerData.flagged.length} flagged</span>
+            )}
+          </div>
+          <div className="space-y-2 max-h-[260px] overflow-y-auto scrollbar-thin">
+            {(biomarkerData?.flagged || []).slice(0, 8).map((f: any) => (
+              <div key={f._id} className="flex items-center gap-3 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => navigate(`/patients/${f._id}`)}>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                  (f.healthIndex || 0) < 35 ? "bg-red-100" : (f.healthIndex || 0) < 50 ? "bg-amber-100" : "bg-emerald-100"
+                }`}>
+                  <Brain className={`h-4 w-4 ${
+                    (f.healthIndex || 0) < 35 ? "text-red-600" : (f.healthIndex || 0) < 50 ? "text-amber-600" : "text-emerald-600"
+                  }`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900 truncate">{f.patient?.name || "Unknown"}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      (f.healthIndex || 0) < 35 ? "bg-red-100 text-red-600" : (f.healthIndex || 0) < 50 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                    }`}>HI: {f.healthIndex}</span>
+                    {f.decliningStreak >= 3 && (
+                      <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                        <TrendingDown className="h-2.5 w-2.5" /> {f.decliningStreak}x
+                      </span>
+                    )}
+                  </div>
+                  {f.patient?.primaryDiagnosis && (
+                    <p className="text-[10px] text-gray-500 truncate">{f.patient.primaryDiagnosis}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {(f.latestFlags || []).slice(0, 2).map((flag: any, i: number) => (
+                    <span key={i} className={`text-[9px] px-1.5 py-0.5 rounded ${
+                      flag.severity === "high" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+                    }`}>{flag.type.replace(/_/g, " ")}</span>
+                  ))}
+                  {f.proactiveCare?.triggered && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-0.5">
+                      <DollarSign className="h-2.5 w-2.5" />{f.proactiveCare.billableCode}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {(!biomarkerData?.flagged || biomarkerData.flagged.length === 0) && (
+              <div className="flex items-center w-full justify-center py-8 text-xs text-gray-400">
+                <Brain className="h-5 w-5 mr-1.5 text-purple-400" /> No flagged patients — all biomarkers normal
               </div>
             )}
           </div>
