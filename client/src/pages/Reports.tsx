@@ -261,8 +261,9 @@ export default function Reports() {
 
 function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const pointsRef = useRef<{ x: number; y: number; t: number }[]>([]);
+  const lastFrameRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -273,14 +274,8 @@ function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
     canvas.width = rect.width * 2;
     canvas.height = rect.height * 2;
     ctx.scale(2, 2);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#1a1a2e";
-    ctx.lineWidth = 2.5;
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, rect.width, rect.height);
-    ctx.beginPath();
-    ctx.setLineDash([]);
   }, []);
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
@@ -291,29 +286,112 @@ function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDrawing(true);
-    setHasDrawn(true);
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const pos = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-  };
+  const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const pos = getPos(e);
-    ctx.lineTo(pos.x, pos.y);
+  const drawSmoothSegment = (ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[]) => {
+    if (pts.length < 3) {
+      if (pts.length === 2) {
+        const [p0, p1] = pts;
+        const spd = dist(p0, p1);
+        const w = Math.max(0.8, Math.min(3.5, 8 / Math.max(spd, 1)));
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(26,26,46,${Math.min(0.95, 0.7 + w * 0.05)})`;
+        ctx.lineWidth = w;
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+      return;
+    }
+    const [p0, p1, p2] = pts;
+    const spd = dist(p0, p1);
+    const w = Math.max(0.8, Math.min(3.5, 8 / Math.max(spd, 1)));
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(26,26,46,${Math.min(0.95, 0.7 + w * 0.05)})`;
+    ctx.lineWidth = w;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.moveTo(p0.x, p0.y);
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+    ctx.quadraticCurveTo(p1.x, p1.y, mx, my);
     ctx.stroke();
   };
 
-  const endDraw = () => {
-    setIsDrawing(false);
+  const getPressure = (pts: { x: number; y: number; t: number }[]) => {
+    if (pts.length < 2) return 0.7;
+    const last = pts[pts.length - 1];
+    const prev = pts[pts.length - 2];
+    const dt = Math.max(last.t - prev.t, 1);
+    const d = dist(last, prev);
+    const speed = d / dt;
+    const pressure = Math.max(0.3, Math.min(1.0, 1.2 - speed * 0.015));
+    return pressure;
+  };
+
+  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    setHasDrawn(true);
+    const pos = getPos(e);
+    pointsRef.current = [{ ...pos, t: performance.now() }];
+    lastFrameRef.current = 0;
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (pointsRef.current.length === 0) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const pos = getPos(e);
+    const now = performance.now();
+
+    pointsRef.current.push({ ...pos, t: now });
+
+    const pts = pointsRef.current;
+    if (pts.length >= 3) {
+      const len = pts.length;
+      drawSmoothSegment(ctx, [pts[len - 3], pts[len - 2], pts[len - 1]]);
+
+      const pressure = getPressure(pts);
+      const lastPt = pts[len - 1];
+      ctx.beginPath();
+      ctx.arc(lastPt.x, lastPt.y, pressure * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(26,26,46,${pressure * 0.3})`;
+      ctx.fill();
+    } else if (pts.length === 2) {
+      drawSmoothSegment(ctx, [pts[0], pts[1]]);
+    }
+  };
+
+  const endDraw = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) e.preventDefault();
+    const pts = pointsRef.current;
+
+    if (pts.length > 2) {
+      const canvas = canvasRef.current!;
+      const ctx = canvas.getContext("2d")!;
+
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(26,26,46,0.6)";
+      ctx.lineWidth = 1.2;
+      ctx.lineCap = "round";
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i].x + pts[i + 1].x) / 2;
+        const my = (pts[i].y + pts[i + 1].y) / 2;
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+      }
+      ctx.stroke();
+    }
+
+    pointsRef.current = [];
     if (hasDrawn && canvasRef.current) {
-      onSignature(canvasRef.current.toDataURL("image/png"));
+      setTimeout(() => {
+        if (canvasRef.current) {
+          onSignature(canvasRef.current.toDataURL("image/png"));
+        }
+      }, 50);
     }
   };
 
@@ -339,7 +417,7 @@ function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
           onMouseDown={startDraw}
           onMouseMove={draw}
           onMouseUp={endDraw}
-          onMouseLeave={endDraw}
+          onMouseLeave={(e) => endDraw(e)}
           onTouchStart={startDraw}
           onTouchMove={draw}
           onTouchEnd={endDraw}
