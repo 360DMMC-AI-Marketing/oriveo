@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema(
     specialty: { type: [String], default: [] },
     language: { type: String, default: "en" },
     avatar: { type: String, default: "" },
+    digitalSignature: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
     department: { type: String, default: "" },
     tokenVersion: { type: Number, default: 0 },

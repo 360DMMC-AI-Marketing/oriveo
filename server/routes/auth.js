@@ -74,4 +74,23 @@ router.delete("/team/:id", protect, authorize("admin"), async (req, res) => {
   }
 });
 
+router.get("/me/signature", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("digitalSignature");
+    res.json({ signature: user?.digitalSignature || "" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/me/signature", protect, async (req, res) => {
+  try {
+    const { signature } = req.body;
+    await User.findByIdAndUpdate(req.user._id, { digitalSignature: signature || "" });
+    res.json({ message: "Signature saved" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;

@@ -8,6 +8,71 @@ import { FileText, Download, Search, Loader2, CheckCircle2, AlertTriangle, Clock
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
+function beautifySignature(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d")!;
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      tempCtx.drawImage(img, 0, 0);
+      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      const data = imageData.data;
+      let minX = tempCanvas.width, minY = tempCanvas.height, maxX = 0, maxY = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 30) {
+          const x = (i / 4) % tempCanvas.width;
+          const y = Math.floor((i / 4) / tempCanvas.width);
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+      if (maxX <= minX || maxY <= minY) { resolve(dataUrl); return; }
+      const pad = 16;
+      minX = Math.max(0, minX - pad);
+      minY = Math.max(0, minY - pad);
+      maxX = Math.min(tempCanvas.width, maxX + pad);
+      maxY = Math.min(tempCanvas.height, maxY + pad);
+      const cropW = maxX - minX;
+      const cropH = maxY - minY;
+      const outCanvas = document.createElement("canvas");
+      const outCtx = outCanvas.getContext("2d")!;
+      const outW = 400;
+      const outH = Math.round((cropH / cropW) * outW);
+      outCanvas.width = outW;
+      outCanvas.height = outH;
+      outCtx.imageSmoothingEnabled = true;
+      outCtx.imageSmoothingQuality = "high";
+      outCtx.fillStyle = "#fff";
+      outCtx.fillRect(0, 0, outW, outH);
+      outCtx.drawImage(tempCanvas, minX, minY, cropW, cropH, 0, 0, outW, outH);
+      const finalData = outCtx.getImageData(0, 0, outW, outH);
+      const fd = finalData.data;
+      for (let i = 0; i < fd.length; i += 4) {
+        if (fd[i + 3] > 20) {
+          const brightness = (fd[i] + fd[i + 1] + fd[i + 2]) / 3;
+          if (brightness > 180) {
+            fd[i] = 0; fd[i + 1] = 0; fd[i + 2] = 0; fd[i + 3] = Math.round(255 * Math.max(0.4, 1 - (brightness - 180) / 75));
+          } else {
+            const factor = Math.min(1.0, 60 / Math.max(brightness, 1));
+            fd[i] = Math.max(0, Math.round(fd[i] * (1 - factor)));
+            fd[i + 1] = Math.max(0, Math.round(fd[i + 1] * (1 - factor)));
+            fd[i + 2] = Math.max(0, Math.round(fd[i + 2] * (1 - factor)));
+            fd[i + 3] = Math.min(255, Math.round(fd[i + 3] * 1.1));
+          }
+        }
+      }
+      outCtx.putImageData(finalData, 0, 0);
+      resolve(outCanvas.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 const TRIAGE_COLORS = {
   0: { label: "Emergency", class: "text-red-700 bg-red-50 ring-red-600/20" },
   1: { label: "Urgent", class: "text-orange-700 bg-orange-50 ring-orange-600/20" },
@@ -441,11 +506,27 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
   const [showSign, setShowSign] = useState(false);
   const [signMode, setSignMode] = useState<"draw" | "type">("draw");
   const [agreed, setAgreed] = useState(false);
+  const [savedSignature, setSavedSignature] = useState("");
+  const [useSaved, setUseSaved] = useState(false);
+  const [saveForFuture, setSaveForFuture] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+
+  useEffect(() => {
+    api.get("/auth/me/signature").then((r) => {
+      if (r.data.signature) setSavedSignature(r.data.signature);
+    }).catch(() => {}).finally(() => setLoadingSaved(false));
+  }, []);
 
   const handlePrint = () => window.print();
 
-  const handleSign = () => {
-    const sig = signMode === "type" ? signatureName : signatureImage;
+  const handleSign = async () => {
+    let sig = signMode === "type" ? signatureName : (useSaved ? savedSignature : signatureImage);
+    if (signMode === "draw" && !useSaved && signatureImage) {
+      sig = await beautifySignature(signatureImage);
+    }
+    if (saveForFuture && sig && sig.startsWith("data:")) {
+      api.put("/auth/me/signature", { signature: sig }).catch(() => {});
+    }
     signMutation.mutate({ id: report._id, doctorNotes, digitalSignature: sig || undefined });
   };
 
@@ -526,9 +607,38 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
               {/* Signature area */}
               {signMode === "draw" ? (
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">Your signature</label>
-                  <SignaturePad onSignature={(img) => setSignatureImage(img)} />
-                  <p className="text-[11px] text-slate-400 mt-2">Draw your signature using your mouse or finger. This is your legally binding electronic signature.</p>
+                  {savedSignature && !loadingSaved && (
+                    <div className="mb-3">
+                      <label className="flex items-center gap-2.5 cursor-pointer bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-3 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={useSaved}
+                          onChange={(e) => { setUseSaved(e.target.checked); if (e.target.checked) setSignatureImage(savedSignature); }}
+                          className="h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-xs font-medium text-emerald-700">Use saved signature</span>
+                        <img src={savedSignature} alt="Saved signature" className="h-8 ml-auto" style={{ filter: "contrast(1.1)" }} />
+                      </label>
+                    </div>
+                  )}
+                  {!useSaved && (
+                    <>
+                      <label className="text-sm font-medium text-slate-700 mb-2 block">Your signature</label>
+                      <SignaturePad onSignature={(img) => { setSignatureImage(img); setUseSaved(false); }} />
+                      <p className="text-[11px] text-slate-400 mt-2">Draw your signature. It will be automatically beautified for clarity.</p>
+                    </>
+                  )}
+                  {savedSignature && !loadingSaved && (
+                    <label className="flex items-center gap-2 cursor-pointer mt-2">
+                      <input
+                        type="checkbox"
+                        checked={saveForFuture}
+                        onChange={(e) => setSaveForFuture(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                      />
+                      <span className="text-[11px] text-slate-500">Save this signature for future reports</span>
+                    </label>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -567,10 +677,10 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
 
               {/* Actions */}
               <div className="flex gap-3 pt-2 pb-safe sm:pb-0">
-                <Button variant="outline" onClick={() => { setShowSign(false); setSignatureName(""); setSignatureImage(""); setAgreed(false); }} className="flex-1 text-sm">Cancel</Button>
+                <Button variant="outline" onClick={() => { setShowSign(false); setSignatureName(""); setSignatureImage(""); setAgreed(false); setUseSaved(false); setSaveForFuture(false); }} className="flex-1 text-sm">Cancel</Button>
                 <Button
                   onClick={handleSign}
-                  disabled={signMutation.isPending || !agreed || (signMode === "type" ? !signatureName.trim() : !signatureImage)}
+                  disabled={signMutation.isPending || !agreed || (signMode === "type" ? !signatureName.trim() : (!useSaved && !signatureImage))}
                   className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/25 disabled:opacity-40 disabled:shadow-none text-sm"
                 >
                   {signMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
