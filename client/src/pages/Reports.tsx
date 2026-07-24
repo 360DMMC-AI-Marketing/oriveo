@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
-import { FileText, Download, Search, Loader2, CheckCircle2, AlertTriangle, Clock, FileSignature, User, Filter, ArrowUpDown, Printer, Stethoscope, Activity, Pill, AlertCircle, Calendar } from "lucide-react";
+import { FileText, Download, Search, Loader2, CheckCircle2, AlertTriangle, Clock, FileSignature, User, Filter, ArrowUpDown, Printer, Stethoscope, Activity, Pill, AlertCircle, Calendar, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -259,81 +259,252 @@ export default function Reports() {
   );
 }
 
+function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#1a1a2e";
+    ctx.lineWidth = 2.5;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.beginPath();
+    ctx.setLineDash([]);
+  }, []);
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  };
+
+  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDrawing(true);
+    setHasDrawn(true);
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  };
+
+  const endDraw = () => {
+    setIsDrawing(false);
+    if (hasDrawn && canvasRef.current) {
+      onSignature(canvasRef.current.toDataURL("image/png"));
+    }
+  };
+
+  const clearPad = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    setHasDrawn(false);
+    onSignature("");
+  };
+
+  return (
+    <div>
+      <div className="relative rounded-xl border-2 border-dashed border-gray-300 bg-white overflow-hidden" style={{ touchAction: "none" }}>
+        <canvas
+          ref={canvasRef}
+          className="w-full cursor-crosshair"
+          style={{ height: 120 }}
+          onMouseDown={startDraw}
+          onMouseMove={draw}
+          onMouseUp={endDraw}
+          onMouseLeave={endDraw}
+          onTouchStart={startDraw}
+          onTouchMove={draw}
+          onTouchEnd={endDraw}
+        />
+        {!hasDrawn && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <svg className="h-8 w-8 text-gray-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            <span className="text-xs text-gray-400 font-medium">Draw your signature here</span>
+          </div>
+        )}
+      </div>
+      <button type="button" onClick={clearPad} className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline">Clear signature</button>
+    </div>
+  );
+}
+
 function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownloadFhir }: { report: any; user: any; signMutation: any; onDownloadPdf: (id: string) => void; onDownloadFhir: (id: string) => void }) {
   const [doctorNotes, setDoctorNotes] = useState("");
   const [signatureName, setSignatureName] = useState("");
+  const [signatureImage, setSignatureImage] = useState("");
   const [showSign, setShowSign] = useState(false);
+  const [signMode, setSignMode] = useState<"draw" | "type">("draw");
+  const [agreed, setAgreed] = useState(false);
 
   const handlePrint = () => window.print();
 
+  const handleSign = () => {
+    const sig = signMode === "type" ? signatureName : signatureImage;
+    signMutation.mutate({ id: report._id, doctorNotes, digitalSignature: sig || undefined });
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex justify-end gap-3 mb-6 print:hidden">
-        <Button variant="outline" onClick={handlePrint} className="gap-2.5 px-5 py-2.5 text-sm font-bold shadow-sm hover:shadow-md transition-all"><Printer className="h-4 w-4" /> Print</Button>
-        <Button variant="outline" onClick={() => onDownloadPdf(report._id)} className="gap-2.5 px-5 py-2.5 text-sm font-bold shadow-sm hover:shadow-md transition-all">
-          <FileText className="h-4 w-4" /> Download PDF
+      {/* Action bar */}
+      <div className="flex items-center justify-between mb-6 print:hidden">
+        <Button variant="ghost" onClick={() => window.history.back()} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700">
+          <span className="text-lg leading-none">&larr;</span> Back to reports
         </Button>
-        <Button variant="outline" onClick={() => onDownloadFhir(report._id)} className="gap-2.5 px-5 py-2.5 text-sm font-bold shadow-sm hover:shadow-md transition-all">
-          <Activity className="h-4 w-4" /> FHIR
-        </Button>
-        {!report.doctorSigned && (user?.role === "admin" || user?.role === "doctor") && (
-          <Button onClick={() => setShowSign(!showSign)} className="gap-2.5 px-6 py-2.5 text-sm font-bold shadow-md hover:shadow-lg transition-all">
-            <FileSignature className="h-4 w-4" /> Sign Report
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5"><Printer className="h-3.5 w-3.5" /> Print</Button>
+          <Button variant="outline" size="sm" onClick={() => onDownloadPdf(report._id)} className="gap-1.5"><Download className="h-3.5 w-3.5" /> PDF</Button>
+          <Button variant="outline" size="sm" onClick={() => onDownloadFhir(report._id)} className="gap-1.5"><Activity className="h-3.5 w-3.5" /> FHIR</Button>
+          {!report.doctorSigned && (user?.role === "admin" || user?.role === "doctor") && (
+            <Button size="sm" onClick={() => setShowSign(true)} className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20">
+              <FileSignature className="h-3.5 w-3.5" /> Sign Report
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Signing Overlay */}
       {showSign && (
-        <Card className="mb-4 border-primary/30 print:hidden">
-          <CardContent className="pt-4 space-y-4">
-            <div className="flex items-center gap-3 pb-3 border-b">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-light">
-                <FileSignature className="h-5 w-5 text-primary" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm print:hidden" onClick={() => setShowSign(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Sign header */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-7 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/20 flex items-center justify-center">
+                    <FileSignature className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Sign Report</h3>
+                    <p className="text-xs text-slate-400">Electronic signature for {report.patientInfo?.name || "this report"}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSign(false)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all">
+                  <X className="h-4 w-4 text-slate-300" />
+                </button>
               </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Signer info */}
+              <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                <div className="w-11 h-11 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  {(user?.name || "D").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{user?.name || "Doctor"}</p>
+                  <p className="text-xs text-slate-400">
+                    {user?.role === "doctor" ? "Physician" : user?.role === "admin" ? "Administrator" : "Staff"}
+                    {user?.specialty ? ` · ${user.specialty}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Signature mode tabs */}
+              <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+                <button
+                  onClick={() => setSignMode("draw")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${signMode === "draw" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  Draw
+                </button>
+                <button
+                  onClick={() => setSignMode("type")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${signMode === "type" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  Type
+                </button>
+              </div>
+
+              {/* Signature area */}
+              {signMode === "draw" ? (
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">Your signature</label>
+                  <SignaturePad onSignature={(img) => setSignatureImage(img)} />
+                  <p className="text-[11px] text-slate-400 mt-2">Draw your signature using your mouse or finger. This is your legally binding electronic signature.</p>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">Type your full name</label>
+                  <input
+                    type="text"
+                    value={signatureName}
+                    onChange={(e) => setSignatureName(e.target.value)}
+                    placeholder={user?.name || "Dr. John Smith"}
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-lg focus:border-slate-900 focus:ring-0 outline-none transition-colors"
+                    style={{ fontFamily: "'Brush Script MT', 'Segoe Script', 'Dancing Script', cursive", fontSize: "1.5rem" }}
+                  />
+                  <p className="text-[11px] text-slate-400 mt-2">This serves as your legally binding electronic signature.</p>
+                </div>
+              )}
+
+              {/* Notes */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Digital Signature</h3>
-                <p className="text-xs text-gray-500">Signing as <strong>{user?.name || "Doctor"}</strong>
-                  {user?.role === "doctor" ? " (MD)" : ""}
-                  {user?.specialty ? ` — ${user.specialty}` : ""}
-                </p>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Clinical Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+                <textarea value={doctorNotes} onChange={(e) => setDoctorNotes(e.target.value)}
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm min-h-[72px] focus:border-slate-900 focus:ring-0 outline-none transition-colors resize-none" placeholder="Add clinical notes, observations, or follow-up instructions..." />
+              </div>
+
+              {/* Agreement checkbox */}
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                />
+                <span className="text-xs text-slate-500 leading-relaxed group-hover:text-slate-700 transition-colors">
+                  I certify that this report accurately reflects the clinical encounter and I approve it for the medical record.
+                </span>
+              </label>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => { setShowSign(false); setSignatureName(""); setSignatureImage(""); setAgreed(false); }} className="flex-1">Cancel</Button>
+                <Button
+                  onClick={handleSign}
+                  disabled={signMutation.isPending || !agreed || (signMode === "type" ? !signatureName.trim() : !signatureImage)}
+                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/25 disabled:opacity-40 disabled:shadow-none"
+                >
+                  {signMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {signMutation.isPending ? "Signing..." : "Sign & Approve"}
+                </Button>
               </div>
             </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Type your full name to sign</label>
-              <input
-                type="text"
-                value={signatureName}
-                onChange={(e) => setSignatureName(e.target.value)}
-                placeholder={user?.name || "Dr. John Smith"}
-                className="mt-1 flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium font-serif focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive", fontSize: "1.1rem" }}
-              />
-              <p className="text-xs text-gray-400 mt-1">This serves as your legally binding electronic signature</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Doctor's Notes (optional)</label>
-              <textarea value={doctorNotes} onChange={(e) => setDoctorNotes(e.target.value)}
-                className="mt-1 flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm min-h-[80px]" placeholder="Add any additional notes or observations..." />
-            </div>
-
-            <div className="flex gap-2 justify-end pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => { setShowSign(false); setSignatureName(""); }}>Cancel</Button>
-              <Button
-                size="sm"
-                onClick={() => signMutation.mutate({ id: report._id, doctorNotes, digitalSignature: signatureName || undefined })}
-                disabled={signMutation.isPending || !signatureName.trim()}
-                className="gap-1"
-              >
-                {signMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileSignature className="h-3 w-3" />}
-                {signMutation.isPending ? "Signing..." : "Sign & Finalize"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
+      {/* The report document */}
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden report-print-area">
         <div className="bg-gray-50 border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -472,37 +643,68 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{report.callSummary || "N/A"}</p>
           </Section>
 
+          {/* Footer with signature */}
           <div className="border-t pt-4 mt-6">
             <div className="flex items-center justify-between text-sm text-gray-500">
               <p>Generated by AI {report.generatedBy?.name ? `(${report.generatedBy.name})` : ""}</p>
               <p>{report.createdAt ? new Date(report.createdAt).toLocaleString() : ""}</p>
             </div>
+
             {report.doctorSigned && (
-              <div className="mt-4 border-t pt-4">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                      <FileSignature className="h-5 w-5 text-emerald-600" />
+              <div className="mt-6">
+                {/* Realistic signed document look */}
+                <div className="relative rounded-xl border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 overflow-hidden">
+                  {/* Watermark */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-black text-slate-100/60 select-none pointer-events-none rotate-[-15deg]">SIGNED</div>
+
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-px flex-1 bg-slate-200" />
+                      <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">Signature Block</span>
+                      <div className="h-px flex-1 bg-slate-200" />
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-emerald-800">Digitally Signed</p>
-                      <p className="font-serif text-base text-emerald-900" style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}>
-                        {report.digitalSignature || report.signedBy?.name || "Doctor"}
-                      </p>
-                      <p className="text-xs text-emerald-700">
-                        {report.signedBy?.name || "Doctor"}
-                        {report.signatureTitle ? `, ${report.signatureTitle}` : ""}
-                      </p>
-                      <p className="text-xs text-emerald-600">
-                        Signed on {report.signedAt ? new Date(report.signedAt).toLocaleString() : ""}
-                      </p>
-                      {report.doctorNotes && (
-                        <div className="mt-2 pt-2 border-t border-emerald-200">
-                          <p className="text-xs font-medium text-emerald-700">Doctor's Notes:</p>
-                          <p className="text-sm text-emerald-800 mt-0.5">{report.doctorNotes}</p>
+
+                    <div className="flex items-start gap-6">
+                      {/* Signature */}
+                      <div className="flex-1">
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Physician Signature</p>
+                        {report.digitalSignature && report.digitalSignature.startsWith("data:") ? (
+                          <div className="border-b-2 border-slate-900 pb-1 mb-2 inline-block">
+                            <img src={report.digitalSignature} alt="Signature" className="h-14" style={{ filter: "contrast(1.2)" }} />
+                          </div>
+                        ) : (
+                          <div className="border-b-2 border-slate-900 pb-1 mb-2 inline-block">
+                            <span className="text-2xl text-slate-900" style={{ fontFamily: "'Brush Script MT', 'Segoe Script', 'Dancing Script', cursive" }}>
+                              {report.digitalSignature || report.signedBy?.name || "Doctor"}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-4 text-xs text-slate-600">
+                          <span className="font-semibold">{report.signedBy?.name || "Doctor"}{report.signatureTitle ? `, ${report.signatureTitle}` : ""}</span>
+                          <span className="text-slate-400">|</span>
+                          <span>{report.signedAt ? new Date(report.signedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""}</span>
+                          <span className="text-slate-400">|</span>
+                          <span>{report.signedAt ? new Date(report.signedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Verification badge */}
+                      <div className="flex flex-col items-center gap-1 shrink-0 pt-2">
+                        <div className="w-16 h-16 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
+                          <div className="text-center">
+                            <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto" />
+                            <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-wider">Verified</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
+                    {report.doctorNotes && (
+                      <div className="mt-4 pt-4 border-t border-dashed border-slate-200">
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Clinical Notes</p>
+                        <p className="text-sm text-slate-700 bg-amber-50/50 rounded-lg p-3 border border-amber-100 italic">{report.doctorNotes}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
