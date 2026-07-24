@@ -8,6 +8,7 @@ import { generateReport, generateAllMissingReports } from "../services/reportGen
 import { convertReportToFhirBundle } from "../services/fhirConverter.js";
 import { SPECIALTY_DASHBOARD_LABELS } from "../config/specialties.js";
 import PDFDocument from "pdfkit";
+import { cacheGet, cacheSet, cacheDel } from "../utils/cache.js";
 
 const idParam = z.object({ id: z.string().regex(/^[a-f\d]{24}$/i, "Invalid ID") });
 const callIdParam = z.object({ callId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid call ID") });
@@ -23,6 +24,10 @@ router.get("/", validate(reportQuerySchema, "query"), async (req, res) => {
     if (signed === "true") filter.doctorSigned = true;
     if (signed === "false") filter.doctorSigned = false;
 
+    const cacheKey = `reports:${req.user.organization || "default"}:${page}:${limit}:${patientId || ""}:${signed || ""}:${sort}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const total = await Report.countDocuments(filter);
     const reports = await Report.find(filter)
       .populate("patient", "name phone")
@@ -31,7 +36,9 @@ router.get("/", validate(reportQuerySchema, "query"), async (req, res) => {
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit));
 
-    res.json({ reports, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
+    const result = { reports, total, page: Number(page), pages: Math.ceil(total / Number(limit)) };
+    await cacheSet(cacheKey, result, 30);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -399,6 +406,7 @@ router.put("/:id/sign", authorize("admin", "doctor"), validate(idParam, "params"
       { new: true }
     ).populate("signedBy", "name email role specialty");
     if (!report) return res.status(404).json({ message: "Report not found" });
+    await cacheDel(`reports:*`);
     res.json({ report });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Patient from "../models/Patient.js";
 import { addDocument, removeDocument } from "../services/knowledgeBase.js";
+import { cacheGet, cacheSet, cacheDel } from "../utils/cache.js";
 
 function syncKbNotes(patient) {
   if (!patient.kbNotes || !patient.kbNotes.trim()) {
@@ -49,6 +50,10 @@ export const getPatients = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
     const skip = (page - 1) * limit;
+    const cacheKey = `patients:${req.user.organization || "default"}:${req.user.role}:${req.user._id}:${page}:${limit}:${req.query.search || ""}:${req.query.patientType || ""}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const [patients, total] = await Promise.all([
       Patient.find(query)
         .populate("assignedDoctor", "name email")
@@ -58,7 +63,9 @@ export const getPatients = async (req, res) => {
         .limit(limit),
       Patient.countDocuments(query),
     ]);
-    res.json({ patients, total, page, pages: Math.ceil(total / limit) });
+    const result = { patients, total, page, pages: Math.ceil(total / limit) };
+    await cacheSet(cacheKey, result, 20);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -88,6 +95,7 @@ export const createPatient = async (req, res) => {
     const patient = await Patient.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: req.body.specialty || orgSpecialty || "general" });
     syncKbNotes(patient);
     const populated = await patient.populate("assignedDoctor", "name email");
+    await cacheDel("patients:*");
     res.status(201).json({ patient: populated });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -104,6 +112,7 @@ export const updatePatient = async (req, res) => {
       return res.status(404).json({ message: "Patient not found" });
     }
     syncKbNotes(patient);
+    await cacheDel("patients:*");
     res.json({ patient });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -117,6 +126,8 @@ export const deletePatient = async (req, res) => {
       return res.status(404).json({ message: "Patient not found" });
     }
     removeDocument(`patient_${patient._id}`);
+    await cacheDel("patients:*");
+    await cacheDel("reports:*");
     res.json({ message: "Patient deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });

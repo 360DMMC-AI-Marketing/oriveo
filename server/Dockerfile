@@ -9,4 +9,4 @@ COPY . .
 RUN chown -R oriveo:oriveo /app
 USER oriveo
 EXPOSE 5000
-CMD ["dumb-init", "pm2-runtime", "index.js", "-i", "max"]
+CMD ["dumb-init", "pm2-runtime", "pm2.config.cjs"]

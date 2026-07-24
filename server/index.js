@@ -54,6 +54,7 @@ import { setIo } from "./services/socketManager.js";
 
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import RedisStore from "rate-limit-redis";
 import mongoSanitize from "express-mongo-sanitize";
 import pino from "pino";
 import pinoHttp from "pino-http";
@@ -62,6 +63,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { protect } from "./middleware/auth.js";
 import jwt from "jsonwebtoken";
 import User from "./models/User.js";
+import { initCache } from "./utils/cache.js";
 
 const sentryEnabled = !!process.env.SENTRY_DSN;
 
@@ -108,13 +110,19 @@ if (useHttps) {
 
 const io = new Server(httpServer, {
   cors: { origin: process.env.CORS_ORIGIN || "http://localhost:5173", methods: ["GET", "POST"] },
+  pingInterval: 25000,
+  pingTimeout: 20000,
+  maxHttpBufferSize: 1e6,
 });
 
+let redisClients = null;
 if (process.env.REDIS_URL) {
   try {
-    const pubClient = new IORedis(process.env.REDIS_URL);
-    const subClient = new IORedis(process.env.REDIS_URL);
+    const pubClient = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: 3 });
+    const subClient = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: 3 });
+    redisClients = { pubClient, subClient };
     io.adapter(createAdapter(pubClient, subClient));
+    initCache();
     logger.info("Socket.io using Redis adapter for multi-instance scaling");
   } catch (err) {
     logger.warn({ err }, "Failed to connect Redis for socket.io, using in-memory");
@@ -146,6 +154,18 @@ function createRateLimiter() {
     message: { message: "Too many requests, please try again later" },
     skipFailedRequests: true,
   };
+
+  if (redisClients?.pubClient) {
+    try {
+      config.store = new RedisStore({
+        sendCommand: (...args) => redisClients.pubClient.call(...args),
+        prefix: "rl:",
+      });
+      logger.info("Rate limiter using Redis store (shared across workers)");
+    } catch (err) {
+      logger.warn({ err }, "Failed to create Redis rate limiter store, using memory");
+    }
+  }
 
   return rateLimit(config);
 }
@@ -181,11 +201,14 @@ io.use((socket, next) => {
   }
 });
 
+const activeConnections = new Map();
+
 io.on("connection", (socket) => {
-  logger.info({ socketId: socket.id }, "Socket connected");
   const userId = socket.userId || socket.handshake.query?.userId;
   if (userId) {
     socket.join(`user:${userId}`);
+    if (!activeConnections.has(userId)) activeConnections.set(userId, new Set());
+    activeConnections.get(userId).add(socket.id);
   }
   socket.on("join-call", (callId) => {
     socket.join(`call:${callId}`);
@@ -195,13 +218,15 @@ io.on("connection", (socket) => {
   });
   socket.on("join-supervisor", () => {
     socket.join("supervisor-room");
-    logger.info({ socketId: socket.id }, "Supervisor joined monitoring room");
   });
   socket.on("leave-supervisor", () => {
     socket.leave("supervisor-room");
   });
   socket.on("disconnect", () => {
-    logger.info({ socketId: socket.id }, "Socket disconnected");
+    if (userId && activeConnections.has(userId)) {
+      activeConnections.get(userId).delete(socket.id);
+      if (activeConnections.get(userId).size === 0) activeConnections.delete(userId);
+    }
   });
 });
 
@@ -347,12 +372,20 @@ httpServer.on("upgrade", async (request, socket, head) => {
   return;
 });
 
+const workers = parseInt(process.env.WEB_CONCURRENCY || "4");
+const mongoPoolSize = Math.max(20, Math.floor(200 / workers));
+
 mongoose
-  .connect(MONGO_URI)
+  .connect(MONGO_URI, {
+    maxPoolSize: mongoPoolSize,
+    minPoolSize: 5,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+  })
   .then(() => {
-    logger.info("Connected to MongoDB");
+    logger.info({ poolSize: mongoPoolSize }, "Connected to MongoDB");
     httpServer.listen(PORT, () => {
-      logger.info({ port: PORT, ssl: useHttps, sentry: sentryEnabled }, "Oriveo server running");
+      logger.info({ port: PORT, ssl: useHttps, sentry: sentryEnabled, workers }, "Oriveo server running");
     import("./services/callOrchestrator.js").then(({ recoverOrphanedCalls }) => {
       recoverOrphanedCalls().then((n) => {
         if (n > 0) logger.info({ orphanedCallsRecovered: n }, "Recovered orphaned calls");
@@ -393,13 +426,24 @@ mongoose
   });
 
 function gracefulShutdown(signal) {
-  logger.info({ signal }, "Shutdown signal received");
-  httpServer.close(() => {
-    mongoose.connection.close(false).then(() => {
-      logger.info("Server shut down gracefully");
-      process.exit(0);
+  logger.info({ signal }, "Shutdown signal received, draining connections...");
+  io.emit("server-shutdown", { message: "Server restarting, reconnecting..." });
+  wss.clients.forEach((ws) => ws.close(1001, "Server shutting down"));
+  setTimeout(() => {
+    httpServer.close(() => {
+      mongoose.connection.close(false).then(() => {
+        if (redisClients?.pubClient) {
+          Promise.all([redisClients.pubClient.quit(), redisClients.subClient.quit()]).then(() => {
+            logger.info("All connections closed gracefully");
+            process.exit(0);
+          }).catch(() => process.exit(0));
+        } else {
+          logger.info("Server shut down gracefully");
+          process.exit(0);
+        }
+      });
     });
-  });
+  }, 2000);
   setTimeout(() => {
     logger.error("Forced shutdown after timeout");
     process.exit(1);
