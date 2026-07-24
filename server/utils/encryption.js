@@ -32,7 +32,7 @@ export function decrypt(encoded) {
   if (parts.length !== 3) return encoded;
   const [ivHex, authTagHex, encrypted] = parts;
   try {
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(ivHex, "hex"));
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(ivHex, "hex"), { authTagLength: 16 });
     decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");

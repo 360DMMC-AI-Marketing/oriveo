@@ -111,7 +111,13 @@ export const deleteDocument = async (req, res) => {
       organization: req.user.organization || null,
     });
     if (!doc) return res.status(404).json({ message: "Document not found" });
-    const filePath = path.join("uploads", "documents", doc.fileName);
+    const safeName = path.basename(doc.fileName);
+    const filePath = path.join("uploads", "documents", safeName);
+    const resolvedPath = path.resolve(filePath);
+    const documentsDir = path.resolve("uploads", "documents");
+    if (!resolvedPath.startsWith(documentsDir + path.sep)) {
+      return res.status(400).json({ message: "Invalid file path" });
+    }
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     res.json({ message: "Document deleted" });
   } catch (error) {

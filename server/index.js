@@ -54,7 +54,6 @@ import { setIo } from "./services/socketManager.js";
 
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import MongoStore from "rate-limit-mongo";
 import mongoSanitize from "express-mongo-sanitize";
 import pino from "pino";
 import pinoHttp from "pino-http";
@@ -95,7 +94,12 @@ if (useHttps) {
   httpServer = createHttpsServer(httpsOptions, app);
   if (process.env.NODE_ENV === "production") {
     const httpApp = express();
-    httpApp.get("*", (req, res) => res.redirect(`https://${req.headers.host}${req.url}`));
+    const allowedHosts = (process.env.CORS_ORIGIN || "http://localhost:5173").split(",").map(o => new URL(o).hostname);
+    httpApp.get("*", (req, res) => {
+      const host = req.headers.host?.split(":")[0];
+      if (!host || !allowedHosts.includes(host)) return res.status(400).send("Invalid host");
+      res.redirect(301, `https://${host}${req.url}`);
+    });
     httpApp.listen(80);
   }
 } else {
@@ -142,19 +146,6 @@ function createRateLimiter() {
     message: { message: "Too many requests, please try again later" },
     skipFailedRequests: true,
   };
-
-  if (process.env.MONGODB_URI) {
-    try {
-      config.store = new MongoStore({
-        uri: process.env.MONGODB_URI,
-        collectionName: "rateLimits",
-        expireTimeMs: 60 * 1000,
-      });
-      logger.info("Rate limiter using MongoDB store");
-    } catch (err) {
-      logger.warn({ err }, "Failed to create MongoDB rate limiter store, using memory");
-    }
-  }
 
   return rateLimit(config);
 }
