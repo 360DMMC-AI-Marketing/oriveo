@@ -374,16 +374,16 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
   return (
     <div className="max-w-3xl mx-auto">
       {/* Action bar */}
-      <div className="flex items-center justify-between mb-6 print:hidden">
-        <Button variant="ghost" onClick={() => window.history.back()} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6 print:hidden">
+        <Button variant="ghost" onClick={() => window.history.back()} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700 self-start">
           <span className="text-lg leading-none">&larr;</span> Back to reports
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5"><Printer className="h-3.5 w-3.5" /> Print</Button>
-          <Button variant="outline" size="sm" onClick={() => onDownloadPdf(report._id)} className="gap-1.5"><Download className="h-3.5 w-3.5" /> PDF</Button>
-          <Button variant="outline" size="sm" onClick={() => onDownloadFhir(report._id)} className="gap-1.5"><Activity className="h-3.5 w-3.5" /> FHIR</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5 flex-1 sm:flex-none justify-center"><Printer className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Print</span></Button>
+          <Button variant="outline" size="sm" onClick={() => onDownloadPdf(report._id)} className="gap-1.5 flex-1 sm:flex-none justify-center"><Download className="h-3.5 w-3.5" /> <span className="hidden xs:inline">PDF</span></Button>
+          <Button variant="outline" size="sm" onClick={() => onDownloadFhir(report._id)} className="gap-1.5 flex-1 sm:flex-none justify-center"><Activity className="h-3.5 w-3.5" /> <span className="hidden xs:inline">FHIR</span></Button>
           {!report.doctorSigned && (user?.role === "admin" || user?.role === "doctor") && (
-            <Button size="sm" onClick={() => setShowSign(true)} className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20">
+            <Button size="sm" onClick={() => setShowSign(true)} className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 flex-1 sm:flex-none justify-center">
               <FileSignature className="h-3.5 w-3.5" /> Sign Report
             </Button>
           )}
@@ -392,27 +392,27 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
 
       {/* Signing Overlay */}
       {showSign && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm print:hidden" onClick={() => setShowSign(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm print:hidden p-0 sm:p-4" onClick={() => setShowSign(false)}>
+          <div className="bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-lg sm:mx-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             {/* Sign header */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-7 py-5">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-5 sm:px-7 py-4 sm:py-5 shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/20 flex items-center justify-center">
-                    <FileSignature className="h-5 w-5 text-emerald-400" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/20 flex items-center justify-center shrink-0">
+                    <FileSignature className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white">Sign Report</h3>
-                    <p className="text-xs text-slate-400">Electronic signature for {report.patientInfo?.name || "this report"}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-white truncate">Sign Report</h3>
+                    <p className="text-[11px] sm:text-xs text-slate-400 truncate">Electronic signature for {report.patientInfo?.name || "this report"}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowSign(false)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all">
+                <button onClick={() => setShowSign(false)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all shrink-0 ml-2">
                   <X className="h-4 w-4 text-slate-300" />
                 </button>
               </div>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 sm:space-y-5">
               {/* Signer info */}
               <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
                 <div className="w-11 h-11 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
@@ -431,16 +431,16 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
               <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
                 <button
                   onClick={() => setSignMode("draw")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${signMode === "draw" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${signMode === "draw" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   Draw
                 </button>
                 <button
                   onClick={() => setSignMode("type")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${signMode === "type" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${signMode === "type" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   Type
                 </button>
               </div>
@@ -488,12 +488,12 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
               </label>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => { setShowSign(false); setSignatureName(""); setSignatureImage(""); setAgreed(false); }} className="flex-1">Cancel</Button>
+              <div className="flex gap-3 pt-2 pb-safe sm:pb-0">
+                <Button variant="outline" onClick={() => { setShowSign(false); setSignatureName(""); setSignatureImage(""); setAgreed(false); }} className="flex-1 text-sm">Cancel</Button>
                 <Button
                   onClick={handleSign}
                   disabled={signMutation.isPending || !agreed || (signMode === "type" ? !signatureName.trim() : !signatureImage)}
-                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/25 disabled:opacity-40 disabled:shadow-none"
+                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/25 disabled:opacity-40 disabled:shadow-none text-sm"
                 >
                   {signMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {signMutation.isPending ? "Signing..." : "Sign & Approve"}
@@ -506,20 +506,20 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
 
       {/* The report document */}
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden report-print-area">
-        <div className="bg-gray-50 border-b px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-gray-50 border-b px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Medical Call Report</h2>
-              <p className="text-sm text-gray-500">Auto-generated from AI-patient conversation</p>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Medical Call Report</h2>
+              <p className="text-xs sm:text-sm text-gray-500">Auto-generated from AI-patient conversation</p>
             </div>
-            <div className="text-right text-xs text-gray-400">
+            <div className="text-left sm:text-right text-xs text-gray-400">
               <p>Report ID: {report._id?.slice(-8)}</p>
               <p>{report.callDate ? new Date(report.callDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""}</p>
             </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-5">
 
           <Section icon={User} title="Patient Information">
             <Row label="Name" value={report.patientInfo?.name} />
@@ -664,36 +664,36 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
                       <div className="h-px flex-1 bg-slate-200" />
                     </div>
 
-                    <div className="flex items-start gap-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                       {/* Signature */}
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Physician Signature</p>
                         {report.digitalSignature && report.digitalSignature.startsWith("data:") ? (
-                          <div className="border-b-2 border-slate-900 pb-1 mb-2 inline-block">
-                            <img src={report.digitalSignature} alt="Signature" className="h-14" style={{ filter: "contrast(1.2)" }} />
+                          <div className="border-b-2 border-slate-900 pb-1 mb-2 inline-block max-w-full overflow-hidden">
+                            <img src={report.digitalSignature} alt="Signature" className="h-12 sm:h-14 max-w-full" style={{ filter: "contrast(1.2)" }} />
                           </div>
                         ) : (
                           <div className="border-b-2 border-slate-900 pb-1 mb-2 inline-block">
-                            <span className="text-2xl text-slate-900" style={{ fontFamily: "'Brush Script MT', 'Segoe Script', 'Dancing Script', cursive" }}>
+                            <span className="text-xl sm:text-2xl text-slate-900" style={{ fontFamily: "'Brush Script MT', 'Segoe Script', 'Dancing Script', cursive" }}>
                               {report.digitalSignature || report.signedBy?.name || "Doctor"}
                             </span>
                           </div>
                         )}
-                        <div className="flex items-center gap-4 text-xs text-slate-600">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-slate-600">
                           <span className="font-semibold">{report.signedBy?.name || "Doctor"}{report.signatureTitle ? `, ${report.signatureTitle}` : ""}</span>
-                          <span className="text-slate-400">|</span>
+                          <span className="text-slate-400 hidden sm:inline">|</span>
                           <span>{report.signedAt ? new Date(report.signedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""}</span>
-                          <span className="text-slate-400">|</span>
+                          <span className="text-slate-400 hidden sm:inline">|</span>
                           <span>{report.signedAt ? new Date(report.signedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
                         </div>
                       </div>
 
                       {/* Verification badge */}
-                      <div className="flex flex-col items-center gap-1 shrink-0 pt-2">
-                        <div className="w-16 h-16 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
+                      <div className="flex flex-row sm:flex-col items-center gap-2 sm:gap-1 shrink-0 self-center sm:pt-2">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
                           <div className="text-center">
-                            <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto" />
-                            <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-wider">Verified</span>
+                            <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-500 mx-auto" />
+                            <span className="text-[7px] sm:text-[8px] font-bold text-emerald-600 uppercase tracking-wider">Verified</span>
                           </div>
                         </div>
                       </div>
