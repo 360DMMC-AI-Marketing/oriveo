@@ -392,76 +392,96 @@ export default function Analytics() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Monthly Report</CardTitle>
-          <Button onClick={handleGenerateReport} className="gap-3 px-8 py-6 text-base font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-200 rounded-xl" disabled={reportLoading}>
-            <FileDown className="h-5 w-5" /> {reportLoading ? "Generating..." : "Generate Report"}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="rounded-lg border bg-gray-50/50 p-3">
-              <p className="text-xs text-gray-500">This Month's Calls</p>
-              <p className="text-xl font-bold text-gray-900">{calls.length}</p>
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-7 py-5">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <FileDown className="h-5 w-5 text-blue-500" />
             </div>
-            <div className="rounded-lg border bg-gray-50/50 p-3">
-              <p className="text-xs text-gray-500">Completed</p>
-              <p className="text-xl font-bold text-emerald-600">{completedCalls.length}</p>
-            </div>
-            <div className="rounded-lg border bg-gray-50/50 p-3">
-              <p className="text-xs text-gray-500">Avg Severity</p>
-              <p className="text-xl font-bold text-gray-900">{avgSeverity}</p>
-            </div>
-            <div className="rounded-lg border bg-gray-50/50 p-3">
-              <p className="text-xs text-gray-500">Active Patients</p>
-              <p className="text-xl font-bold text-gray-900">{patients.length}</p>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Monthly Report</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Auto-emailed to admin on the 1st of each month</p>
             </div>
           </div>
-          <p className="mt-3 text-xs text-gray-400">Monthly report is automatically emailed to the clinic admin on the 1st of each month.</p>
-        </CardContent>
-      </Card>
+          <Button onClick={handleGenerateReport} className="gap-2.5 px-7 py-3 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-slate-900/30 hover:scale-[1.02] transition-all duration-200" disabled={reportLoading}>
+            <FileDown className="h-4 w-4" /> {reportLoading ? "Generating..." : "Generate Report"}
+          </Button>
+        </div>
+        <div className="px-7 pb-5">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-white border border-slate-100 p-4 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">This Month's Calls</p>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{calls.length}</p>
+            </div>
+            <div className="rounded-xl bg-white border border-slate-100 p-4 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Completed</p>
+              <p className="text-2xl font-extrabold text-emerald-600 mt-1">{completedCalls.length}</p>
+            </div>
+            <div className="rounded-xl bg-white border border-slate-100 p-4 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Avg Severity</p>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{avgSeverity}</p>
+            </div>
+            <div className="rounded-xl bg-white border border-slate-100 p-4 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Active Patients</p>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{patients.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Report Modal */}
       {showReportModal && reportHtml && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowReportModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white rounded-t-2xl">
-              <div className="flex items-center gap-6">
-                <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Monthly Report</h2>
-                <div className="flex rounded-xl bg-gray-100 p-1 gap-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Dark header bar */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/20 flex items-center justify-center">
+                    <FileDown className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white tracking-tight">Monthly Performance Report</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Review, edit, and share your clinic's report</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowReportModal(false)} className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all">
+                  <X className="h-4.5 w-4.5 text-slate-300" />
+                </button>
+              </div>
+              {/* Tabs + actions row */}
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex gap-1 bg-white/5 rounded-xl p-1 border border-white/10">
                   <button
                     onClick={() => setReportEditMode(false)}
-                    className={`flex items-center gap-2.5 px-7 py-[14px] text-sm font-bold rounded-lg transition-all duration-150 ${!reportEditMode ? "bg-white text-primary shadow-md border border-gray-200" : "text-gray-500 hover:text-gray-800"}`}
-                  ><Eye className="h-5 w-5" /> Preview</button>
+                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${!reportEditMode ? "bg-white/15 text-white shadow-sm" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"}`}
+                  ><Eye className="h-4 w-4" /> Preview</button>
                   <button
                     onClick={() => setReportEditMode(true)}
-                    className={`flex items-center gap-2.5 px-7 py-[14px] text-sm font-bold rounded-lg transition-all duration-150 ${reportEditMode ? "bg-white text-primary shadow-md border border-gray-200" : "text-gray-500 hover:text-gray-800"}`}
-                  ><Edit3 className="h-5 w-5" /> Edit HTML</button>
+                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${reportEditMode ? "bg-white/15 text-white shadow-sm" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"}`}
+                  ><Edit3 className="h-4 w-4" /> Edit HTML</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all duration-200" title="Download as PDF">
+                    <FileDown className="h-4 w-4" /> PDF
+                  </button>
+                  <button onClick={handleSendReport} disabled={emailLoading} className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed" title="Send via Email">
+                    <Send className="h-4 w-4" /> {emailLoading ? "Sending..." : "Send Email"}
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={handleDownloadPDF} className="flex items-center gap-2.5 px-7 py-[14px] text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 hover:shadow-md transition-all duration-200 shadow-sm" title="Download as PDF">
-                  <FileDown className="h-5 w-5 text-gray-600" /> PDF
-                </button>
-                <button onClick={handleSendReport} disabled={emailLoading} className="flex items-center gap-2.5 px-8 py-[14px] text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary-dark hover:shadow-lg transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed" title="Send via Email">
-                  <Send className="h-5 w-5" /> {emailLoading ? "Sending..." : "Send Email"}
-                </button>
-                <button onClick={() => setShowReportModal(false)} className="p-[14px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all ml-1">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
             </div>
-            <div className="flex-1 overflow-auto bg-gray-100 p-6">
+            {/* Content area */}
+            <div className="flex-1 overflow-auto bg-slate-50 p-6">
               {reportEditMode ? (
-                <div ref={editContainerRef} className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                  <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-b border-gray-200">
+                <div ref={editContainerRef} className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-3 bg-slate-50 border-b border-slate-200">
                     <div className="flex gap-1.5">
                       <span className="h-3 w-3 rounded-full bg-red-400" />
                       <span className="h-3 w-3 rounded-full bg-yellow-400" />
                       <span className="h-3 w-3 rounded-full bg-green-400" />
                     </div>
-                    <span className="text-xs text-gray-400 font-medium ml-2">Document Editor</span>
+                    <span className="text-xs text-slate-400 font-medium ml-2">HTML Editor</span>
                   </div>
                   <div
                     ref={editRef}
