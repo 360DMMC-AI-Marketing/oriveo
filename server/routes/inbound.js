@@ -32,7 +32,8 @@ router.post("/inbound", async (req, res) => {
       language: foundPatient?.language || "en",
     });
 
-    const practiceName = process.env.PRACTICE_NAME || "your healthcare provider";
+    const org = orgId ? await Organization.findById(orgId).select("name") : null;
+    const practiceName = org?.name || "your healthcare provider";
     const greeting = foundPatient
       ? `Hello ${foundPatient.name}. This is an automated health checkup from ${practiceName}. Please hold while we begin.`
       : `Welcome to ${practiceName}. Please hold while our virtual assistant connects with you.`;

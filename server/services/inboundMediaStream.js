@@ -5,6 +5,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
+import Organization from "../models/Organization.js";
 import { getQuestionsForCall, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
@@ -65,13 +66,21 @@ export async function handleInboundMediaStream(ws, req) {
   let currentLiveNote = null;
   let ambientInterval = null;
   let lastAmbientTranscript = "";
+  let practiceName = "your healthcare provider";
 
   try {
-    const call = await Call.findById(callId);
+    const call = await Call.findById(callId).populate("organization");
     if (call) {
       language = call.language || "en";
-      if (call.patient) {
+
+      if (call.organization?.name) {
+        practiceName = call.organization.name;
+      } else if (call.patient) {
         await call.populate("patient");
+        if (call.patient?.organization) {
+          const org = await Organization.findById(call.patient.organization).select("name");
+          if (org?.name) practiceName = org.name;
+        }
         patientForCall = call.patient;
         patientName = call.patient?.name || "";
         patientIdentified = true;
@@ -90,7 +99,7 @@ export async function handleInboundMediaStream(ws, req) {
     questions: [],
     patientName: patientName || "",
     patientInfo: "",
-    practiceName: process.env.PRACTICE_NAME || "your healthcare provider",
+    practiceName,
     triageEngine,
     emotionAnalyzer,
     knowledgeBase: { query: async (query) => queryKnowledgeBase(query) },

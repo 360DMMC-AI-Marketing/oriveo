@@ -4,6 +4,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Questionnaire from "../models/Questionnaire.js";
+import Organization from "../models/Organization.js";
 import { getQuestionsForCall, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { VoiceAgent } from "../services/voiceAgent.js";
 import { queryKnowledgeBase } from "../services/knowledgeBase.js";
@@ -504,13 +505,13 @@ router.post("/outbound", protect, authorize("admin", "doctor", "nurse"), async (
 });
 
 router.get("/twilio/outbound-twiml/:callId", async (req, res) => {
-  const call = await Call.findById(req.params.callId).populate("patient");
+  const call = await Call.findById(req.params.callId).populate("patient").populate("organization");
   if (!call) {
     return res.status(404).send("Call not found");
   }
 
   const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.headers.host}`;
-  const practiceName = process.env.PRACTICE_NAME || "Your Healthcare Provider";
+  const practiceName = call.organization?.name || "Your Healthcare Provider";
   const callbackNumber = process.env.TWILIO_PHONE_NUMBER || "your provider";
 
   res.type("text/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
@@ -525,11 +526,11 @@ router.post("/twilio/amd-status/:callId", async (req, res) => {
   const { CallSid, AnsweredBy, MachineDetectionDuration } = req.body;
 
   if (AnsweredBy === "machine_start" || AnsweredBy === "machine_end" || AnsweredBy === "machine") {
-    const call = await Call.findById(req.params.callId).populate("patient", "name");
+    const call = await Call.findById(req.params.callId).populate("patient", "name").populate("organization", "name");
     if (call) {
       call.status = "failed";
       call.endedAt = new Date();
-      const practiceName = process.env.PRACTICE_NAME || "your healthcare provider";
+      const practiceName = call.organization?.name || "your healthcare provider";
       const patientName = call.patient?.name || "";
       call.notes = call.notes
         ? `${call.notes}\nVoicemail detected — callback message left`

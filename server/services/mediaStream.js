@@ -3,6 +3,7 @@ import { queryKnowledgeBase } from "./knowledgeBase.js";
 import { handleFunctionCall, voiceFunctions } from "../routes/voice.js";
 import Call from "../models/Call.js";
 import Appointment from "../models/Appointment.js";
+import Organization from "../models/Organization.js";
 import { getQuestionsForCall, resolveSpecialty } from "../config/specialtyTemplates.js";
 import { TriageEngine } from "./triageEngine.js";
 import { EmotionAnalyzer } from "./emotionAnalyzer.js";
@@ -30,12 +31,20 @@ export async function handleMediaStream(ws, req) {
   let ambientInterval = null;
   let lastAmbientTranscript = "";
   let patientForCall = null;
+  let practiceName = "your healthcare provider";
 
   try {
-    const call = await Call.findById(callId).populate("patient").populate("questionnaire");
+    const call = await Call.findById(callId).populate("patient").populate("questionnaire").populate("organization");
     if (call) {
       patientForCall = call.patient;
       language = call.language || "en";
+
+      if (call.organization?.name) {
+        practiceName = call.organization.name;
+      } else if (call.patient?.organization) {
+        const org = await Organization.findById(call.patient.organization).select("name");
+        if (org?.name) practiceName = org.name;
+      }
       multiLangEnabled = call.language === "multi" || !call.language || call.language === "en";
       if (language !== "multi" && language !== "en") {
         ctx.languageLocked = true;
@@ -95,7 +104,7 @@ export async function handleMediaStream(ws, req) {
     questions,
     patientName,
     patientInfo,
-    practiceName: process.env.PRACTICE_NAME || "your healthcare provider",
+    practiceName,
     triageEngine,
     emotionAnalyzer,
     knowledgeBase: { query: async (query) => queryKnowledgeBase(query) },

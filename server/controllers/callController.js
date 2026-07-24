@@ -300,9 +300,12 @@ export const emergencyCall = async (req, res) => {
       ? `${call.patient.name || "Unknown patient"}, phone: ${call.patient.phone || "N/A"}`
       : "Unknown patient";
 
+    const practiceName = call.organization ? (await (await import("../models/Organization.js")).default.findById(call.organization).select("name"))?.name : null;
+    const orgLabel = practiceName || "Oriveo medical system";
+
     const emergencyMessage = target === "911"
-      ? `This is an automated emergency alert from Oriveo medical system. A patient requires immediate emergency assistance. Patient information: ${patientInfo}. The AI triage system has detected a medical emergency during a patient checkup call. Please dispatch emergency services.`
-      : `This is an automated emergency alert from Oriveo medical system. A patient requires immediate clinical attention. Patient information: ${patientInfo}. The AI triage system has detected a medical emergency. Please call the patient back immediately.`;
+      ? `This is an automated emergency alert from ${orgLabel}. A patient requires immediate emergency assistance. Patient information: ${patientInfo}. The AI triage system has detected a medical emergency during a patient checkup call. Please dispatch emergency services.`
+      : `This is an automated emergency alert from ${orgLabel}. A patient requires immediate clinical attention. Patient information: ${patientInfo}. The AI triage system has detected a medical emergency. Please call the patient back immediately.`;
 
     const emergencyCall = await getTwilioClient().calls.create({
       to: numberToDial,
