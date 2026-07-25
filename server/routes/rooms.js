@@ -1,5 +1,6 @@
 import { Router } from "express";
 import Room from "../models/Room.js";
+import User from "../models/User.js";
 import { protect, authorize } from "../middleware/auth.js";
 
 const router = Router();
@@ -13,7 +14,7 @@ router.get("/", async (req, res) => {
     if (type) filter.type = type;
     if (floor) filter.floor = floor;
     if (search) filter.name = { $regex: search, $options: "i" };
-    const rooms = await Room.find(filter).sort({ floor: 1, number: 1, name: 1 }).populate("currentPatient", "name phone").populate("currentProvider", "name").lean();
+    const rooms = await Room.find(filter).sort({ floor: 1, number: 1, name: 1 }).populate("currentPatient", "name phone").populate("currentProvider", "name").populate("assignedStaff", "name email role").lean();
     const summary = await Room.aggregate([
       { $match: { organization: req.user.organization, isActive: true } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
@@ -58,6 +59,15 @@ router.get("/stats", async (req, res) => {
       ]),
     ]);
     res.json({ byType, byFloor, byStatus });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/staff", async (req, res) => {
+  try {
+    const users = await User.find({ organization: req.user.organization, isActive: true }).select("name email role").sort({ name: 1 }).lean();
+    res.json({ users });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

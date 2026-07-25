@@ -11,6 +11,7 @@ const roomSchema = new mongoose.Schema({
   status:       { type: String, enum: ["available", "occupied", "maintenance", "reserved", "cleaning"], default: "available" },
   equipment:    [{ type: String }],
   capacity:     { type: Number, default: 1, min: 1 },
+  assignedStaff: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   isActive:     { type: Boolean, default: true },
   currentPatient:  { type: mongoose.Schema.Types.ObjectId, ref: "Patient", default: null },
   currentProvider: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

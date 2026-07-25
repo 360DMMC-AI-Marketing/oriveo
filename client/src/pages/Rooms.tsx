@@ -62,9 +62,15 @@ const QUICK_TEMPLATES = [
   ]},
 ];
 
-function RoomForm({ onSave, onClose, initial }: { onSave: (data: any) => void; onClose: () => void; initial?: any }) {
-  const [form, setForm] = useState(initial || { name: "", number: "", type: "exam", floor: "", wing: "", capacity: 1, equipment: "", notes: "" });
+function RoomForm({ onSave, onClose, initial, staffList }: { onSave: (data: any) => void; onClose: () => void; initial?: any; staffList?: any[] }) {
+  const [form, setForm] = useState(initial || { name: "", number: "", type: "exam", floor: "", wing: "", capacity: 1, equipment: "", notes: "", assignedStaff: [] });
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
+
+  const toggleStaff = (userId: string) => {
+    const current = form.assignedStaff || [];
+    const next = current.includes(userId) ? current.filter((id: string) => id !== userId) : [...current, userId];
+    set("assignedStaff", next);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -116,6 +122,26 @@ function RoomForm({ onSave, onClose, initial }: { onSave: (data: any) => void; o
           <div>
             <Label>Notes</Label>
             <textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={2} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Special instructions..." />
+          </div>
+          <div>
+            <Label>Assigned Staff</Label>
+            <p className="text-xs text-gray-500 mb-2">Select who is in charge of / present in this room</p>
+            {staffList && staffList.length > 0 ? (
+              <div className="space-y-1.5 max-h-40 overflow-y-auto border rounded-lg p-2">
+                {staffList.map((s: any) => (
+                  <label key={s._id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer text-sm">
+                    <input type="checkbox" checked={(form.assignedStaff || []).includes(s._id)} onChange={() => toggleStaff(s._id)} className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                    <span className="font-medium text-gray-900">{s.name}</span>
+                    <span className="text-xs text-gray-500 capitalize">({s.role})</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">No staff members found. Add team members first.</p>
+            )}
+            {(form.assignedStaff || []).length > 0 && (
+              <p className="text-xs text-emerald-600 mt-1">{(form.assignedStaff || []).length} staff member(s) assigned</p>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-xl">
@@ -173,6 +199,16 @@ function RoomCard({ room, onEdit, onStatusChange, onSeed }: { room: any; onEdit:
         <div className="flex items-center gap-1.5"><TypeIcon size={12} /> {typeInfo?.label || room.type}</div>
         {(room.floor || room.wing) && <div className="flex items-center gap-1.5"><MapPin size={12} /> {[room.floor && `Floor ${room.floor}`, room.wing].filter(Boolean).join(" · ")}</div>}
         {room.capacity > 1 && <div className="flex items-center gap-1.5"><Users size={12} /> Capacity: {room.capacity}</div>}
+        {room.assignedStaff && room.assignedStaff.length > 0 && (
+          <div className="flex items-start gap-1.5">
+            <Stethoscope size={12} className="mt-0.5 shrink-0" />
+            <div className="flex flex-wrap gap-1">
+              {room.assignedStaff.map((s: any) => (
+                <span key={s._id || s} className="px-1.5 py-0.5 bg-white/80 rounded text-[10px] font-medium text-emerald-700 border border-emerald-200">{s.name || "Staff"}</span>
+              ))}
+            </div>
+          </div>
+        )}
         {room.currentPatient && <div className="flex items-center gap-1.5 text-red-600 font-medium"><Users size={12} /> {room.currentPatient.name}</div>}
         {room.currentProvider && <div className="flex items-center gap-1.5"><Stethoscope size={12} /> {room.currentProvider.name}</div>}
       </div>
@@ -217,6 +253,13 @@ export default function Rooms() {
     queryKey: ["room-stats"],
     queryFn: () => api.get("/rooms/stats").then(r => r.data),
   });
+
+  const { data: staffData } = useQuery({
+    queryKey: ["room-staff"],
+    queryFn: () => api.get("/rooms/staff").then(r => r.data),
+  });
+
+  const staffList = staffData?.users || [];
 
   const createMut = useMutation({
     mutationFn: (d: any) => api.post("/rooms", d),
@@ -407,6 +450,7 @@ export default function Rooms() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Floor</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Assigned Staff</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Patient</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Provider</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
@@ -428,6 +472,15 @@ export default function Rooms() {
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.bg} ${st.color} border ${st.border}`}>
                           {st.label}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {room.assignedStaff?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {room.assignedStaff.map((s: any) => (
+                              <span key={s._id || s} className="px-1.5 py-0.5 bg-emerald-50 rounded text-[10px] font-medium text-emerald-700 border border-emerald-200">{s.name || "Staff"}</span>
+                            ))}
+                          </div>
+                        ) : "—"}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{room.currentPatient?.name || "—"}</td>
                       <td className="px-4 py-3 text-gray-600">{room.currentProvider?.name || "—"}</td>
@@ -486,8 +539,8 @@ export default function Rooms() {
         </Card>
       )}
 
-      {showForm && <RoomForm onSave={(d) => createMut.mutate(d)} onClose={() => setShowForm(false)} />}
-      {editingRoom && <RoomForm initial={{ ...editingRoom, equipment: Array.isArray(editingRoom.equipment) ? editingRoom.equipment.join(", ") : "" }} onSave={(d) => updateMut.mutate({ id: editingRoom._id, ...d })} onClose={() => setEditingRoom(null)} />}
+      {showForm && <RoomForm staffList={staffList} onSave={(d) => createMut.mutate(d)} onClose={() => setShowForm(false)} />}
+      {editingRoom && <RoomForm staffList={staffList} initial={{ ...editingRoom, equipment: Array.isArray(editingRoom.equipment) ? editingRoom.equipment.join(", ") : "", assignedStaff: (editingRoom.assignedStaff || []).map((s: any) => typeof s === "string" ? s : s._id) }} onSave={(d) => updateMut.mutate({ id: editingRoom._id, ...d })} onClose={() => setEditingRoom(null)} />}
     </div>
   );
 }
