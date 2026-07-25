@@ -717,11 +717,11 @@ export default function Dashboard() {
                   const val = e.target.value;
                   if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
                   const q = allTemplates.find((t: any) => t.id === val);
-                  if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || q.title || val }); }
+                  if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || val }); }
                 }}
                 className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                 <option value="">Select template...</option>
-                {allTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.condition || t.title}</option>)}
+                {allTemplates.map((t) => <option key={t.id} value={t.id}>{t.condition}</option>)}
               </select>
               <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
                 rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
