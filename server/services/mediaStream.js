@@ -32,6 +32,8 @@ export async function handleMediaStream(ws, req) {
   let lastAmbientTranscript = "";
   let patientForCall = null;
   let practiceName = "your healthcare provider";
+  let patientSpecialty = "general-practice";
+  let patientClinicType = "human";
 
   try {
     const call = await Call.findById(callId).populate("patient").populate("questionnaire").populate("organization");
@@ -83,6 +85,8 @@ export async function handleMediaStream(ws, req) {
       } else if (call.patient) {
         const spec = call.patient.specialty || "general";
         const clinicType = call.patient.patientType || "human";
+        patientSpecialty = resolveSpecialty(spec, clinicType);
+        patientClinicType = clinicType;
         const result = getQuestionsForCall(spec, clinicType, call.summary || "");
         if (result.questions && result.questions.length > 0) {
           questions = [...result.questions];
@@ -101,6 +105,8 @@ export async function handleMediaStream(ws, req) {
 
   const agent = createVoiceAgent({
     language: ctx.languageLocked ? language : "en",
+    specialty: patientSpecialty,
+    type: patientClinicType === "veterinary" ? "veterinary" : patientClinicType === "general" ? "general" : undefined,
     questions,
     patientName,
     patientInfo,

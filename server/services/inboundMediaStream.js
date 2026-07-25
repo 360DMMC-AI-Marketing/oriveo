@@ -1,4 +1,4 @@
-import { createVoiceAgent } from "./voiceAgent.js";
+import { createVoiceAgent, SPECIALTY_PROMPTS } from "./voiceAgent.js";
 import { queryKnowledgeBase } from "./knowledgeBase.js";
 import { handleFunctionCall, voiceFunctions } from "../routes/voice.js";
 import Call from "../models/Call.js";
@@ -67,6 +67,8 @@ export async function handleInboundMediaStream(ws, req) {
   let ambientInterval = null;
   let lastAmbientTranscript = "";
   let practiceName = "your healthcare provider";
+  let patientSpecialty = "general-practice";
+  let patientClinicType = "human";
 
   try {
     const call = await Call.findById(callId).populate("organization");
@@ -84,6 +86,10 @@ export async function handleInboundMediaStream(ws, req) {
         patientForCall = call.patient;
         patientName = call.patient?.name || "";
         patientIdentified = true;
+        if (call.patient?.specialty) {
+          patientSpecialty = resolveSpecialty(call.patient.specialty, call.patient.patientType || "human");
+          patientClinicType = call.patient.patientType || "human";
+        }
       }
     }
   } catch {}
@@ -96,6 +102,8 @@ export async function handleInboundMediaStream(ws, req) {
   const agent = createVoiceAgent({
     systemPrompt: INBOUND_SYSTEM_PROMPT,
     language: ctx.languageLocked ? language : "en",
+    specialty: patientSpecialty,
+    type: patientClinicType === "veterinary" ? "veterinary" : patientClinicType === "general" ? "general" : undefined,
     questions: [],
     patientName: patientName || "",
     patientInfo: "",
@@ -321,6 +329,14 @@ async function handlePatientIdentification(text, callId, agent) {
       agent.patientName = match.name;
       agent.patientInfo = buildPatientInfo(match);
       enrichPatientInfoWithAppointments(match._id, agent.patientInfo).then((enriched) => { agent.patientInfo = enriched; });
+
+      if (match.specialty) {
+        patientSpecialty = resolveSpecialty(match.specialty, match.patientType || "human");
+        patientClinicType = match.patientType || "human";
+        if (SPECIALTY_PROMPTS[patientSpecialty]) {
+          agent.systemPrompt += SPECIALTY_PROMPTS[patientSpecialty];
+        }
+      }
 
       try {
         const patientForQ = await Patient.findById(match._id);
