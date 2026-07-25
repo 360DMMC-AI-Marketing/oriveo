@@ -405,7 +405,7 @@ export default function PatientDetail() {
                       placeholder="e.g., Monitor HbA1c trends, ask about insulin adherence..." />
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => { updatePatientMutation.mutate({ callInstructions: { ...callInstrDraft, setBy: currentUser?._id, setAt: new Date().toISOString() } }, { onSuccess: () => setEditingCallInstr(false) }); }} disabled={updatePatientMutation.isPending}>
+                    <Button size="sm" onClick={() => { updatePatientMutation.mutate({ callInstructions: { ...callInstrDraft, setBy: currentUser?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() } }, { onSuccess: () => setEditingCallInstr(false) }); }} disabled={updatePatientMutation.isPending}>
                       <Save className="h-3.5 w-3.5 mr-1" /> Save
                     </Button>
                     {patient.callInstructions?.templateName && (

@@ -1,20 +1,24 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { getHumanWidgets } from "@/components/dashboards/HumanDashboardWidgets";
 import { getDentalWidgets } from "@/components/dashboards/DentalDashboardWidgets";
 import { getVetWidgets } from "@/components/dashboards/VetDashboardWidgets";
+import { medicalTemplates } from "@/data/medicalTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
 import {
   Phone, AlertTriangle, CheckCircle, Clock,
   Activity, Brain, Users, Calendar, TrendingUp,
   ArrowRight, Mic, BarChart3, Siren, ShieldAlert,
   Heart, Stethoscope, Bell, X, MessageSquare, FileText,
-  Eye, Award
+  Eye, Award, ClipboardList, Star, Plus, Search, Save
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, LineChart, Line, BarChart, Bar,
@@ -229,7 +233,10 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [confirmEmergency, setConfirmEmergency] = useState<{ callId: string; target: "911" | "clinic" } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showCallInstrForm, setShowCallInstrForm] = useState(false);
+  const [callInstrDraft, setCallInstrDraft] = useState({ patientId: "", patientName: "", templateId: "", templateName: "", notes: "" });
   const notifRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const specialty = user?.organization?.specialty || "general-practice";
   const clinicType = user?.organization?.clinicType || "human";
@@ -283,7 +290,32 @@ export default function Dashboard() {
     onError: (err: any) => toast.error(err?.response?.data?.message || "Emergency call failed"),
   });
 
+  const updatePatientMutation = useMutation({
+    mutationFn: ({ patientId, ...body }: any) => api.put(`/patients/${patientId}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast.success("Call instructions saved (expires in 24h)");
+      setShowCallInstrForm(false);
+      setCallInstrDraft({ patientId: "", patientName: "", templateId: "", templateName: "", notes: "" });
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to save"),
+  });
+
+  const allTemplates = useMemo(() => {
+    if (clinicType === "dental") return dentalTemplates;
+    if (clinicType === "veterinary") return veterinaryTemplates;
+    return medicalTemplates;
+  }, [clinicType]);
+
   const patients = patientsData?.patients || [];
+  const activeInstructions = useMemo(() => {
+    const now = new Date();
+    return patients.filter((p: any) =>
+      p.callInstructions?.templateName &&
+      p.callInstructions?.expiresAt &&
+      new Date(p.callInstructions.expiresAt) > now
+    );
+  }, [patients]);
   const calls = callsData?.calls || [];
   const completedCalls = calls.filter((c: any) => c.status === "completed");
   const scheduledCalls = calls.filter((c: any) => c.status === "scheduled");
@@ -639,6 +671,109 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            Today's Call Instructions
+            {activeInstructions.length > 0 && (
+              <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{activeInstructions.length}</span>
+            )}
+          </CardTitle>
+          {(user?.role === "admin" || user?.role === "doctor") && (
+            <Button variant="outline" size="sm" onClick={() => setShowCallInstrForm(!showCallInstrForm)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {showCallInstrForm && (
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-900">Set Call Instruction (expires in 24h)</p>
+                <button onClick={() => setShowCallInstrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search patient..."
+                  value={callInstrDraft.patientName}
+                  onChange={(e) => { setCallInstrDraft({ ...callInstrDraft, patientName: e.target.value, patientId: "" }); }}
+                  className="flex w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm"
+                />
+                {callInstrDraft.patientName && !callInstrDraft.patientId && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-lg max-h-40 overflow-y-auto">
+                    {patients.filter((p: any) => p.name?.toLowerCase().includes(callInstrDraft.patientName.toLowerCase())).slice(0, 5).map((p: any) => (
+                      <button key={p._id} onClick={() => setCallInstrDraft({ ...callInstrDraft, patientId: p._id, patientName: p.name })}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">{p.name}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <select value={callInstrDraft.templateId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
+                  const q = allTemplates.find((t: any) => t.id === val);
+                  if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || q.title || val }); }
+                }}
+                className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                <option value="">Select template...</option>
+                {allTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.condition || t.title}</option>)}
+              </select>
+              <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
+                rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                placeholder="Notes for staff..." />
+              <Button size="sm" disabled={!callInstrDraft.patientId || !callInstrDraft.templateId || updatePatientMutation.isPending}
+                onClick={() => updatePatientMutation.mutate({
+                  patientId: callInstrDraft.patientId,
+                  callInstructions: { templateId: callInstrDraft.templateId, templateName: callInstrDraft.templateName, notes: callInstrDraft.notes, setBy: user?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+                })}>
+                <Save className="h-3.5 w-3.5 mr-1" /> Save
+              </Button>
+            </div>
+          )}
+
+          {activeInstructions.length === 0 ? (
+            <div className="py-8 text-center text-gray-400">
+              <ClipboardList className="mx-auto mb-2 h-8 w-8" />
+              <p className="text-sm">No active call instructions today</p>
+              <p className="text-xs mt-1">{(user?.role === "admin" || user?.role === "doctor") ? "Add instructions for your patients above" : "No instructions set by doctors today"}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {activeInstructions.map((p: any) => {
+                const ci = p.callInstructions;
+                const hoursLeft = Math.max(0, Math.round((new Date(ci.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+                const setByName = ci.setBy?.name || "Doctor";
+                return (
+                  <div key={p._id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/50 p-3 hover:bg-amber-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                        <Star className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 truncate">{p.name || "Unknown"}</p>
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">⭐ {ci.templateName}</span>
+                        </div>
+                        {ci.notes && <p className="text-xs text-gray-500 truncate mt-0.5">{ci.notes}</p>}
+                        <p className="text-[10px] text-gray-400 mt-0.5">Set by {setByName} · expires in {hoursLeft}h</p>
+                      </div>
+                    </div>
+                    <Link to={`/voice-agent?patientId=${p._id}&patientName=${encodeURIComponent(p.name)}`}
+                      className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors">
+                      Schedule Call
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">

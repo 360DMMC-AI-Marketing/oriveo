@@ -373,6 +373,7 @@ export default function CallCenter() {
 
   const getPatientCallInstr = (patient: any) => {
     if (!patient?.callInstructions?.templateName) return null;
+    if (patient.callInstructions.expiresAt && new Date(patient.callInstructions.expiresAt) < new Date()) return null;
     const ci = patient.callInstructions;
     const matchedTemplate = allTemplates.find((t: any) => t.id === ci.templateId);
     const matchedQ = !ci.templateId.startsWith("template_") ? savedQuestionnaires.find((q: any) => q._id === ci.templateId || q._id === ci.templateId?.replace("q_", "")) : null;
@@ -496,7 +497,7 @@ export default function CallCenter() {
                       {filteredPatients.slice(0, 8).map((p: any) => (
                         <button key={p._id} onClick={() => {
                           setSelectedPatient(p); setSearch(p.name);
-                          if (p.callInstructions?.templateId) {
+                          if (p.callInstructions?.templateId && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date())) {
                             const ci = p.callInstructions;
                             if (ci.templateId.startsWith("template_")) {
                               handleQuestionnaireSelect(ci.templateId);

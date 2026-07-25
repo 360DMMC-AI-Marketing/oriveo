@@ -298,6 +298,7 @@ export default function CalendarSchedule() {
     if (!patientId) return null;
     const p = patients.find((pp: any) => pp._id === (typeof patientId === "string" ? patientId : patientId?._id));
     if (!p?.callInstructions?.templateName) return null;
+    if (p.callInstructions.expiresAt && new Date(p.callInstructions.expiresAt) < new Date()) return null;
     return p.callInstructions;
   };
 
@@ -524,7 +525,7 @@ export default function CalendarSchedule() {
                                 onClick={() => {
                                   setAddForm({ ...addForm, patient: p._id, patientName: p.name });
                                   setSearch(p.name); setShowSearch(false);
-                                  if (p.callInstructions?.templateName) {
+                                  if (p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date())) {
                                     const ci = p.callInstructions;
                                     const matched = allCalTemplates.find((t) => t.id === ci.templateId || t.condition === ci.templateName);
                                     if (matched) setAddForm((prev) => ({ ...prev, patient: p._id, patientName: p.name, questionnaire: matched.condition }));

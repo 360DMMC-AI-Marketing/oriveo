@@ -41,6 +41,7 @@ const patientSchema = new mongoose.Schema(
       notes: { type: String, default: "" },
       setBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
       setAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null },
     },
     reminderPreferences: {
       email: { type: Boolean, default: false },
