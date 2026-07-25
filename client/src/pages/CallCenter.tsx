@@ -17,6 +17,9 @@ import {
   Star, Brain, ArrowRight, AlertTriangle, Radio
 } from "lucide-react";
 import { medicalTemplates } from "@/data/medicalTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LANGUAGES = [
   { code: "en", label: "English" }, { code: "es", label: "Spanish" },
@@ -61,6 +64,8 @@ const callSeverities: Record<string, number> = {};
 
 export default function CallCenter() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const orgSpec = user?.organization?.specialty as string | undefined;
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>("quick");
 
@@ -187,7 +192,7 @@ export default function CallCenter() {
   const handleQuestionnaireSelect = (value: string) => {
     setSelectedQId(value);
     if (value.startsWith("template_")) {
-      const template = medicalTemplates.find((t) => t.id === value.replace("template_", ""));
+      const template = allTemplates.find((t) => t.id === value.replace("template_", ""));
       setSelectedQuestions(template?.questions || []);
     } else if (value) {
       const q = savedQuestionnaires.find((q: any) => q._id === value);
@@ -361,6 +366,11 @@ export default function CallCenter() {
     ));
   };
 
+  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : medicalTemplates;
+  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : dentalTemplates;
+  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
+  const allTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
+
   const TAB_CONFIG = [
     { id: "quick" as Tab, label: "Quick Call", icon: Phone },
     { id: "batch" as Tab, label: "Batch", icon: Users },
@@ -498,7 +508,7 @@ export default function CallCenter() {
                     <span className={selectedQId ? "" : "text-gray-400"}>
                       {selectedQId
                         ? (selectedQId.startsWith("template_")
-                          ? medicalTemplates.find(t => t.id === selectedQId.replace("template_", ""))?.condition
+                          ? allTemplates.find(t => t.id === selectedQId.replace("template_", ""))?.condition
                           : savedQuestionnaires.find((q: any) => q._id === selectedQId)?.title)
                         : "No template"}
                     </span>
@@ -510,8 +520,8 @@ export default function CallCenter() {
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b font-medium text-gray-500">
                         No template (general conversation)
                       </button>
-                      <div className="border-b px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Medical Templates</div>
-                      {medicalTemplates.map((t) => (
+                      <div className="border-b px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Templates</div>
+                      {allTemplates.map((t) => (
                         <button key={t.id} onClick={() => { handleQuestionnaireSelect(`template_${t.id}`); setShowTemplatePanel(false); }}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0 flex items-center justify-between">
                           <span>{t.condition}</span>

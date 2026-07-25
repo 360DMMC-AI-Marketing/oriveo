@@ -13,9 +13,14 @@ import {
   Stethoscope, Bell, RefreshCw, MessageSquare,
 } from "lucide-react";
 import { medicalTemplates } from "@/data/medicalTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Campaigns() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const orgSpec = user?.organization?.specialty as string | undefined;
   const [showNewCampaign, setShowNewCampaign] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
@@ -43,6 +48,10 @@ export default function Campaigns() {
   const questionnaires = questionnairesData?.questionnaires || [];
   const calls = callsData?.calls || [];
   const batchCampaigns = campaignsData?.campaigns || [];
+
+  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : medicalTemplates;
+  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : dentalTemplates;
+  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
 
   const startCampaignMutation = useMutation({
     mutationFn: (data: any) => api.post("/batch/start", data),
@@ -153,11 +162,27 @@ export default function Campaigns() {
                 <select value={selectedQuestionnaire} onChange={(e) => setSelectedQuestionnaire(e.target.value)}
                   className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                   <option value="">None</option>
-                  <optgroup label="Medical Templates">
-                    {medicalTemplates.map((t) => (
-                      <option key={t.id} value={`template_${t.id}`}>{t.condition}</option>
-                    ))}
-                  </optgroup>
+                  {filteredMedical.length > 0 && (
+                    <optgroup label="Human Medical">
+                      {filteredMedical.map((t) => (
+                        <option key={t.id} value={`template_${t.id}`}>{t.condition}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {filteredDental.length > 0 && (
+                    <optgroup label="Dental">
+                      {filteredDental.map((t) => (
+                        <option key={t.id} value={`template_${t.id}`}>{t.condition}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {filteredVet.length > 0 && (
+                    <optgroup label="Veterinary">
+                      {filteredVet.map((t) => (
+                        <option key={t.id} value={`template_${t.id}`}>{t.condition}</option>
+                      ))}
+                    </optgroup>
+                  )}
                   {questionnaires.length > 0 && (
                     <optgroup label="Saved Questionnaires">
                       {questionnaires.map((q: any) => (

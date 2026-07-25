@@ -465,7 +465,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {dashboardData?.data?.conditionPrevalence?.length > 0 && (
+      {user?.role === "admin" && dashboardData?.data?.conditionPrevalence?.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Activity className="h-4 w-4 text-primary" /> Condition Prevalence (Last 30 Days)</CardTitle></CardHeader>
@@ -475,7 +475,7 @@ export default function Dashboard() {
                   <Pie
                     data={dashboardData.data.conditionPrevalence.map((c: any) => ({ name: c.name || c._id, value: c.count }))}
                     dataKey="value" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }: any) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
                     labelLine={false}
                   >
                     {dashboardData.data.conditionPrevalence.map((_: any, i: number) => (
@@ -619,7 +619,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {SPECIALTY_SCALES[specialty]?.length > 0 && (
+      {user?.role === "admin" && SPECIALTY_SCALES[specialty]?.length > 0 && (
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Stethoscope className="h-4 w-4 text-primary" /> Clinical Assessment Scales — {labels.title.replace(" Dashboard", "")}</CardTitle></CardHeader>
           <CardContent>

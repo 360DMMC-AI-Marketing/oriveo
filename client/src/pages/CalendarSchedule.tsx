@@ -10,9 +10,14 @@ import {
   Activity, Loader2, Repeat, Pencil, CheckCircle2, Link2Off
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { medicalTemplates } from "@/data/medicalTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
 
 export default function CalendarSchedule() {
+  const { user } = useAuth();
+  const orgSpec = user?.organization?.specialty as string | undefined;
   const queryClient = useQueryClient();
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -147,7 +152,7 @@ export default function CalendarSchedule() {
 
   const handleAddCall = async () => {
     if (!addForm.patient || !addForm.questionnaire || !selectedDate) return;
-    const template = medicalTemplates.find((t) => t.condition === addForm.questionnaire);
+    const template = allCalTemplates.find((t) => t.condition === addForm.questionnaire);
     if (!template) { toast.error("Invalid template"); return; }
     try {
       const { data: qData } = await api.post("/questionnaires", {
@@ -283,6 +288,11 @@ export default function CalendarSchedule() {
     const d = new Date(dateStr);
     return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
+
+  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : medicalTemplates;
+  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : dentalTemplates;
+  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
+  const allCalTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
 
   const renderedCallRows = useMemo(() => {
     if (sortedCalls.length === 0) {
@@ -519,7 +529,7 @@ export default function CalendarSchedule() {
                       <select value={addForm.questionnaire} onChange={(e) => setAddForm({ ...addForm, questionnaire: e.target.value })}
                         className="flex h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                         <option value="">Select a template...</option>
-                        {medicalTemplates.map((t) => (
+                        {allCalTemplates.map((t) => (
                           <option key={t.id} value={t.condition}>{t.condition} ({t.questions.length}q)</option>
                         ))}
                       </select>

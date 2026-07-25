@@ -74,9 +74,13 @@ export default function MedicalTemplates() {
 
   const allVet = veterinaryTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
   const allDental = dentalTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
-  const activeTemplates: any[] = templateTab === "veterinary" ? allVet :
+  const rawTemplates: any[] = templateTab === "veterinary" ? allVet :
     templateTab === "dental" ? allDental :
     sharedTemplates.map((t: any) => ({ ...t, ...templateDisplay[t.id] }));
+
+  const activeTemplates = orgSpec
+    ? rawTemplates.filter((t: any) => t.specialties?.includes(orgSpec))
+    : rawTemplates;
 
   const categories = [...new Set(activeTemplates.map((t: any) => t.category))] as string[];
 

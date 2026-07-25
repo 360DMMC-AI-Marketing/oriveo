@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Search, Phone, Bot, Headphones, Settings2, Activity, Globe, ClipboardList, ChevronDown, ChevronUp, X } from "lucide-react";
 import { medicalTemplates } from "@/data/medicalTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -25,6 +28,8 @@ const LANGUAGES = [
 
 export default function AIVoiceAgent() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const orgSpec = user?.organization?.specialty as string | undefined;
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
@@ -53,6 +58,11 @@ export default function AIVoiceAgent() {
   const activeCalls = callsData?.calls || [];
   const savedQuestionnaires = questionnairesData?.questionnaires || [];
 
+  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : medicalTemplates;
+  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : dentalTemplates;
+  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
+  const allTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
+
   // Handle URL params (e.g. from Appointments "Call" button)
   useEffect(() => {
     const patientId = searchParams.get("patientId");
@@ -79,7 +89,7 @@ export default function AIVoiceAgent() {
   const handleQuestionnaireSelect = (value: string) => {
     setSelectedQId(value);
     if (value.startsWith("template_")) {
-      const template = medicalTemplates.find((t) => t.id === value.replace("template_", ""));
+      const template = allTemplates.find((t) => t.id === value.replace("template_", ""));
       setSelectedQuestions(template?.questions || []);
     } else if (value) {
       const q = savedQuestionnaires.find((q: any) => q._id === value);
@@ -225,7 +235,7 @@ export default function AIVoiceAgent() {
                 <span className={selectedQId ? "" : "text-gray-400"}>
                   {selectedQId
                     ? (selectedQId.startsWith("template_")
-                      ? medicalTemplates.find(t => t.id === selectedQId.replace("template_", ""))?.condition
+                      ? allTemplates.find(t => t.id === selectedQId.replace("template_", ""))?.condition
                       : savedQuestionnaires.find((q: any) => q._id === selectedQId)?.title)
                     : "No template"}
                 </span>
@@ -237,8 +247,8 @@ export default function AIVoiceAgent() {
                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b font-medium text-gray-500">
                     No template (general conversation)
                   </button>
-                  <div className="border-b px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Medical Templates</div>
-                  {medicalTemplates.map((t) => (
+                  <div className="border-b px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Templates</div>
+                  {allTemplates.map((t) => (
                     <button key={t.id} onClick={() => { handleQuestionnaireSelect(`template_${t.id}`); setShowTemplatePanel(false); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0 flex items-center justify-between">
                       <span>{t.condition}</span>
