@@ -294,6 +294,15 @@ export default function CalendarSchedule() {
   const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
   const allCalTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
 
+  const getPatientCallInstr = (patientId: any) => {
+    if (!patientId) return null;
+    const p = patients.find((pp: any) => pp._id === (typeof patientId === "string" ? patientId : patientId?._id));
+    if (!p?.callInstructions?.templateName) return null;
+    return p.callInstructions;
+  };
+
+  const selectedCalPatientInstr = getPatientCallInstr(addForm.patient);
+
   const renderedCallRows = useMemo(() => {
     if (sortedCalls.length === 0) {
       return (
@@ -512,7 +521,15 @@ export default function CalendarSchedule() {
                             filteredPatients.map((p: any) => (
                               <button
                                 key={p._id}
-                                onClick={() => { setAddForm({ ...addForm, patient: p._id, patientName: p.name }); setSearch(p.name); setShowSearch(false); }}
+                                onClick={() => {
+                                  setAddForm({ ...addForm, patient: p._id, patientName: p.name });
+                                  setSearch(p.name); setShowSearch(false);
+                                  if (p.callInstructions?.templateName) {
+                                    const ci = p.callInstructions;
+                                    const matched = allCalTemplates.find((t) => t.id === ci.templateId || t.condition === ci.templateName);
+                                    if (matched) setAddForm((prev) => ({ ...prev, patient: p._id, patientName: p.name, questionnaire: matched.condition }));
+                                  }
+                                }}
                                 className="w-full flex items-center gap-2 p-2 text-sm hover:bg-gray-50 text-left"
                               >
                                 <User className="h-4 w-4 text-gray-400 shrink-0" />
@@ -524,14 +541,26 @@ export default function CalendarSchedule() {
                         </div>
                       )}
                     </div>
+                    {selectedCalPatientInstr && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-start gap-2 text-sm">
+                        <span className="text-lg leading-none mt-0.5">⭐</span>
+                        <div>
+                          <span className="font-medium text-blue-800">Dr. recommends: {selectedCalPatientInstr.templateName}</span>
+                          {selectedCalPatientInstr.notes && <span className="text-blue-600 ml-2">— {selectedCalPatientInstr.notes}</span>}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-600">Questionnaire *</label>
                       <select value={addForm.questionnaire} onChange={(e) => setAddForm({ ...addForm, questionnaire: e.target.value })}
                         className="flex h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                         <option value="">Select a template...</option>
-                        {allCalTemplates.map((t) => (
-                          <option key={t.id} value={t.condition}>{t.condition} ({t.questions.length}q)</option>
-                        ))}
+                        {allCalTemplates.map((t) => {
+                          const isRecommended = selectedCalPatientInstr && (selectedCalPatientInstr.templateId === t.id || selectedCalPatientInstr.templateName === t.condition);
+                          return (
+                            <option key={t.id} value={t.condition} className={isRecommended ? "bg-blue-50 font-medium" : ""}>{isRecommended ? "⭐ " : ""}{t.condition} ({t.questions.length}q)</option>
+                          );
+                        })}
                       </select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">

@@ -8,9 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity } from "lucide-react";
+import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity, ClipboardList } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
+import { useAuth } from "@/contexts/AuthContext";
+import { medicalTemplates } from "@/data/medicalTemplates";
+import { dentalTemplates } from "@/data/dentalTemplates";
+import { veterinaryTemplates } from "@/data/veterinaryTemplates";
 import SummaryTab from "@/components/patients/SummaryTab";
 import MedicalHistoryTab from "@/components/patients/MedicalHistoryTab";
 import DocumentsTab from "@/components/patients/DocumentsTab";
@@ -36,6 +40,8 @@ export default function PatientDetail() {
   const [editingPatient, setEditingPatient] = useState(false);
   const [patientForm, setPatientForm] = useState<any>({});
   const [showErasureConfirm, setShowErasureConfirm] = useState(false);
+  const [editingCallInstr, setEditingCallInstr] = useState(false);
+  const [callInstrDraft, setCallInstrDraft] = useState({ templateId: "", templateName: "", notes: "" });
 
   const { data: consentsData } = useQuery({
     queryKey: ["patient-consents", id],
@@ -138,6 +144,17 @@ export default function PatientDetail() {
   });
 
   const patient = patientData?.patient;
+  const { user: currentUser } = useAuth();
+  const canEditCallInstr = currentUser?.role === "admin" || currentUser?.role === "doctor";
+  const orgSpec = currentUser?.organization?.specialty as string | undefined;
+
+  const filteredHumanTemplates = medicalTemplates.filter((t: any) => !orgSpec || orgSpec === "general-practice" || (t.specialties?.includes(orgSpec)));
+  const filteredDentalTemplates = dentalTemplates.filter((t: any) => !orgSpec || orgSpec === "general-practice" || (t.specialties?.includes(orgSpec)));
+  const filteredVetTemplates = veterinaryTemplates.filter((t: any) => !orgSpec || orgSpec === "general-practice" || (t.specialties?.includes(orgSpec)));
+  const callInstrTemplates = orgSpec === "veterinary" ? filteredVetTemplates
+    : orgSpec === "dentistry" || orgSpec === "dental" ? filteredDentalTemplates
+    : [...filteredHumanTemplates, ...filteredDentalTemplates, ...filteredVetTemplates];
+
   const questionnaires = questionnairesData?.questionnaires || [];
 
   const recommendedQuestionnaires = questionnaires.filter((q: any) => {
@@ -343,6 +360,72 @@ export default function PatientDetail() {
                 </div>
               ) : (
                 <p className="text-sm bg-gray-50 rounded-lg p-3 mt-1">{patient.kbNotes || <span className="text-gray-400 italic">No knowledge base notes.</span>}</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="mt-4">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-500 flex items-center gap-1"><ClipboardList className="h-3 w-3" /> Doctor Call Instructions</span>
+                {canEditCallInstr && !editingCallInstr && (
+                  <button onClick={() => { setCallInstrDraft({ templateId: patient.callInstructions?.templateId || "", templateName: patient.callInstructions?.templateName || "", notes: patient.callInstructions?.notes || "" }); setEditingCallInstr(true); }}
+                    className="text-xs text-primary hover:underline">{patient.callInstructions?.templateName ? "Edit" : "Set Instructions"}</button>
+                )}
+              </div>
+              {editingCallInstr ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Recommended Template</label>
+                    <select value={callInstrDraft.templateId} onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
+                      if (val.startsWith("q_")) {
+                        const q = questionnaires.find((q: any) => q._id === val.slice(2));
+                        setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q?.title || "" });
+                      } else {
+                        const t = callInstrTemplates.find((t: any) => t.id === val);
+                        setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: t?.condition || val });
+                      }
+                    }} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                      <option value="">None (no recommendation)</option>
+                      <optgroup label="Templates">
+                        {callInstrTemplates.map((t: any) => <option key={t.id} value={t.id}>{t.condition}</option>)}
+                      </optgroup>
+                      {questionnaires.length > 0 && (
+                        <optgroup label="Saved Questionnaires">
+                          {questionnaires.map((q: any) => <option key={q._id} value={`q_${q._id}`}>{q.title}</option>)}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Notes for Staff</label>
+                    <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
+                      rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                      placeholder="e.g., Monitor HbA1c trends, ask about insulin adherence..." />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => { updatePatientMutation.mutate({ callInstructions: { ...callInstrDraft, setBy: currentUser?._id, setAt: new Date().toISOString() } }, { onSuccess: () => setEditingCallInstr(false) }); }} disabled={updatePatientMutation.isPending}>
+                      <Save className="h-3.5 w-3.5 mr-1" /> Save
+                    </Button>
+                    {patient.callInstructions?.templateName && (
+                      <Button variant="ghost" size="sm" onClick={() => { updatePatientMutation.mutate({ callInstructions: null }, { onSuccess: () => setEditingCallInstr(false) }); }} disabled={updatePatientMutation.isPending}>
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => setEditingCallInstr(false)}><X className="h-3.5 w-3.5 mr-1" /> Cancel</Button>
+                  </div>
+                </div>
+              ) : patient.callInstructions?.templateName ? (
+                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-blue-800">Use: {patient.callInstructions.templateName}</span>
+                  </div>
+                  {patient.callInstructions.notes && <p className="text-xs text-blue-600 mt-1">{patient.callInstructions.notes}</p>}
+                  {patient.callInstructions.setBy && <p className="text-[10px] text-blue-400 mt-2">Set by {typeof patient.callInstructions.setBy === "object" ? patient.callInstructions.setBy.name : "Doctor"}</p>}
+                </div>
+              ) : (
+                <p className="text-sm bg-gray-50 rounded-lg p-3 mt-1 text-gray-400 italic">No call instructions set. {canEditCallInstr ? "Click 'Set Instructions' to recommend a template for the next call." : ""}</p>
               )}
             </CardContent>
           </Card>

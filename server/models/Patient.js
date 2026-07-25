@@ -34,6 +34,14 @@ const patientSchema = new mongoose.Schema(
     kbNotes: { type: String, default: "" },
     doNotCall: { type: Boolean, default: false },
     doNotCallReason: { type: String, default: "" },
+    callInstructions: {
+      templateId: { type: String, default: "" },
+      questionnaireId: { type: mongoose.Schema.Types.ObjectId, ref: "Questionnaire", default: null },
+      templateName: { type: String, default: "" },
+      notes: { type: String, default: "" },
+      setBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      setAt: { type: Date, default: null },
+    },
     reminderPreferences: {
       email: { type: Boolean, default: false },
     },

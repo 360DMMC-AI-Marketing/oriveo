@@ -371,6 +371,16 @@ export default function CallCenter() {
   const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
   const allTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
 
+  const getPatientCallInstr = (patient: any) => {
+    if (!patient?.callInstructions?.templateName) return null;
+    const ci = patient.callInstructions;
+    const matchedTemplate = allTemplates.find((t: any) => t.id === ci.templateId);
+    const matchedQ = !ci.templateId.startsWith("template_") ? savedQuestionnaires.find((q: any) => q._id === ci.templateId || q._id === ci.templateId?.replace("q_", "")) : null;
+    return { ...ci, matchedTemplate, matchedQ };
+  };
+
+  const patientCallInstr = getPatientCallInstr(selectedPatient);
+
   const TAB_CONFIG = [
     { id: "quick" as Tab, label: "Quick Call", icon: Phone },
     { id: "batch" as Tab, label: "Batch", icon: Users },
@@ -484,7 +494,19 @@ export default function CallCenter() {
                   {search && !selectedPatient && (
                     <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto bg-white border rounded-lg shadow-lg">
                       {filteredPatients.slice(0, 8).map((p: any) => (
-                        <button key={p._id} onClick={() => { setSelectedPatient(p); setSearch(p.name); }}
+                        <button key={p._id} onClick={() => {
+                          setSelectedPatient(p); setSearch(p.name);
+                          if (p.callInstructions?.templateId) {
+                            const ci = p.callInstructions;
+                            if (ci.templateId.startsWith("template_")) {
+                              handleQuestionnaireSelect(ci.templateId);
+                            } else {
+                              handleQuestionnaireSelect(ci.templateId);
+                            }
+                          } else {
+                            setSelectedQId(""); setSelectedQuestions([]);
+                          }
+                        }}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between border-b last:border-0">
                           <div>
                             <span className="font-medium">{p.name}</span>
@@ -501,6 +523,15 @@ export default function CallCenter() {
                     </div>
                   )}
                 </div>
+                {selectedPatient && patientCallInstr && (
+                  <div className="col-span-full bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 flex items-start gap-2 text-sm">
+                    <span className="text-lg leading-none mt-0.5">⭐</span>
+                    <div>
+                      <span className="font-medium text-blue-800">Dr. recommends: {patientCallInstr.templateName}</span>
+                      {patientCallInstr.notes && <span className="text-blue-600 ml-2">— {patientCallInstr.notes}</span>}
+                    </div>
+                  </div>
+                )}
                 <div className="w-56 relative">
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Template (optional)</label>
                   <button onClick={() => setShowTemplatePanel(!showTemplatePanel)}
@@ -521,20 +552,28 @@ export default function CallCenter() {
                         No template (general conversation)
                       </button>
                       <div className="border-b px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Templates</div>
-                      {allTemplates.map((t) => (
-                        <button key={t.id} onClick={() => { handleQuestionnaireSelect(`template_${t.id}`); setShowTemplatePanel(false); }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0 flex items-center justify-between">
-                          <span>{t.condition}</span>
-                          <span className="text-[10px] text-gray-400 uppercase">{t.severity}</span>
-                        </button>
-                      ))}
+                      {allTemplates.map((t) => {
+                        const isRecommended = patientCallInstr && ((patientCallInstr.templateId === `template_${t.id}`) || (patientCallInstr.templateName === t.condition));
+                        return (
+                          <button key={t.id} onClick={() => { handleQuestionnaireSelect(`template_${t.id}`); setShowTemplatePanel(false); }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0 flex items-center justify-between ${isRecommended ? "bg-blue-50" : ""}`}>
+                            <span>{isRecommended && <span className="mr-1">⭐</span>}{t.condition}</span>
+                            <span className="text-[10px] text-gray-400 uppercase">{t.severity}</span>
+                          </button>
+                        );
+                      })}
                       {savedQuestionnaires.length > 0 && (
                         <>
                           <div className="border-b px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Saved Questionnaires</div>
-                          {savedQuestionnaires.map((q: any) => (
-                            <button key={q._id} onClick={() => { handleQuestionnaireSelect(q._id); setShowTemplatePanel(false); }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">{q.title}</button>
-                          ))}
+                          {savedQuestionnaires.map((q: any) => {
+                            const isRecommended = patientCallInstr && (patientCallInstr.templateId === q._id || patientCallInstr.templateId === `q_${q._id}`);
+                            return (
+                              <button key={q._id} onClick={() => { handleQuestionnaireSelect(q._id); setShowTemplatePanel(false); }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${isRecommended ? "bg-blue-50" : ""}`}>
+                                {isRecommended && <span className="mr-1">⭐</span>}{q.title}
+                              </button>
+                            );
+                          })}
                         </>
                       )}
                     </div>
