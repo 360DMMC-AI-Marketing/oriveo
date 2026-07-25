@@ -100,6 +100,10 @@ router.get("/dashboard-data", protect, async (req, res) => {
     }
 
     const filter = { organization: orgId };
+
+    const org = await Organization.findById(orgId).select("specialty clinicType").lean();
+    const orgSpecialty = org?.specialty || "general-practice";
+
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
@@ -171,6 +175,31 @@ router.get("/dashboard-data", protect, async (req, res) => {
       ClinicalNote.countDocuments({ ...filter, encounterDate: { $gte: todayStart } }),
     ]);
 
+    const conditionPrevalence = await Call.aggregate([
+      { $match: { ...filter, conditionKey: { $ne: null }, createdAt: { $gte: last30days } } },
+      { $group: { _id: "$conditionKey", name: { $first: "$conditionName" }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 },
+    ]);
+
+    const highRiskPatients = await Call.find({
+      ...filter,
+      aiSeverityScore: { $gte: 5 },
+      createdAt: { $gte: last30days },
+    }).populate("patient", "name specialty primaryDiagnosis")
+      .select("patient aiSeverityScore conditionName aiSummary redFlags createdAt")
+      .sort({ aiSeverityScore: -1 })
+      .limit(10)
+      .lean();
+
+    const recentVitals = await VitalSign.find({
+      ...filter,
+      recordedAt: { $gte: last7days },
+    }).select("patient bpSystolic bpDiastolic heartRate weight recordedAt")
+      .sort({ recordedAt: -1 })
+      .limit(50)
+      .lean();
+
     const aiAssessments = completedCalls.length;
 
     let avgSeverity = "—";
@@ -235,6 +264,10 @@ router.get("/dashboard-data", protect, async (req, res) => {
         failed,
         totalCheckups,
         noShowRate,
+        orgSpecialty,
+        conditionPrevalence,
+        highRiskPatients,
+        recentVitals,
       },
     });
   } catch (error) {

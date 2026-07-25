@@ -79,6 +79,120 @@ const NOTIF_ICONS: Record<string, any> = {
 
 const CHART_COLORS = ["#0a7c6f", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6"];
 
+const SPECIALTY_SCALES: Record<string, Array<{ name: string; range: string; color: string }>> = {
+  cardiology: [
+    { name: "NYHA Functional Class", range: "Class I-IV", color: "red" },
+    { name: "CCS Angina Classification", range: "Class I-IV", color: "amber" },
+    { name: "ACC/AHA Heart Failure Stage", range: "Stage A-D", color: "blue" },
+  ],
+  neurology: [
+    { name: "NIH Stroke Scale", range: "/42", color: "red" },
+    { name: "MoCA Cognitive Screen", range: "/30", color: "blue" },
+    { name: "MMSE", range: "/30", color: "emerald" },
+    { name: "MIDAS Migraine Disability", range: "Grade I-IV", color: "amber" },
+  ],
+  psychiatry: [
+    { name: "PHQ-9 Depression", range: "/27", color: "purple" },
+    { name: "GAD-7 Anxiety", range: "/21", color: "blue" },
+    { name: "C-SSRS Suicide Risk", range: "Screening", color: "red" },
+    { name: "YMRS Mania", range: "/60", color: "amber" },
+  ],
+  dermatology: [
+    { name: "PASI Score", range: "/72", color: "amber" },
+    { name: "EASI Score", range: "Eczema", color: "blue" },
+    { name: "Acne Grading", range: "Grade I-IV", color: "red" },
+  ],
+  therapy: [
+    { name: "Berg Balance Scale", range: "/56", color: "emerald" },
+    { name: "Tinetti Gait & Balance", range: "/28", color: "blue" },
+    { name: "FIM Score", range: "/126", color: "violet" },
+    { name: "Pain Scale", range: "0-10", color: "red" },
+  ],
+  gastroenterology: [
+    { name: "Mayo Score (UC)", range: "0-12", color: "amber" },
+    { name: "CDAI (Crohn's)", range: "Disease Activity", color: "blue" },
+    { name: "Boston Bowel Prep", range: "0-9", color: "emerald" },
+  ],
+  endocrinology: [
+    { name: "HbA1c Goal", range: "<7.0%", color: "amber" },
+    { name: "CGM Time-in-Range", range: ">70%", color: "emerald" },
+    { name: "Bone Density T-Score", range: "T-score", color: "blue" },
+  ],
+  oncology: [
+    { name: "ECOG Performance", range: "0-5", color: "red" },
+    { name: "RECIST 1.1 Response", range: "CR/PR/SD/PD", color: "amber" },
+  ],
+  rheumatology: [
+    { name: "DAS28", range: "<2.6 to >5.1", color: "red" },
+    { name: "BASDAI", range: "0-10", color: "blue" },
+  ],
+  nephrology: [
+    { name: "CKD Stage (GFR)", range: "G1-G5", color: "amber" },
+    { name: "Albuminuria Category", range: "A1-A3", color: "red" },
+  ],
+  pulmonology: [
+    { name: "mMRC Dyspnea Scale", range: "0-4", color: "blue" },
+    { name: "CAT Score", range: "0-40", color: "amber" },
+    { name: "GOLD Stage", range: "1-4", color: "red" },
+  ],
+  ophthalmology: [
+    { name: "Visual Acuity (Snellen)", range: "20/20-20/200", color: "blue" },
+    { name: "Diabetic Retinopathy Stage", range: "NPDR-PDR", color: "red" },
+    { name: "Cataract Grade", range: "1-4", color: "amber" },
+  ],
+  ent: [
+    { name: "Hearing Loss Grade", range: "Normal-Profound", color: "blue" },
+  ],
+  "general-dentistry": [
+    { name: "ADA Caries Risk", range: "Low/Med/High", color: "amber" },
+    { name: "Periodontal Staging", range: "Stage I-IV", color: "red" },
+    { name: "ASA Physical Status", range: "I-IV", color: "blue" },
+  ],
+  orthodontics: [
+    { name: "Angle Classification", range: "Class I/II/III", color: "blue" },
+    { name: "PAR Index", range: "0-100", color: "amber" },
+  ],
+  endodontics: [
+    { name: "AAE Case Difficulty", range: "Minimal/Moderate/High", color: "amber" },
+    { name: "Pulpal Diagnosis", range: "5 options", color: "red" },
+  ],
+  periodontics: [
+    { name: "AAP Perio Stage", range: "I-IV", color: "red" },
+    { name: "AAP Perio Grade", range: "A-C", color: "amber" },
+    { name: "Furcation Hamp", range: "I-III", color: "blue" },
+  ],
+  "oral-surgery": [
+    { name: "ASA Physical Status", range: "I-IV", color: "blue" },
+    { name: "Bone Quality (Lekholm-Zarb)", range: "Type 1-4", color: "amber" },
+  ],
+  prosthodontics: [
+    { name: "Kennedy Classification", range: "Class I-IV", color: "blue" },
+    { name: "Crown-to-Root Ratio", range: "Assessment", color: "amber" },
+  ],
+  "pediatric-dentistry": [
+    { name: "AAPD Caries Risk", range: "Low/Med/High", color: "amber" },
+    { name: "Frankl Behavior Rating", range: "1-4", color: "emerald" },
+  ],
+  "small-animal": [
+    { name: "Body Condition Score", range: "1-9", color: "amber" },
+    { name: "Veterinary Pain Scale", range: "0-10", color: "red" },
+  ],
+  equine: [
+    { name: "AAEP Lameness Grade", range: "0-5", color: "red" },
+    { name: "Henneke Body Condition", range: "1-9", color: "amber" },
+  ],
+  "exotic-pets": [
+    { name: "Body Condition Score", range: "1-5 (species-specific)", color: "amber" },
+  ],
+  "large-animal": [
+    { name: "BCS", range: "1-9", color: "amber" },
+    { name: "Bovine Lameness Score", range: "0-4", color: "red" },
+  ],
+  "vet-specialty": [
+    { name: "Veterinary Pain Scale", range: "0-10", color: "red" },
+  ],
+};
+
 const SPECIALTY_LABELS: Record<string, { title: string; subtitle: string }> = {
   "general-practice": { title: "General Practice Dashboard", subtitle: "Family medicine & primary care overview" },
   "cardiology": { title: "Cardiology Dashboard", subtitle: "Cardiovascular care & diagnostics overview" },
@@ -351,6 +465,53 @@ export default function Dashboard() {
         })}
       </div>
 
+      {dashboardData?.data?.conditionPrevalence?.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Activity className="h-4 w-4 text-primary" /> Condition Prevalence (Last 30 Days)</CardTitle></CardHeader>
+            <CardContent className="p-3 flex justify-center">
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={dashboardData.data.conditionPrevalence.map((c: any) => ({ name: c.name || c._id, value: c.count }))}
+                    dataKey="value" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={false}
+                  >
+                    {dashboardData.data.conditionPrevalence.map((_: any, i: number) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-red-500" /> High-Risk Patients</CardTitle></CardHeader>
+            <CardContent className="space-y-2 max-h-[200px] overflow-y-auto">
+              {dashboardData.data.highRiskPatients?.length === 0 ? (
+                <div className="py-6 text-center text-gray-400 text-sm">No high-risk patients detected</div>
+              ) : (
+                dashboardData.data.highRiskPatients?.slice(0, 6).map((hp: any, i: number) => (
+                  <Link key={i} to={`/calls/${hp._id}`} className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50/50 p-2.5 hover:bg-red-50 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100">
+                        <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">{hp.patient?.name || "Unknown"}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{hp.conditionName || "Severity"} · {hp.aiSeverityScore}/10</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {dashboardData?.data || qaScoresData?.summary ? (
         <div className="grid gap-4 md:grid-cols-4">
           <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
@@ -456,6 +617,27 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {SPECIALTY_SCALES[specialty]?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Stethoscope className="h-4 w-4 text-primary" /> Clinical Assessment Scales — {labels.title.replace(" Dashboard", "")}</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {SPECIALTY_SCALES[specialty].map((scale, i) => (
+                <div key={i} className={`flex items-center gap-3 rounded-lg border p-3 bg-${scale.color}-50/50 border-${scale.color}-200`}>
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-${scale.color}-100`}>
+                    <Activity className={`h-4 w-4 text-${scale.color}-600`} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-900">{scale.name}</p>
+                    <p className="text-[10px] text-gray-500">{scale.range}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
