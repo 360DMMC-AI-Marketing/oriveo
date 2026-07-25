@@ -36,6 +36,7 @@ import OnboardingGuide from "@/pages/OnboardingGuide";
 import AdminAvailability from "@/pages/AdminAvailability";
 import CalendarSettings from "@/pages/CalendarSettings";
 import MyProfile from "@/pages/MyProfile";
+import Rooms from "@/pages/Rooms";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -103,6 +104,7 @@ function AppRoutes() {
         <Route path="/clinic" element={<ClinicDashboard />} />
         <Route path="/clinic/settings" element={<Navigate to="/clinic" replace />} />
         <Route path="/clinic/users" element={<ClinicUsers />} />
+        <Route path="/rooms" element={<Rooms />} />
 
         <Route path="/onboarding-guide" element={<OnboardingGuide />} />
         <Route path="/notifications" element={<Notifications />} />
