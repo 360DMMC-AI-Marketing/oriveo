@@ -2,18 +2,6 @@ import "dotenv/config";
 import express from "express";
 import compression from "compression";
 
-const SENSITIVE_ENV_KEYS = ["JWT_SECRET", "PHI_ENCRYPTION_KEY", "TWILIO_AUTH_TOKEN", "OPENAI_API_KEY", "DEEPGRAM_API_KEY", "ELEVENLABS_API_KEY"];
-for (const key of SENSITIVE_ENV_KEYS) {
-  if (process.env[key]) {
-    const val = process.env[key];
-    Object.defineProperty(process.env, key, {
-      get() { return val; },
-      set() { throw new Error(`Cannot modify sensitive env var "${key}" at runtime`); },
-      configurable: false,
-    });
-  }
-}
-
 process.on("uncaughtException", (err) => {
   console.error("UNCAUGHT EXCEPTION:", err);
   process.exit(1);
