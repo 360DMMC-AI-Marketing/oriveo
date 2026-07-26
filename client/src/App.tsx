@@ -1,8 +1,9 @@
 import { lazy, Suspense, Component, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AnimatePresence, motion } from "framer-motion";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -97,19 +98,34 @@ function RootRoute() {
   return <Landing />;
 }
 
+function PageTransition({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 function AppRoutes() {
+  const location = useLocation();
   return (
     <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<RootRoute />} />
-        <Route path="/features" element={<Features />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-        <Route path="/:page" element={<StaticPage />} />
-        <Route path="/book/:token" element={<PatientBooking />} />
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><RootRoute /></PageTransition>} />
+          <Route path="/features" element={<PageTransition><Features /></PageTransition>} />
+          <Route path="/pricing" element={<PageTransition><Pricing /></PageTransition>} />
+          <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
+          <Route path="/login" element={<PageTransition><PublicRoute><Login /></PublicRoute></PageTransition>} />
+          <Route path="/signup" element={<PageTransition><PublicRoute><Signup /></PublicRoute></PageTransition>} />
+          <Route path="/:page" element={<PageTransition><StaticPage /></PageTransition>} />
+          <Route path="/book/:token" element={<PageTransition><PatientBooking /></PageTransition>} />
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/patients/:id" element={<PatientDetail />} />
@@ -145,6 +161,7 @@ function AppRoutes() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </AnimatePresence>
     </Suspense>
   );
 }

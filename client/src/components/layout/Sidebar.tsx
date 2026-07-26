@@ -8,7 +8,7 @@ import {
   UserPlus, ClipboardList, Bot, BarChart3, BookOpen, ShieldCheck,
   ChevronDown, ChevronRight, Menu, Calendar, Clock, ScrollText,
   FileText, PhoneIncoming, Radio, Building2, CreditCard, UserCircle,
-  Dog, Smile, HeartPulse,
+  Dog, Smile, HeartPulse, X,
 } from "lucide-react";
 
 const TYPE_ICONS: Record<string, any> = { human: HeartPulse, dental: Smile, veterinary: Dog };
@@ -61,7 +61,12 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
   ];
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -84,14 +89,19 @@ export default function Sidebar() {
   const typeLabel = TYPE_LABELS[clinicType] || "Medical";
   const subtitle = TYPE_SUBTITLES[clinicType] || TYPE_SUBTITLES.human;
 
-  return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r bg-white" role="navigation" aria-label="Main navigation">
-      <div className="flex items-center gap-3 border-b px-6 py-5">
-        <Logo size="md" variant="dark" showText={false} />
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">Oriveo</h1>
-          <p className="text-xs text-gray-500">{subtitle}</p>
+  const sidebarContent = (
+    <>
+      <div className="flex items-center justify-between border-b px-6 py-5">
+        <div className="flex items-center gap-3">
+          <Logo size="md" variant="dark" showText={false} />
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Oriveo</h1>
+            <p className="text-xs text-gray-500">{subtitle}</p>
+          </div>
         </div>
+        <button onClick={onClose} className="lg:hidden p-1 rounded-lg hover:bg-gray-100 text-gray-400">
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
@@ -103,7 +113,7 @@ export default function Sidebar() {
           return (
             <div key={group.label}>
               <button onClick={() => toggleGroup(group.label)} aria-expanded={isExpanded} aria-label={`${group.label} section`}
-                className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer",
+                className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer",
                   isGroupActive ? "bg-primary-light text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 )}>
                 <group.icon className="h-5 w-5 flex-shrink-0" />
@@ -111,14 +121,15 @@ export default function Sidebar() {
                 {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
               </button>
               {isExpanded && (
-                <div className="ml-2 mt-1 space-y-1 border-l-2 border-gray-100 pl-3">
+                <div className="ml-2 mt-1 space-y-0.5 border-l-2 border-gray-100 pl-3">
                   {visibleChildren.map((child) => {
                     const isActive = location.pathname.startsWith(child.to);
                     return (
                       <NavLink key={child.to} to={child.to}
-                        className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative",
                           isActive ? "bg-primary/10 text-primary" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                         )}>
+                        {isActive && <span className="absolute -left-[13px] top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary" />}
                         <child.icon className="h-4 w-4 flex-shrink-0" />
                         {child.label}
                       </NavLink>
@@ -131,12 +142,12 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t px-4 py-4 space-y-1">
-        <button onClick={() => navigate("/my-profile")}
+      <div className="border-t px-4 py-4 space-y-0.5">
+        <button onClick={() => { navigate("/my-profile"); onClose(); }}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer">
           <UserCircle className="h-5 w-5" /> My Profile
         </button>
-        <button onClick={() => navigate("/onboarding-guide")}
+        <button onClick={() => { navigate("/onboarding-guide"); onClose(); }}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer">
           <BookOpen className="h-5 w-5" /> Guide
         </button>
@@ -145,6 +156,23 @@ export default function Sidebar() {
           <LogOut className="h-5 w-5" /> Sign out
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile sidebar */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-white transition-transform duration-200 ease-out lg:hidden",
+        open ? "translate-x-0" : "-translate-x-full"
+      )}>
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col border-r bg-white">
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

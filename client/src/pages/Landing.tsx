@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Logo from "@/components/ui/Logo";
+import Footer from "@/components/layout/Footer";
 import {
   ArrowRight, Shield, Star, Quote, Award, Clock, Phone, Calendar,
   Activity, BarChart3, CheckCircle, ChevronRight, Siren, Radio,
@@ -314,7 +315,7 @@ export default function Landing() {
               { icon: Monitor, title: "Specialty Dashboards", description: "28 specialty-aware dashboards with condition-specific widgets, metrics, and clinical terminology. Cardiology, neurology, dentistry, veterinary, and more.", gradient: "from-primary to-emerald-500" },
               { icon: Lock, title: "Enterprise Security", description: "HIPAA-compliant with AES-256-GCM PHI encryption, RBAC with 6 roles, comprehensive audit trails, consent management, data retention controls, right-to-erasure, and data portability — all built-in.", gradient: "from-amber-500 to-orange-500" },
             ].map((f) => (
-              <Card key={f.title} className="group border-0 bg-gray-50 hover:bg-white shadow-sm hover:shadow-xl transition-all duration-500 cursor-default">
+              <Card key={f.title} className="group border-0 bg-gray-50 hover:bg-white shadow-sm hover:shadow-xl transition-all duration-200 cursor-default">
                 <CardContent className="p-8">
                   <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br ${f.gradient} text-white mb-6 shadow-lg group-hover:scale-110 transition-transform duration-500`}>
                     <f.icon className="h-7 w-7" />
@@ -352,7 +353,7 @@ export default function Landing() {
               ].map((s, i) => (
                 <div key={s.step} className="relative">
                   <div className="flex flex-col items-center text-center">
-                    <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-white border-2 shadow-xl mb-6 transition-all duration-500 hover:scale-110 ${i === 0 ? 'border-primary shadow-primary/20' : 'border-gray-200'}`}>
+                    <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-white border-2 shadow-xl mb-6 transition-all duration-200 hover:scale-110 ${i === 0 ? 'border-primary shadow-primary/20' : 'border-gray-200'}`}>
                       <s.icon className={`h-7 w-7 ${i === 0 ? 'text-primary' : 'text-gray-400'}`} />
                     </div>
                     <span className="text-sm font-bold text-primary mb-2">{s.step}</span>
@@ -391,7 +392,7 @@ export default function Landing() {
               { icon: Database, title: "EHR Integration Hub", description: "Bi-directional sync with Athenahealth, Epic, Cerner, eClinicalWorks, Practice Fusion, and AdvancedMD. Patient data and clinical notes sync automatically." },
               { icon: Target, title: "Analytics & Reporting", description: "Comprehensive dashboards with call volume trends, no-show reduction, patient satisfaction, ROI calculators, severity distributions, and exportable reports." },
             ].map((f) => (
-              <Card key={f.title} className="group border border-gray-200 hover:border-primary/30 hover:shadow-xl transition-all duration-500">
+              <Card key={f.title} className="group border border-gray-200 hover:border-primary/30 hover:shadow-xl transition-all duration-200">
                 <CardContent className="p-6">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-5 group-hover:scale-110 transition-transform duration-500">
                     <f.icon className="h-6 w-6" />
@@ -421,7 +422,7 @@ export default function Landing() {
               { icon: Zap, title: "Real-Time Transcription", stats: "< 500ms latency", desc: "Streaming speech-to-text with medical vocabulary recognition across 10+ languages. Every word is captured, timestamped, and analyzed for clinical relevance in real-time." },
               { icon: Layers, title: "Structured Note Generation", stats: "60% time saved", desc: "Ambient AI generates SOAP notes, ICD-10 codes, medication lists, and lab orders from natural conversation. Clinicians review and sign — no typing required." },
             ].map((f) => (
-              <Card key={f.title} className="bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-500">
+              <Card key={f.title} className="bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-200">
                 <CardContent className="p-8">
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/20 text-primary mb-6">
                     <f.icon className="h-7 w-7" />
@@ -532,7 +533,7 @@ export default function Landing() {
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             {testimonials.map((t) => (
-              <Card key={t.name} className="border border-gray-200 hover:border-primary/30 hover:shadow-xl transition-all duration-500 group">
+              <Card key={t.name} className="border border-gray-200 hover:border-primary/30 hover:shadow-xl transition-all duration-200 group">
                 <CardContent className="p-8">
                   <Quote className="h-8 w-8 text-primary/20 mb-4" />
                   <p className="text-gray-600 leading-relaxed mb-6">&ldquo;{t.quote}&rdquo;</p>
@@ -658,41 +659,7 @@ export default function Landing() {
       </section>
 
       {/* ═══ Footer ═══ */}
-      <footer className="bg-gray-950 border-t border-gray-800 py-16">
-        <div className="mx-auto max-w-7xl px-8">
-          <div className="grid gap-8 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <Logo size="sm" variant="light" />
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
-                The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
-              </p>
-            </div>
-            {[
-              { title: "Platform", links: [{ label: "Overview", to: "/features" }, { label: "Features", to: "/features" }, { label: "Integrations", to: "/integrations" }, { label: "Security", to: "/security" }, { label: "Compliance", to: "/compliance" }] },
-              { title: "Resources", links: [{ label: "Documentation", to: "/documentation" }, { label: "API Reference", to: "/api-reference" }, { label: "Case Studies", to: "/case-studies" }, { label: "Whitepapers", to: "/whitepapers" }, { label: "Blog", to: "/blog" }] },
-              { title: "Company", links: [{ label: "About Us", to: "/about-us" }, { label: "Leadership", to: "/leadership" }, { label: "Careers", to: "/careers" }, { label: "Contact", to: "/contact" }, { label: "Partners", to: "/partners" }] },
-            ].map((col) => (
-              <div key={col.title}>
-                <h4 className="font-semibold text-gray-300 mb-4 text-sm uppercase tracking-wider">{col.title}</h4>
-                <div className="flex flex-col gap-3">
-                  {col.links.map((link) => (
-                    <a key={link.label} href={link.to} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">{link.label}</a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
-              <a href="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms of Service</a>
-              <a href="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA Notice</a>
-              <a href="/sla" className="hover:text-gray-300 transition-colors">SLA</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
@@ -9,6 +9,7 @@ import OnboardingTour from "@/components/OnboardingTour";
 
 export default function Layout() {
   const { token } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -21,13 +22,19 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="ml-64 flex flex-1 flex-col">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:border focus:rounded-lg focus:text-primary focus:font-medium">
           Skip to main content
         </a>
-        <Navbar />
-        <main id="main-content" className="flex-1 p-6" role="main">
+        <Navbar onMenuToggle={() => setSidebarOpen(true)} />
+        <main id="main-content" className="flex-1 p-4 sm:p-6" role="main">
           <Outlet />
         </main>
       </div>
