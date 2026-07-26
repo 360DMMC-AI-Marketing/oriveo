@@ -50,11 +50,12 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
       ],
     },
     {
-      label: "Organization", icon: Building2, roles: ["admin"],
+      label: "Organization", icon: Building2, roles: ["admin", "doctor", "nurse", "receptionist"],
       children: [
         { to: "/clinic", icon: Building2, label: "Clinic", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/clinic/users", icon: UserPlus, label: "Team", roles: ["admin"] },
-        ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Room Management", roles: ["admin", "doctor"] as string[] }] : []),
+        { to: "/departments", icon: Building2, label: "Departments", roles: ["admin", "doctor", "nurse", "receptionist"] },
+        ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Rooms", roles: ["admin", "doctor", "nurse", "receptionist"] as string[] }] : []),
         { to: "/audit-log", icon: ScrollText, label: "Audit Log", roles: ["admin"] },
       ],
     },
@@ -141,21 +142,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           );
         })}
       </nav>
-
-      <div className="border-t px-4 py-4 space-y-0.5">
-        <button onClick={() => { navigate("/my-profile"); onClose(); }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer">
-          <UserCircle className="h-5 w-5" /> My Profile
-        </button>
-        <button onClick={() => { navigate("/onboarding-guide"); onClose(); }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer">
-          <BookOpen className="h-5 w-5" /> Guide
-        </button>
-        <button onClick={logout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer">
-          <LogOut className="h-5 w-5" /> Sign out
-        </button>
-      </div>
     </>
   );
 

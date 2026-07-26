@@ -4,7 +4,7 @@ import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ClinicalAssistant from "@/components/ClinicalAssistant";
 import CommandPalette from "@/components/CommandPalette";
 import { useAuth } from "@/contexts/AuthContext";
-import { Stethoscope, Menu, ChevronRight, LogOut, UserCircle, Settings, Building2 } from "lucide-react";
+import { Stethoscope, Menu, ChevronRight, LogOut, UserCircle, BookOpen } from "lucide-react";
 
 const routeLabels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -118,13 +118,9 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <UserCircle className="h-4 w-4 text-gray-400" /> My Profile
                 </button>
-                <button onClick={() => { navigate("/clinic"); setShowAvatar(false); }}
+                <button onClick={() => { navigate("/onboarding-guide"); setShowAvatar(false); }}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                  <Settings className="h-4 w-4 text-gray-400" /> Settings
-                </button>
-                <button onClick={() => { navigate("/clinic"); setShowAvatar(false); }}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                  <Building2 className="h-4 w-4 text-gray-400" /> {user.organization?.name || "Clinic"}
+                  <BookOpen className="h-4 w-4 text-gray-400" /> Guide
                 </button>
               </div>
               <div className="p-1 border-t">

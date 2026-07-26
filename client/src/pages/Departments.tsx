@@ -61,6 +61,7 @@ const DEPT_ICONS: Record<string, string> = {
 
 export default function Departments() {
   const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "doctor";
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -157,10 +158,12 @@ export default function Departments() {
                       ))}
                     </div>
                   </div>
-                  <button onClick={() => removeDepartment(dept.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Remove">
-                    <X className="h-4 w-4" />
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => removeDepartment(dept.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Remove">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -169,7 +172,7 @@ export default function Departments() {
       </Card>
 
       {/* Available Departments */}
-      {availableToAdd.length > 0 && (
+      {canEdit && availableToAdd.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">

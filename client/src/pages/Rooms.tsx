@@ -155,7 +155,7 @@ function RoomForm({ onSave, onClose, initial, staffList }: { onSave: (data: any)
   );
 }
 
-function RoomCard({ room, onEdit, onStatusChange, onSeed }: { room: any; onEdit: () => void; onStatusChange: (status: string) => void; onSeed?: () => void }) {
+function RoomCard({ room, onEdit, onStatusChange, canEdit }: { room: any; onEdit: () => void; onStatusChange: (status: string) => void; canEdit?: boolean }) {
   const status = STATUS_CONFIG[room.status] || STATUS_CONFIG.available;
   const StatusIcon = status.icon;
   const typeInfo = ROOM_TYPES.find(t => t.id === room.type);
@@ -175,18 +175,24 @@ function RoomCard({ room, onEdit, onStatusChange, onSeed }: { room: any; onEdit:
           </div>
         </div>
         <div className="relative">
-          <button onClick={() => setShowActions(!showActions)} className="p-1 hover:bg-white/80 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-            <ChevronDown size={14} />
-          </button>
-          {showActions && (
-            <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg z-10 min-w-[140px] py-1">
-              <button onClick={() => { onEdit(); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2"><Pencil size={13} /> Edit</button>
-              {room.status !== "available" && <button onClick={() => { onStatusChange("available"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-emerald-600"><CheckCircle2 size={13} /> Set Available</button>}
-              {room.status !== "occupied" && <button onClick={() => { onStatusChange("occupied"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"><Users size={13} /> Set Occupied</button>}
-              {room.status !== "maintenance" && <button onClick={() => { onStatusChange("maintenance"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-amber-600"><Wrench size={13} /> Set Maintenance</button>}
-              {room.status !== "reserved" && <button onClick={() => { onStatusChange("reserved"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"><ShieldCheck size={13} /> Set Reserved</button>}
-              {room.status !== "cleaning" && <button onClick={() => { onStatusChange("cleaning"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-purple-600"><Droplets size={13} /> Set Cleaning</button>}
-            </div>
+          {canEdit ? (
+            <>
+              <button onClick={() => setShowActions(!showActions)} className="p-1 hover:bg-white/80 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                <ChevronDown size={14} />
+              </button>
+              {showActions && (
+                <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg z-10 min-w-[140px] py-1">
+                  <button onClick={() => { onEdit(); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2"><Pencil size={13} /> Edit</button>
+                  {room.status !== "available" && <button onClick={() => { onStatusChange("available"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-emerald-600"><CheckCircle2 size={13} /> Set Available</button>}
+                  {room.status !== "occupied" && <button onClick={() => { onStatusChange("occupied"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"><Users size={13} /> Set Occupied</button>}
+                  {room.status !== "maintenance" && <button onClick={() => { onStatusChange("maintenance"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-amber-600"><Wrench size={13} /> Set Maintenance</button>}
+                  {room.status !== "reserved" && <button onClick={() => { onStatusChange("reserved"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"><ShieldCheck size={13} /> Set Reserved</button>}
+                  {room.status !== "cleaning" && <button onClick={() => { onStatusChange("cleaning"); setShowActions(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2 text-purple-600"><Droplets size={13} /> Set Cleaning</button>}
+                </div>
+              )}
+            </>
+          ) : (
+            <Eye size={14} className="text-gray-300" />
           )}
         </div>
       </div>
@@ -227,6 +233,7 @@ function RoomCard({ room, onEdit, onStatusChange, onSeed }: { room: any; onEdit:
 
 export default function Rooms() {
   const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "doctor";
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingRoom, setEditingRoom] = useState<any>(null);
@@ -315,10 +322,12 @@ export default function Rooms() {
           <h1 className="text-2xl font-bold text-gray-900">Room Management</h1>
           <p className="text-sm text-gray-500 mt-1">{summary.total} rooms · {occupiedPct}% occupancy</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowSeed(!showSeed)}><LayoutGrid size={14} className="mr-1" /> Quick Setup</Button>
-          <Button size="sm" onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Plus size={14} className="mr-1" /> Add Room</Button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowSeed(!showSeed)}><LayoutGrid size={14} className="mr-1" /> Quick Setup</Button>
+            <Button size="sm" onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Plus size={14} className="mr-1" /> Add Room</Button>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -437,7 +446,7 @@ export default function Rooms() {
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {rooms.map((room: any) => (
-            <RoomCard key={room._id} room={room} onEdit={() => setEditingRoom(room)} onStatusChange={(s) => statusMut.mutate({ id: room._id, status: s })} />
+            <RoomCard key={room._id} room={room} canEdit={canEdit} onEdit={() => setEditingRoom(room)} onStatusChange={(s) => statusMut.mutate({ id: room._id, status: s })} />
           ))}
         </div>
       ) : (
@@ -485,11 +494,15 @@ export default function Rooms() {
                       <td className="px-4 py-3 text-gray-600">{room.currentPatient?.name || "—"}</td>
                       <td className="px-4 py-3 text-gray-600">{room.currentProvider?.name || "—"}</td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setEditingRoom(room)} className="p-1.5 hover:bg-gray-100 rounded"><Pencil size={13} /></button>
-                          {room.status !== "available" && <button onClick={() => statusMut.mutate({ id: room._id, status: "available" })} className="p-1.5 hover:bg-emerald-50 rounded text-emerald-600"><CheckCircle2 size={13} /></button>}
-                          <button onClick={() => { if (confirm("Remove this room?")) deleteMut.mutate(room._id); }} className="p-1.5 hover:bg-red-50 rounded text-red-500"><Trash2 size={13} /></button>
-                        </div>
+                        {canEdit ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => setEditingRoom(room)} className="p-1.5 hover:bg-gray-100 rounded"><Pencil size={13} /></button>
+                            {room.status !== "available" && <button onClick={() => statusMut.mutate({ id: room._id, status: "available" })} className="p-1.5 hover:bg-emerald-50 rounded text-emerald-600"><CheckCircle2 size={13} /></button>}
+                            <button onClick={() => { if (confirm("Remove this room?")) deleteMut.mutate(room._id); }} className="p-1.5 hover:bg-red-50 rounded text-red-500"><Trash2 size={13} /></button>
+                          </div>
+                        ) : (
+                          <Eye size={14} className="text-gray-300 ml-auto" />
+                        )}
                       </td>
                     </tr>
                   );
