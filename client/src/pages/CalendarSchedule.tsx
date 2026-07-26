@@ -30,7 +30,7 @@ export default function CalendarSchedule() {
   const [showSearch, setShowSearch] = useState(false);
   const [instrEditPatient, setInstrEditPatient] = useState<string | null>(null);
   const [instrDraft, setInstrDraft] = useState({ templateId: "", templateName: "", notes: "" });
-  const [hoveredPatientInstr, setHoveredPatientInstr] = useState<{ patient: any; x: number; y: number } | null>(null);
+  const [hoveredPatientInstr, setHoveredPatientInstr] = useState<{ patient: any; ci: any; x: number; y: number } | null>(null);
 
   const { data: callsData, isLoading: callsLoading } = useQuery({ queryKey: ["calls"], queryFn: () => api.get("/calls").then((r) => r.data) });
   const { data: patientsData } = useQuery({ queryKey: ["patients"], queryFn: () => api.get("/patients").then((r) => r.data) });
@@ -357,7 +357,7 @@ export default function CalendarSchedule() {
                   onMouseEnter={(e) => {
                     if (patientInstr) {
                       const rect = e.currentTarget.getBoundingClientRect();
-                      setHoveredPatientInstr({ patient: patientInstr.patient, x: rect.left, y: rect.bottom + 4 });
+                      setHoveredPatientInstr({ patient: patientInstr.patient, ci: patientInstr.ci, x: rect.left, y: rect.bottom + 4 });
                     }
                   }}
                   onMouseLeave={() => setHoveredPatientInstr(null)}
