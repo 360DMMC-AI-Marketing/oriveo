@@ -43,6 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
+      api.get("/auth/me")
+        .then(({ data }) => {
+          if (data?.user) {
+            localStorage.setItem("oriveo_user", JSON.stringify(data.user));
+            setUser(data.user);
+          }
+        })
+        .catch(() => {});
     }
     setLoading(false);
   }, []);
