@@ -731,7 +731,7 @@ export default function CalendarSchedule() {
       {hoveredPatientInstr && (
         <div
           className="fixed z-50 w-72 rounded-lg border border-amber-200 bg-white shadow-xl p-3 pointer-events-none"
-          style={{ left: Math.min(hoveredPatientInstr.x, window.innerWidth - 300), top: hoveredPatientInstr.y }}
+          style={{ left: Math.min(hoveredPatientInstr.x, window.innerWidth - 300), top: Math.min(hoveredPatientInstr.y, window.innerHeight - 140) }}
         >
           <div className="flex items-center gap-2 mb-1.5">
             <Star className="h-4 w-4 text-amber-500 shrink-0" />
