@@ -7,7 +7,31 @@
     <title>Oriveo</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-error" style="display:none;font-family:monospace;padding:20px;background:#fff;color:#000;white-space:pre-wrap;position:fixed;inset:0;z-index:99999;overflow:auto;">
+        <h2 style="color:red;margin-bottom:8px;">Boot Error</h2>
+        <pre id="boot-error-msg"></pre>
+      </div>
+    </div>
+    <script>
+      window.onerror = function(msg, url, line, col, err) {
+        var el = document.getElementById('boot-error');
+        var msgEl = document.getElementById('boot-error-msg');
+        if (el && msgEl) {
+          el.style.display = 'block';
+          msgEl.textContent = msg + '\n' + url + ':' + line + ':' + col + (err && err.stack ? '\n\n' + err.stack : '');
+        }
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        var el = document.getElementById('boot-error');
+        var msgEl = document.getElementById('boot-error-msg');
+        if (el && msgEl) {
+          el.style.display = 'block';
+          msgEl.textContent = 'Unhandled Promise Rejection:\n' + (e.reason && e.reason.stack ? e.reason.stack : e.reason);
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
