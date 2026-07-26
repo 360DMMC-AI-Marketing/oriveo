@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Phone, Clock,
   Plus, User, X, AlertCircle, CheckCircle, ArrowRight, TrendingUp,
-  Activity, Loader2, Repeat, Pencil, CheckCircle2, Link2Off
+  Activity, Loader2, Repeat, Pencil, CheckCircle2, Link2Off, ClipboardList, Save, Star
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,12 +28,25 @@ export default function CalendarSchedule() {
   const [addForm, setAddForm] = useState({ patient: "", patientName: "", questionnaire: "", time: "09:00", language: "en", recurringMonthly: false, remindAppointment: false, nextAppointmentDate: "", nextAppointmentPlace: "" });
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [instrEditPatient, setInstrEditPatient] = useState<string | null>(null);
+  const [instrDraft, setInstrDraft] = useState({ templateId: "", templateName: "", notes: "" });
+  const [hoveredPatientInstr, setHoveredPatientInstr] = useState<{ patient: any; x: number; y: number } | null>(null);
 
   const { data: callsData, isLoading: callsLoading } = useQuery({ queryKey: ["calls"], queryFn: () => api.get("/calls").then((r) => r.data) });
   const { data: patientsData } = useQuery({ queryKey: ["patients"], queryFn: () => api.get("/patients").then((r) => r.data) });
 
   const calls = callsData?.calls || [];
   const patients = patientsData?.patients || [];
+
+  const updatePatientInstr = useMutation({
+    mutationFn: ({ patientId, ...body }: any) => api.put(`/patients/${patientId}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast.success("Call instructions saved");
+      setInstrEditPatient(null);
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to save"),
+  });
 
   const filteredPatients = patients.filter((p: any) =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
@@ -304,7 +317,20 @@ export default function CalendarSchedule() {
 
   const selectedCalPatientInstr = getPatientCallInstr(addForm.patient);
 
-  const renderedCallRows = useMemo(() => {
+  const getPatientObj = (patientRef: any) => {
+    if (!patientRef) return null;
+    if (typeof patientRef === "object") return patientRef;
+    return patients.find((p: any) => p._id === patientRef) || null;
+  };
+
+  const getPatientInstr = (patientRef: any) => {
+    const p = getPatientObj(patientRef);
+    if (!p?.callInstructions?.templateName) return null;
+    if (p.callInstructions.expiresAt && new Date(p.callInstructions.expiresAt) < new Date()) return null;
+    return { patient: p, ci: p.callInstructions };
+  };
+
+  const renderedCallRows = (() => {
     if (sortedCalls.length === 0) {
       return (
         <div className="flex flex-col items-center py-12 text-gray-400">
@@ -315,92 +341,156 @@ export default function CalendarSchedule() {
     }
     return sortedCalls.map((call: any) => {
       const time = call.scheduledAt ? formatTime(call.scheduledAt) : "—";
+      const patientInstr = getPatientInstr(call.patient);
+      const patientObj = getPatientObj(call.patient);
+      const isInstrEditing = instrEditPatient === patientObj?._id;
       return (
-        <div key={call._id} className={`flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors group ${call.status === "completed" ? "opacity-60" : ""}`}>
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${getStatusBg(call.status)}`}>
-            {getCallStatusIcon(call.status)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-medium truncate ${call.status === "completed" ? "text-gray-400 line-through" : "text-gray-900"}`}>{getPatientName(call.patient)}</span>
-              {getSeverityBadge(call.aiSeverityScore)}
+        <div key={call._id} className={`p-3 hover:bg-gray-50 transition-colors group ${call.status === "completed" ? "opacity-60" : ""}`}>
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${getStatusBg(call.status)}`}>
+              {getCallStatusIcon(call.status)}
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-              <span>{time}</span>
-              <span>·</span>
-              <span className="capitalize">{call.status}</span>
-              {call.questionnaire?.title && <><span>·</span><span className="truncate">{call.questionnaire.title}</span></>}
-            </div>
-            {call.nextAppointmentDate && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <CalendarIcon className="h-3 w-3 text-primary" />
-                <span className="text-[10px] text-primary font-medium">
-                  Appt: {new Date(call.nextAppointmentDate).toLocaleDateString()}{call.nextAppointmentPlace ? ` @ ${call.nextAppointmentPlace}` : ""}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-sm font-medium truncate ${call.status === "completed" ? "text-gray-400 line-through" : "text-gray-900"}`}
+                  onMouseEnter={(e) => {
+                    if (patientInstr) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoveredPatientInstr({ patient: patientInstr.patient, x: rect.left, y: rect.bottom + 4 });
+                    }
+                  }}
+                  onMouseLeave={() => setHoveredPatientInstr(null)}
+                >
+                  {getPatientName(call.patient)}
                 </span>
+                {patientInstr && <Star className="h-3 w-3 text-amber-500 shrink-0" />}
+                {getSeverityBadge(call.aiSeverityScore)}
               </div>
-            )}
-          </div>
-          <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <a href={`/calls/${call._id}`}>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </a>
-            {call.status !== "completed" && call.status !== "in-progress" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-gray-400 hover:text-primary"
-                onClick={() => {
-                  const pid = typeof call.patient === "object" ? call.patient._id : call.patient;
-                  const pname = typeof call.patient === "object" ? call.patient.name : getPatientName(call.patient);
-                  const t = call.scheduledAt ? new Date(call.scheduledAt).toTimeString().slice(0, 5) : "09:00";
-                  setAddForm({ patient: pid, patientName: pname, questionnaire: call.questionnaire?.title?.replace(" Checkup", "") || "", time: t, language: call.language || "en", recurringMonthly: false, remindAppointment: !!call.nextAppointmentDate, nextAppointmentDate: call.nextAppointmentDate ? new Date(call.nextAppointmentDate).toISOString().split("T")[0] : "", nextAppointmentPlace: call.nextAppointmentPlace || "" });
-                  setSearch(pname);
-                  setEditingCall(call);
-                  setShowAdd(true);
-                }}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {call.status === "pending" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-primary"
-                onClick={() => {
-                  api.post(`/calls/${call._id}/recall`).then(() => {
-                    queryClient.invalidateQueries({ queryKey: ["calls"] });
-                    toast.success("Call started");
-                  }).catch(() => toast.error("Failed"));
-                }}
-              >
-                <Phone className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {call.status !== "completed" && call.status !== "in-progress" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
-                onClick={() => {
-                  if (window.confirm("Remove this scheduled call?")) {
-                    api.delete(`/calls/${call._id}`).then(() => {
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                <span>{time}</span>
+                <span>·</span>
+                <span className="capitalize">{call.status}</span>
+                {call.questionnaire?.title && <><span>·</span><span className="truncate">{call.questionnaire.title}</span></>}
+              </div>
+            </div>
+            <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              {patientObj && (user?.role === "admin" || user?.role === "doctor") && (
+                <Button
+                  variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-400 hover:text-primary"
+                  title={patientInstr ? "Edit call instructions" : "Add call instructions"}
+                  onClick={() => {
+                    if (isInstrEditing) { setInstrEditPatient(null); return; }
+                    setInstrDraft({
+                      templateId: patientInstr?.ci.templateId || "",
+                      templateName: patientInstr?.ci.templateName || "",
+                      notes: patientInstr?.ci.notes || "",
+                    });
+                    setInstrEditPatient(patientObj._id);
+                  }}
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <a href={`/calls/${call._id}`}>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </a>
+              {call.status !== "completed" && call.status !== "in-progress" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-gray-400 hover:text-primary"
+                  onClick={() => {
+                    const pid = typeof call.patient === "object" ? call.patient._id : call.patient;
+                    const pname = typeof call.patient === "object" ? call.patient.name : getPatientName(call.patient);
+                    const t = call.scheduledAt ? new Date(call.scheduledAt).toTimeString().slice(0, 5) : "09:00";
+                    setAddForm({ patient: pid, patientName: pname, questionnaire: call.questionnaire?.title?.replace(" Checkup", "") || "", time: t, language: call.language || "en", recurringMonthly: false, remindAppointment: !!call.nextAppointmentDate, nextAppointmentDate: call.nextAppointmentDate ? new Date(call.nextAppointmentDate).toISOString().split("T")[0] : "", nextAppointmentPlace: call.nextAppointmentPlace || "" });
+                    setSearch(pname);
+                    setEditingCall(call);
+                    setShowAdd(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {call.status === "pending" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-primary"
+                  onClick={() => {
+                    api.post(`/calls/${call._id}/recall`).then(() => {
                       queryClient.invalidateQueries({ queryKey: ["calls"] });
-                      toast.success("Call removed");
-                    }).catch(() => toast.error("Failed to remove call"));
-                  }
-                }}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            )}
+                      toast.success("Call started");
+                    }).catch(() => toast.error("Failed"));
+                  }}
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {call.status !== "completed" && call.status !== "in-progress" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                  onClick={() => {
+                    if (window.confirm("Remove this scheduled call?")) {
+                      api.delete(`/calls/${call._id}`).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ["calls"] });
+                        toast.success("Call removed");
+                      }).catch(() => toast.error("Failed to remove call"));
+                    }
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
+          {isInstrEditing && patientObj && (
+            <div className="mt-2 ml-12 bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">Call Instructions for {patientObj.name}</span>
+                <button onClick={() => setInstrEditPatient(null)} className="text-gray-400 hover:text-gray-600"><X className="h-3.5 w-3.5" /></button>
+              </div>
+              <select value={instrDraft.templateId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) { setInstrDraft({ ...instrDraft, templateId: "", templateName: "" }); return; }
+                  const t = allCalTemplates.find((t) => t.id === val);
+                  if (t) setInstrDraft({ ...instrDraft, templateId: val, templateName: t.condition });
+                }}
+                className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm">
+                <option value="">Select template...</option>
+                {allCalTemplates.map((t) => <option key={t.id} value={t.id}>{t.condition}</option>)}
+              </select>
+              <textarea value={instrDraft.notes} onChange={(e) => setInstrDraft({ ...instrDraft, notes: e.target.value })}
+                rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm"
+                placeholder="Notes for staff (e.g., 'Add questions about insulin adherence')..." />
+              <div className="flex gap-2">
+                <Button size="sm" className="h-7 text-xs"
+                  disabled={!instrDraft.templateId || updatePatientInstr.isPending}
+                  onClick={() => updatePatientInstr.mutate({
+                    patientId: patientObj._id,
+                    callInstructions: { ...instrDraft, setBy: user?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+                  })}>
+                  <Save className="h-3 w-3 mr-1" /> Save
+                </Button>
+                {patientInstr && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-red-500"
+                    onClick={() => updatePatientInstr.mutate({ patientId: patientObj._id, callInstructions: null })}>
+                    <X className="h-3 w-3 mr-1" /> Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       );
     });
-  }, [sortedCalls, getPatientName, getStatusBg, getCallStatusIcon, getSeverityBadge, formatTime]);
+  })();
 
   return (
     <div className="space-y-6">
@@ -634,6 +724,36 @@ export default function CalendarSchedule() {
       {callsLoading && (
         <div className="flex items-center justify-center py-4 text-gray-400 text-sm">
           <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading calls...
+        </div>
+      )}
+
+      {hoveredPatientInstr && (
+        <div
+          className="fixed z-50 w-72 rounded-lg border border-amber-200 bg-white shadow-xl p-3 pointer-events-none"
+          style={{ left: Math.min(hoveredPatientInstr.x, window.innerWidth - 300), top: hoveredPatientInstr.y }}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <Star className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-xs font-semibold text-gray-900">Dr. Instructions</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 w-14 shrink-0">Template:</span>
+              <span className="text-xs font-medium text-primary">{hoveredPatientInstr.ci.templateName}</span>
+            </div>
+            {hoveredPatientInstr.ci.notes && (
+              <div className="flex items-start gap-1.5">
+                <span className="text-[10px] text-gray-400 w-14 shrink-0">Notes:</span>
+                <span className="text-xs text-gray-700">{hoveredPatientInstr.ci.notes}</span>
+              </div>
+            )}
+            {hoveredPatientInstr.ci.expiresAt && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 w-14 shrink-0">Expires:</span>
+                <span className="text-[10px] text-amber-600">{new Date(hoveredPatientInstr.ci.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

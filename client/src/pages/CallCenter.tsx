@@ -97,6 +97,7 @@ export default function CallCenter() {
   // ===== History state =====
   const [historySearch, setHistorySearch] = useState("");
   const [historyTab, setHistoryTab] = useState("all");
+  const [hoveredInstr, setHoveredInstr] = useState<{ patient: any; ci: any; x: number; y: number } | null>(null);
 
   // ===== Shared queries =====
   const { data: patientsData } = useQuery({
@@ -507,11 +508,22 @@ export default function CallCenter() {
                           } else {
                             setSelectedQId(""); setSelectedQuestions([]);
                           }
+                          setHoveredInstr(null);
                         }}
+                          onMouseEnter={(e) => {
+                            if (p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date())) {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredInstr({ patient: p, ci: p.callInstructions, x: rect.right + 4, y: rect.top });
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredInstr(null)}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between border-b last:border-0">
-                          <div>
+                          <div className="flex items-center gap-1.5">
                             <span className="font-medium">{p.name}</span>
-                            <span className="ml-2 text-xs text-muted-foreground">{p.phone}</span>
+                            {p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date()) && (
+                              <Star className="h-3 w-3 text-amber-500 shrink-0" />
+                            )}
+                            <span className="ml-1 text-xs text-muted-foreground">{p.phone}</span>
                           </div>
                           {p.language && p.language !== "en" && (
                             <span className="text-[10px] uppercase text-muted-foreground/60 border rounded px-1">{p.language}</span>
@@ -1011,6 +1023,36 @@ export default function CallCenter() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {hoveredInstr && (
+        <div
+          className="fixed z-50 w-72 rounded-lg border border-amber-200 bg-white shadow-xl p-3 pointer-events-none"
+          style={{ left: hoveredInstr.x, top: Math.min(hoveredInstr.y, window.innerHeight - 120) }}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <Star className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-xs font-semibold text-gray-900">Dr. Instructions</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 w-14 shrink-0">Template:</span>
+              <span className="text-xs font-medium text-primary">{hoveredInstr.ci.templateName}</span>
+            </div>
+            {hoveredInstr.ci.notes && (
+              <div className="flex items-start gap-1.5">
+                <span className="text-[10px] text-gray-400 w-14 shrink-0">Notes:</span>
+                <span className="text-xs text-gray-700">{hoveredInstr.ci.notes}</span>
+              </div>
+            )}
+            {hoveredInstr.ci.expiresAt && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 w-14 shrink-0">Expires:</span>
+                <span className="text-[10px] text-amber-600">{new Date(hoveredInstr.ci.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

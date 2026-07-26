@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2, PawPrint,
+  Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2, PawPrint, Star,
 } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
@@ -25,6 +25,7 @@ export default function Patients() {
   const [expandGroup, setExpandGroup] = useState<string | null>(null);
   const [groupSearch, setGroupSearch] = useState("");
   const [patientType, setPatientType] = useState<"human" | "pet">(isVet ? "pet" : "human");
+  const [hoveredInstr, setHoveredInstr] = useState<{ patient: any; x: number; y: number } | null>(null);
   const [patientForm, setPatientForm] = useState({
     name: "", phone: "", email: "", language: "en", primaryDiagnosis: "", chronicConditions: "",
     allergies: "", currentMedications: "", pastSurgeries: "", medicalNotes: "", assignedDoctor: "",
@@ -375,10 +376,21 @@ export default function Patients() {
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {(search ? filtered : ungrouped).map((p: any) => (
                 <div key={p._id} className="flex items-center justify-between rounded-lg border px-3 py-2 hover:bg-gray-50">
-                  <Link to={`/patients/${p._id}`} className="min-w-0 flex-1">
+                  <Link to={`/patients/${p._id}`} className="min-w-0 flex-1"
+                    onMouseEnter={(e) => {
+                      if (p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date())) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredInstr({ patient: p, x: rect.left, y: rect.bottom + 4 });
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredInstr(null)}
+                  >
                     <div className="text-sm font-medium hover:text-primary truncate flex items-center gap-1.5">
                       {p.patientType === "pet" ? <PawPrint className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
                       <span>{p.name}</span>
+                      {p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date()) && (
+                        <Star className="h-3 w-3 text-amber-500 shrink-0" />
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       {p.patientType === "pet" ? (
@@ -419,6 +431,36 @@ export default function Patients() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {hoveredInstr && (
+        <div
+          className="fixed z-50 w-72 rounded-lg border border-amber-200 bg-white shadow-xl p-3 pointer-events-none"
+          style={{ left: Math.min(hoveredInstr.x, window.innerWidth - 300), top: hoveredInstr.y }}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <Star className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-xs font-semibold text-gray-900">Dr. Instructions</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 w-14 shrink-0">Template:</span>
+              <span className="text-xs font-medium text-primary">{hoveredInstr.patient.callInstructions.templateName}</span>
+            </div>
+            {hoveredInstr.patient.callInstructions.notes && (
+              <div className="flex items-start gap-1.5">
+                <span className="text-[10px] text-gray-400 w-14 shrink-0">Notes:</span>
+                <span className="text-xs text-gray-700">{hoveredInstr.patient.callInstructions.notes}</span>
+              </div>
+            )}
+            {hoveredInstr.patient.callInstructions.expiresAt && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 w-14 shrink-0">Expires:</span>
+                <span className="text-[10px] text-amber-600">{new Date(hoveredInstr.patient.callInstructions.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
