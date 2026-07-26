@@ -8,13 +8,14 @@ export function getSocket(): Socket | null {
 
 export function connectSocket(token: string): Socket {
   if (socket?.connected) return socket;
-  const port = import.meta.env.VITE_SOCKET_PORT || 5000;
+  const port = import.meta.env.VITE_SOCKET_PORT || (window.location.port || (window.location.protocol === "https:" ? "443" : "80"));
   let userId = "";
   try {
     const userData = JSON.parse(localStorage.getItem("oriveo_user") || "{}");
     userId = userData._id || "";
   } catch { /* localStorage corrupted, proceed without userId */ }
-  socket = io(`ws://${window.location.hostname}:${port}`, {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  socket = io(`${protocol}//${window.location.hostname}:${port}`, {
     auth: { token },
     query: { userId },
     transports: ["websocket", "polling"],
