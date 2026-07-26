@@ -32,7 +32,7 @@ router.get("/settings", async (req, res) => {
 
 router.put("/settings", requireOrgAdmin, async (req, res) => {
   try {
-    const allowed = ["name", "slug", "logo", "brandName", "phone", "address", "settings"];
+    const allowed = ["name", "slug", "logo", "brandName", "phone", "address", "settings", "businessHours"];
     const update = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) update[key] = req.body[key];

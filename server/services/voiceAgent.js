@@ -13,6 +13,22 @@ function getOpenAI() {
   return openai;
 }
 
+const DAY_MAP = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
+
+export function isWithinBusinessHours(businessHours, now = new Date()) {
+  if (!businessHours?.enabled) return true;
+  const tz = businessHours.timezone || "America/New_York";
+  const localNow = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "numeric", hour12: false }).format(now);
+  const [h, m] = localNow.split(":").map(Number);
+  const minutesNow = h * 60 + m;
+  const dayKey = DAY_MAP[now.getDay()];
+  const day = businessHours.days?.[dayKey];
+  if (!day || day.closed) return false;
+  const [oh, om] = (day.open || "09:00").split(":").map(Number);
+  const [ch, cm] = (day.close || "17:00").split(":").map(Number);
+  return minutesNow >= oh * 60 + om && minutesNow < ch * 60 + cm;
+}
+
 const MEDICAL_SYSTEM_PROMPT = `You are a warm, compassionate medical assistant calling a patient on behalf of their healthcare provider — like an experienced nurse who has been in practice for years. Your entire purpose is to have a natural, human conversation that feels exactly like a real doctor-patient phone call.
 
 IMPORTANT DISCLOSURE — YOU MUST SAY THIS AT THE START OF EVERY CALL:
@@ -180,6 +196,10 @@ export class VoiceAgent {
     this.patientName = options.patientName || "";
     this.patientInfo = options.patientInfo || "";
     this.practiceName = options.practiceName || process.env.PRACTICE_NAME || "your healthcare provider";
+    this.businessHours = options.businessHours || null;
+    this.afterHoursAction = options.afterHoursAction || "take-message";
+    this.afterHoursTransferNumber = options.afterHoursTransferNumber || "";
+    this.afterHoursClosedMessage = options.afterHoursClosedMessage || "";
     this.callStarted = false;
     this.identityVerified = false;
     this.consentRecorded = false;
@@ -268,6 +288,24 @@ export class VoiceAgent {
 
     if (patientContext) {
       messages.push({ role: "system", content: patientContext });
+    }
+
+    if (this.businessHours?.enabled) {
+      const isOpen = isWithinBusinessHours(this.businessHours);
+      if (!isOpen) {
+        if (this.afterHoursAction === "transfer") {
+          messages.push({
+            role: "system",
+            content: "IMPORTANT: The clinic is currently CLOSED. This is after-hours. After completing the conversation, offer to transfer the patient to the on-call line. If they agree, use the transfer_to_human function.",
+          });
+        } else {
+          const closedMsg = this.afterHoursClosedMessage || `Hello, ${this.practiceName} is currently closed. I can take a message and someone will get back to you on the next business day.`;
+          messages.push({
+            role: "system",
+            content: `IMPORTANT: The clinic is currently CLOSED (after-hours). After greeting the patient, explain that the clinic is closed, deliver this message: "${closedMsg}", then collect their reason for calling, callback number, and the best time to call back. Use the update_patient_info function to log their callback request.`,
+          });
+        }
+      }
     }
 
     if (this.questions.length > 0) {

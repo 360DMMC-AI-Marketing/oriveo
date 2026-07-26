@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Phone, Users, Megaphone, ShieldCheck, BarChart3, ClipboardList, Calendar, UserPlus, LayoutDashboard, Search, ChevronDown, ScrollText, Siren, Bell, PhoneForwarded, Eye, DollarSign, Building2, Mail, Lock, Database, Download, Trash2, CheckSquare } from "lucide-react";
+import { BookOpen, Phone, Users, Megaphone, ShieldCheck, BarChart3, ClipboardList, Calendar, UserPlus, LayoutDashboard, Search, ChevronDown, ScrollText, Siren, Bell, PhoneForwarded, Eye, DollarSign, Building2, Mail, Lock, Database, Download, Trash2, CheckSquare, Clock } from "lucide-react";
 
 const sections = [
   {
@@ -186,6 +186,22 @@ const sections = [
       "No-Show Rate card on Dashboard shows the percentage of no-shows out of valid appointments (excluding cancellations).",
       "Estimated Savings card calculates the projected savings from AI-driven reminders reducing no-shows at $200 per no-show.",
       "The No Show filter tab on the Appointments page shows all no-show appointments for review.",
+    ],
+  },
+  {
+    icon: Clock,
+    title: "Business Hours & After-Hours",
+    desc: "Define when your AI should transfer vs take messages based on your clinic's operating hours.",
+    steps: [
+      "Go to Clinic Dashboard > Settings tab > Business Hours section.",
+      "Toggle the switch on to enable business hours.",
+      "Set your timezone — this controls how open/close times are interpreted.",
+      "Set open and close hours for each day of the week. Toggle days as Open or Closed.",
+      "AI answers calls 24/7 by default, but after-hours behavior is controlled below.",
+      "Choose an after-hours action: 'Take a message' (AI collects info and logs a callback request) or 'Transfer to number' (forward the call to an on-call line).",
+      "If using transfer, enter the on-call phone number.",
+      "Optionally set a custom closed message that callers hear during after-hours.",
+      "Click 'Save Hours' to apply your schedule.",
     ],
   },
   {

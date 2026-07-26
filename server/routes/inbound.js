@@ -2,6 +2,7 @@ import { Router } from "express";
 import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import Organization from "../models/Organization.js";
+import { isWithinBusinessHours } from "../services/voiceAgent.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -59,8 +60,36 @@ router.post("/inbound", validateTwilioSignature, async (req, res) => {
       language: foundPatient?.language || "en",
     });
 
-    const org = orgId ? await Organization.findById(orgId).select("name") : null;
+    const org = orgId ? await Organization.findById(orgId).select("name businessHours") : null;
     const practiceName = org?.name || "your healthcare provider";
+    const bh = org?.businessHours;
+
+    if (bh?.enabled && !isWithinBusinessHours(bh)) {
+      console.log(`[inbound] After-hours — org ${orgId}`);
+      if (bh.afterHoursAction === "transfer" && bh.transferNumber) {
+        const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna-Neural">${escapeXml(`${practiceName} is currently closed. Transferring you to our on-call line now. Please hold.`)}</Say>
+  <Dial>${escapeXml(bh.transferNumber)}</Dial>
+  <Say voice="Polly.Joanna-Neural">Sorry, the transfer could not be completed. Please try again during business hours.</Say>
+  <Hangup/>
+</Response>`;
+        res.type("text/xml").send(twiml);
+        await Call.findByIdAndUpdate(call._id, { status: "transferred", completedAt: new Date() });
+        return;
+      }
+      const closedMsg = bh.closedMessage || `${practiceName} is currently closed. Our business hours are listed on our website. Please leave a message with your name, phone number, and reason for calling, and we will call you back on the next business day.`;
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna-Neural">${escapeXml(closedMsg)}</Say>
+  <Record maxLength="120" action="${process.env.SERVER_URL || `http://${req.hostname}:${process.env.PORT || 5000}`}/api/inbound/after-hours-recording?callId=${call._id}" transcribe="true" transcribeCallback="${process.env.SERVER_URL || `http://${req.hostname}:${process.env.PORT || 5000}`}/api/inbound/after-hours-transcription?callId=${call._id}"/>
+  <Say voice="Polly.Joanna-Neural">Thank you for your message. We will call you back on the next business day. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+      res.type("text/xml").send(twiml);
+      return;
+    }
+
     const greeting = foundPatient
       ? `Hello ${foundPatient.name}. This is an automated health checkup from ${practiceName}. Please hold while we begin.`
       : `Welcome to ${practiceName}. Please hold while our virtual assistant connects with you.`;
@@ -92,5 +121,46 @@ router.post("/inbound", validateTwilioSignature, async (req, res) => {
 function escapeXml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
+
+router.post("/after-hours-recording", validateTwilioSignature, async (req, res) => {
+  try {
+    const { callId } = req.query;
+    const { RecordingUrl, RecordingSid, RecordingDuration } = req.body;
+    if (callId) {
+      await Call.findByIdAndUpdate(callId, {
+        recordingUrl: RecordingUrl || "",
+        twilioRecordingSid: RecordingSid || "",
+        recordingDuration: RecordingDuration ? parseInt(RecordingDuration) : undefined,
+        status: "completed",
+        completedAt: new Date(),
+        outcome: "after-hours-message",
+        notes: "After-hours voicemail recorded",
+      });
+      console.log(`[inbound] After-hours recording saved for call ${callId}: ${RecordingSid}`);
+    }
+    res.type("text/xml").send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
+  } catch (err) {
+    console.error("[inbound] after-hours-recording error:", err.message);
+    res.type("text/xml").send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
+  }
+});
+
+router.post("/after-hours-transcription", validateTwilioSignature, async (req, res) => {
+  try {
+    const { callId } = req.query;
+    const { TranscriptionText, TranscriptionStatus } = req.body;
+    if (callId && TranscriptionStatus === "completed" && TranscriptionText) {
+      await Call.findByIdAndUpdate(callId, {
+        transcript: [{ role: "caller", text: TranscriptionText, timestamp: new Date() }],
+        aiSummary: `After-hours voicemail: ${TranscriptionText}`,
+      });
+      console.log(`[inbound] After-hours transcription saved for call ${callId}`);
+    }
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("[inbound] after-hours-transcription error:", err.message);
+    res.sendStatus(200);
+  }
+});
 
 export default router;
