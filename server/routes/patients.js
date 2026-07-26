@@ -61,10 +61,16 @@ router.post("/import", authorize("admin"), csvUpload.single("file"), async (req,
     const records = parse(raw, { columns: true, skip_empty_lines: true, trim: true });
     if (records.length === 0) return res.status(400).json({ message: "CSV file is empty" });
     const results = { imported: 0, skipped: 0, errors: [] };
+    let orgSpecialty = "general-practice";
+    if (req.user.organization) {
+      const org = await (await import("../models/Organization.js")).default.findById(req.user.organization).lean();
+      if (org?.specialty) orgSpecialty = org.specialty;
+    }
     for (const row of records) {
       try {
         if (!row.name || !row.phone) { results.skipped++; results.errors.push(`Row ${results.imported + results.skipped}: name and phone required`); continue; }
-        await Patient.create({ ...row, organization: req.user.organization || null, createdBy: req.user._id });
+        delete row.specialty;
+        await Patient.create({ ...row, organization: req.user.organization || null, createdBy: req.user._id, specialty: orgSpecialty });
         results.imported++;
       } catch (err) {
         results.skipped++;

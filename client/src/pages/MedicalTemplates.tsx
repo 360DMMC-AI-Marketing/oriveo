@@ -61,9 +61,9 @@ export default function MedicalTemplates() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const orgSpec = user?.organization?.specialty as string | undefined;
-  const availableTabs: ("human" | "veterinary" | "dental")[] = !orgSpec ? ["human", "veterinary", "dental"] :
-    orgSpec === "veterinary" ? ["veterinary"] :
-    orgSpec === "dentistry" || orgSpec === "dental" ? ["dental"] :
+  const clinicType = user?.organization?.clinicType || "human";
+  const availableTabs: ("human" | "veterinary" | "dental")[] = clinicType === "veterinary" ? ["veterinary"] :
+    clinicType === "dental" ? ["dental"] :
     ["human"];
   const defaultTab = availableTabs.includes("human") ? "human" : availableTabs[0];
   const [templateTab, setTemplateTab] = useState<"human" | "veterinary" | "dental">(defaultTab);
@@ -80,7 +80,13 @@ export default function MedicalTemplates() {
 
   const activeTemplates = orgSpec
     ? rawTemplates.filter((t: any) => t.specialties?.includes(orgSpec))
-    : rawTemplates;
+    : rawTemplates.filter((t: any) => !t.specialties?.length || t.specialties.some((s: string) => {
+        const vetIds = ["small-animal","equine","exotic-pets","large-animal","mixed-animal","vet-specialty"];
+        const dentalIds = ["general-dentistry","orthodontics","endodontics","periodontics","oral-surgery","prosthodontics","pediatric-dentistry"];
+        if (clinicType === "veterinary") return vetIds.includes(s);
+        if (clinicType === "dental") return dentalIds.includes(s);
+        return !vetIds.includes(s) && !dentalIds.includes(s);
+      }));
 
   const categories = [...new Set(activeTemplates.map((t: any) => t.category))] as string[];
 

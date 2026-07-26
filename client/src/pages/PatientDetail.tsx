@@ -148,11 +148,12 @@ export default function PatientDetail() {
   const canEditCallInstr = currentUser?.role === "admin" || currentUser?.role === "doctor";
   const orgSpec = currentUser?.organization?.specialty as string | undefined;
 
-  const filteredHumanTemplates = medicalTemplates.filter((t: any) => !orgSpec || orgSpec === "general-practice" || (t.specialties?.includes(orgSpec)));
-  const filteredDentalTemplates = dentalTemplates.filter((t: any) => !orgSpec || orgSpec === "general-practice" || (t.specialties?.includes(orgSpec)));
-  const filteredVetTemplates = veterinaryTemplates.filter((t: any) => !orgSpec || orgSpec === "general-practice" || (t.specialties?.includes(orgSpec)));
-  const callInstrTemplates = orgSpec === "veterinary" ? filteredVetTemplates
-    : orgSpec === "dentistry" || orgSpec === "dental" ? filteredDentalTemplates
+  const clinicType = currentUser?.organization?.clinicType || "human";
+  const filteredHumanTemplates = orgSpec ? medicalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "human" ? medicalTemplates : []);
+  const filteredDentalTemplates = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "dental" ? dentalTemplates : []);
+  const filteredVetTemplates = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "veterinary" ? veterinaryTemplates : []);
+  const callInstrTemplates = clinicType === "veterinary" ? filteredVetTemplates
+    : clinicType === "dental" ? filteredDentalTemplates
     : [...filteredHumanTemplates, ...filteredDentalTemplates, ...filteredVetTemplates];
 
   const questionnaires = questionnairesData?.questionnaires || [];

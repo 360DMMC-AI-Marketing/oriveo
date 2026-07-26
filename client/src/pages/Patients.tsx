@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Patients() {
   const { user } = useAuth();
-  const isVet = user?.organization?.specialty === "veterinary";
+  const isVet = user?.organization?.clinicType === "veterinary";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");

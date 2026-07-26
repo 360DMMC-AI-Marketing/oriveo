@@ -92,7 +92,8 @@ export const createPatient = async (req, res) => {
       const org = await mongoose.model("Organization").findById(req.user.organization).lean();
       orgSpecialty = org?.specialty;
     }
-    const patient = await Patient.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: req.body.specialty || orgSpecialty || "general" });
+    delete req.body.specialty;
+    const patient = await Patient.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: orgSpecialty || "general-practice" });
     syncKbNotes(patient);
     const populated = await patient.populate("assignedDoctor", "name email");
     await cacheDel("patients:*");
@@ -104,6 +105,7 @@ export const createPatient = async (req, res) => {
 
 export const updatePatient = async (req, res) => {
   try {
+    delete req.body.specialty;
     const patient = await Patient.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, req.body, {
       new: true,
       runValidators: true,

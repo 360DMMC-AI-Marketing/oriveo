@@ -302,9 +302,10 @@ export default function CalendarSchedule() {
     return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : medicalTemplates;
-  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : dentalTemplates;
-  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
+  const clinicType = user?.organization?.clinicType || "human";
+  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : (clinicType === "human" ? medicalTemplates : []);
+  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "dental" ? dentalTemplates : []);
+  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "veterinary" ? veterinaryTemplates : []);
   const allCalTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
 
   const getPatientCallInstr = (patientId: any) => {

@@ -58,9 +58,10 @@ export default function AIVoiceAgent() {
   const activeCalls = callsData?.calls || [];
   const savedQuestionnaires = questionnairesData?.questionnaires || [];
 
-  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : medicalTemplates;
-  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : dentalTemplates;
-  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : veterinaryTemplates;
+  const clinicType = user?.organization?.clinicType || "human";
+  const filteredMedical = orgSpec ? medicalTemplates.filter(t => t.specialties?.includes(orgSpec)) : (clinicType === "human" ? medicalTemplates : []);
+  const filteredDental = orgSpec ? dentalTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "dental" ? dentalTemplates : []);
+  const filteredVet = orgSpec ? veterinaryTemplates.filter((t: any) => t.specialties?.includes(orgSpec)) : (clinicType === "veterinary" ? veterinaryTemplates : []);
   const allTemplates = [...filteredMedical, ...filteredDental, ...filteredVet];
 
   // Handle URL params (e.g. from Appointments "Call" button)
