@@ -8,19 +8,20 @@ import { AnimatePresence, motion } from "framer-motion";
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
-          <div className="max-w-md rounded-xl bg-white p-8 shadow-lg text-center">
-            <div className="text-4xl mb-4">⚠️</div>
-            <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-            <p className="text-gray-500 mb-4">An unexpected error occurred. Please try refreshing the page.</p>
-            <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700">
-              Refresh Page
-            </button>
-          </div>
+        <div style={{fontFamily:"monospace",padding:20,background:"#fff",color:"#000",whiteSpace:"pre-wrap",position:"fixed",inset:0,zIndex:99999,overflow:"auto"}}>
+          <h2 style={{color:"red",marginBottom:8}}>React ErrorBoundary</h2>
+          <p style={{color:"#666",marginBottom:16}}>{this.state.error?.message}</p>
+          <pre style={{fontSize:12,background:"#f5f5f5",padding:12,borderRadius:8,overflow:"auto"}}>{this.state.error?.stack}</pre>
+          <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+            style={{marginTop:16,padding:"8px 16px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,cursor:"pointer"}}>
+            Refresh Page
+          </button>
         </div>
       );
     }
