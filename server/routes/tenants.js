@@ -130,6 +130,19 @@ router.put("/users/:userId/deactivate", requireOrgAdmin, async (req, res) => {
   }
 });
 
+router.put("/users/:userId/activate", requireOrgAdmin, async (req, res) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.userId, organization: req.user.organization },
+      { isActive: true },
+      { new: true }
+    ).select("name email role isActive");
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get("/billing", async (req, res) => {
   try {
     const sub = await Subscription.findOne({ organization: req.user.organization }).lean();

@@ -113,6 +113,12 @@ export default function ClinicUsers() {
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),
   });
 
+  const activateUser = useMutation({
+    mutationFn: (userId: string) => api.put(`/org/users/${userId}/activate`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["org", "users"] }); toast.success("User activated"); },
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message),
+  });
+
   const users: any[] = data?.users || [];
   const departments = activeDepts;
 
@@ -338,6 +344,11 @@ export default function ClinicUsers() {
                                     </Button>
                                   </>
                                 )}
+                                {!isSelf && currentUser?.role === "admin" && !u.isActive && (
+                                  <Button size="sm" variant="outline" className="text-xs text-green-600" onClick={() => activateUser.mutate(u._id)}>
+                                    Activate
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           );
@@ -404,6 +415,11 @@ export default function ClinicUsers() {
                               Deactivate
                             </Button>
                           </>
+                        )}
+                        {!isSelf && currentUser?.role === "admin" && !u.isActive && (
+                          <Button size="sm" variant="outline" className="text-xs text-green-600" onClick={() => activateUser.mutate(u._id)}>
+                            Activate
+                          </Button>
                         )}
                       </div>
                     </div>
