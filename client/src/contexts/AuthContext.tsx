@@ -50,9 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(data.user);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          localStorage.removeItem("oriveo_token");
+          localStorage.removeItem("oriveo_user");
+          setToken(null);
+          setUser(null);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -63,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const signup = async (signupData: any) => {
+  const signup = async (signupData: Record<string, unknown>) => {
     const { data } = await api.post("/auth/signup", signupData);
     localStorage.setItem("oriveo_token", data.token);
     localStorage.setItem("oriveo_user", JSON.stringify(data.user));

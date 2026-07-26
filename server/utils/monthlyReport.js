@@ -8,6 +8,10 @@ import { logger } from "./logger.js";
 
 let intervalHandle = null;
 
+function escHtml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 export async function generateMonthlyReports() {
   try {
     const now = new Date();
@@ -56,7 +60,7 @@ export async function generateMonthlyReports() {
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1f2937;">
   <div style="max-width: 600px; margin: 0 auto;">
-    <h2 style="font-size: 22px; margin-bottom: 4px;">Monthly Report — ${org.name}</h2>
+    <h2 style="font-size: 22px; margin-bottom: 4px;">Monthly Report — ${escHtml(org.name)}</h2>
     <p style="color: #6b7280;">${firstOfMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
     <table style="width: 100%; border-collapse: collapse;">

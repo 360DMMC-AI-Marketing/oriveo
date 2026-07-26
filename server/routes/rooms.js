@@ -84,9 +84,14 @@ router.post("/", authorize("admin", "doctor"), async (req, res) => {
 
 router.put("/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
+    const allowedFields = ["name","number","type","floor","status","capacity","equipment","notes","assignedStaff","currentPatient","currentProvider"];
+    const sanitized = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) sanitized[key] = req.body[key];
+    }
     const room = await Room.findOneAndUpdate(
       { _id: req.params.id, organization: req.user.organization },
-      req.body,
+      sanitized,
       { new: true, runValidators: true }
     );
     if (!room) return res.status(404).json({ message: "Room not found" });

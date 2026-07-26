@@ -3,7 +3,7 @@ import { z } from "zod";
 export const inviteSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email address"),
-  role: z.enum(["admin", "doctor", "nurse", "receptionist", "staff", "user"]),
+  role: z.enum(["admin", "doctor", "nurse", "receptionist"]),
 });
 
 export const loginSchema = z.object({
@@ -14,8 +14,10 @@ export const loginSchema = z.object({
 export const signupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "doctor", "nurse", "receptionist", "staff", "user"]).optional(),
+  password: z.string().min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  role: z.enum(["admin", "doctor", "nurse", "receptionist"]).optional(),
   profession: z.string().optional(),
   clinicName: z.string().min(1).max(200),
   clinicSlug: z.string().min(1).max(100),

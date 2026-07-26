@@ -2,6 +2,18 @@ import "dotenv/config";
 import express from "express";
 import compression from "compression";
 
+const SENSITIVE_ENV_KEYS = ["JWT_SECRET", "PHI_ENCRYPTION_KEY", "TWILIO_AUTH_TOKEN", "OPENAI_API_KEY", "DEEPGRAM_API_KEY", "ELEVENLABS_API_KEY"];
+for (const key of SENSITIVE_ENV_KEYS) {
+  if (process.env[key]) {
+    const val = process.env[key];
+    Object.defineProperty(process.env, key, {
+      get() { return val; },
+      set() { throw new Error(`Cannot modify sensitive env var "${key}" at runtime`); },
+      configurable: false,
+    });
+  }
+}
+
 process.on("uncaughtException", (err) => {
   console.error("UNCAUGHT EXCEPTION:", err);
   process.exit(1);
@@ -62,9 +74,12 @@ import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { protect } from "./middleware/auth.js";
+import { validateEncryptionOrThrow } from "./utils/encryption.js";
 import jwt from "jsonwebtoken";
 import User from "./models/User.js";
 import { initCache } from "./utils/cache.js";
+
+validateEncryptionOrThrow();
 
 const sentryEnabled = !!process.env.SENTRY_DSN;
 
@@ -149,11 +164,11 @@ app.set("trust proxy", 1);
 function createRateLimiter() {
   const config = {
     windowMs: 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX || "1000"),
+    max: parseInt(process.env.RATE_LIMIT_MAX || "200"),
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many requests, please try again later" },
-    skipFailedRequests: true,
+    skipFailedRequests: false,
   };
 
   if (redisClients?.pubClient) {

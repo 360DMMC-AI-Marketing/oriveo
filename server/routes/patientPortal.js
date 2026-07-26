@@ -475,6 +475,7 @@ async function buildReportData(orgId) {
   };
 
   const s = (v) => v ?? 0;
+  const escH = (str) => String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const dayRow = data.dayDist.map((d) => `<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">${d.label}</div><div style="height:48px;background:#f1f5f9;border-radius:4px;position:relative;overflow:hidden;"><div style="position:absolute;bottom:0;left:0;right:0;height:${Math.round(d.count / data.maxDayCount * 100)}%;background:linear-gradient(180deg,#3b82f6,#2563eb);border-radius:4px;"></div></div><div style="font-size:13px;font-weight:700;margin-top:3px;">${d.count}</div></div>`).join("");
 
   const html = `<!DOCTYPE html>
@@ -482,7 +483,7 @@ async function buildReportData(orgId) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${data.orgName} — ${data.monthName} Report</title>
+<title>${escH(data.orgName)} — ${escH(data.monthName)} Report</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   *{margin:0;padding:0;box-sizing:border-box}
@@ -588,7 +589,7 @@ async function buildReportData(orgId) {
       <div class="hero-date">${data.generatedAt}</div>
     </div>
     <h1>Monthly Performance Report</h1>
-    <div class="hero-sub"><strong>${data.orgName}</strong> &bull; ${data.monthName}</div>
+    <div class="hero-sub"><strong>${escH(data.orgName)}</strong> &bull; ${escH(data.monthName)}</div>
     <div class="hero-kpis">
       <div class="hero-kpi"><div class="hkv c-blue">${s(data.totalCalls)}</div><div class="hkl">Total Calls</div><div class="hks">${s(data.callGrowth) >= 0 ? '+' : ''}${s(data.callGrowth)}% vs prev</div></div>
       <div class="hero-kpi"><div class="hkv c-green">${s(data.answerRate)}%</div><div class="hkl">Answer Rate</div><div class="hks">${s(data.answeredCalls)} answered</div></div>

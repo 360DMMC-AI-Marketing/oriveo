@@ -12,8 +12,31 @@ import { scheduleRetry, cancelRetry } from "../services/callScheduler.js";
 import { protect, authorize } from "../middleware/auth.js";
 import confirmAppointments from "../utils/confirmAppointments.js";
 import { validateSlot } from "../utils/slotGenerator.js";
+import crypto from "crypto";
 
 const router = Router();
+
+function validateTwilioSignature(req, res, next) {
+  const twilioSignature = req.headers["x-twilio-signature"];
+  if (!twilioSignature || !process.env.TWILIO_AUTH_TOKEN) return next();
+  const url = `${process.env.SERVER_URL || `${req.protocol}://${req.headers.host}`}${req.originalUrl}`;
+  const params = {};
+  for (const [key, value] of Object.entries(req.body || {})) {
+    if (typeof value === "string") params[key] = value;
+  }
+  const data = Object.keys(params).sort().reduce((acc, key) => {
+    acc += key + params[key];
+    return acc;
+  }, url);
+  const hmac = crypto.createHmac("sha1", process.env.TWILIO_AUTH_TOKEN);
+  hmac.update(Buffer.from(data, "utf-8"));
+  const expected = Buffer.from(hmac.digest("base64")).toString();
+  if (twilioSignature !== expected) {
+    console.warn("[Twilio] Invalid webhook signature — rejecting request");
+    return res.status(403).json({ error: "Invalid Twilio signature" });
+  }
+  next();
+}
 
 const activeCalls = new Map();
 
@@ -362,7 +385,7 @@ async function handleFunctionCall(callId, functionName, args) {
   }
 }
 
-router.post("/twilio/incoming", async (req, res) => {
+router.post("/twilio/incoming", validateTwilioSignature, async (req, res) => {
   const callSid = req.body.CallSid;
   const from = req.body.From;
   const to = req.body.To;
@@ -417,7 +440,7 @@ router.post("/twilio/incoming", async (req, res) => {
     </Response>`);
 });
 
-router.post("/twilio/status", async (req, res) => {
+router.post("/twilio/status", validateTwilioSignature, async (req, res) => {
   const callSid = req.body.CallSid;
   const callStatus = req.body.CallStatus;
 
@@ -522,7 +545,7 @@ router.get("/twilio/outbound-twiml/:callId", async (req, res) => {
     </Response>`);
 });
 
-router.post("/twilio/amd-status/:callId", async (req, res) => {
+router.post("/twilio/amd-status/:callId", validateTwilioSignature, async (req, res) => {
   const { CallSid, AnsweredBy, MachineDetectionDuration } = req.body;
 
   if (AnsweredBy === "machine_start" || AnsweredBy === "machine_end" || AnsweredBy === "machine") {
@@ -634,7 +657,7 @@ router.get("/transfer/:callId", protect, authorize("admin", "doctor", "nurse"), 
   }
 });
 
-router.post("/twilio/gather", async (req, res) => {
+router.post("/twilio/gather", validateTwilioSignature, async (req, res) => {
   const digits = req.body.Digits;
   res.type("text/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
     <Response>

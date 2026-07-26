@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Patient from "../models/Patient.js";
 import { addDocument, removeDocument } from "../services/knowledgeBase.js";
 import { cacheGet, cacheSet, cacheDel } from "../utils/cache.js";
+import { escapeRegex } from "../utils/encryption.js";
 
 function syncKbNotes(patient) {
   if (!patient.kbNotes || !patient.kbNotes.trim()) {
@@ -40,11 +41,12 @@ export const getPatients = async (req, res) => {
       query.assignedDoctor = req.user._id;
     }
     if (req.query.search) {
+      const safe = escapeRegex(req.query.search);
       query.$or = [
-        { name: { $regex: req.query.search, $options: "i" } },
-        { phone: { $regex: req.query.search, $options: "i" } },
-        { ownerName: { $regex: req.query.search, $options: "i" } },
-        { ownerPhone: { $regex: req.query.search, $options: "i" } },
+        { name: { $regex: safe, $options: "i" } },
+        { phone: { $regex: safe, $options: "i" } },
+        { ownerName: { $regex: safe, $options: "i" } },
+        { ownerPhone: { $regex: safe, $options: "i" } },
       ];
     }
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -106,7 +108,12 @@ export const createPatient = async (req, res) => {
 export const updatePatient = async (req, res) => {
   try {
     delete req.body.specialty;
-    const patient = await Patient.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, req.body, {
+    const allowedFields = ["name","phone","email","language","age","gender","dob","address","notes","primaryDiagnosis","chronicConditions","allergies","currentMedications","surgeries","insuranceProvider","insuranceId","emergencyContactName","emergencyContactPhone","patientType","species","breed","ownerName","ownerPhone","assignedDoctor","kbNotes"];
+    const sanitized = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) sanitized[key] = req.body[key];
+    }
+    const patient = await Patient.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, sanitized, {
       new: true,
       runValidators: true,
     }).populate("assignedDoctor", "name email");

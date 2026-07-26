@@ -50,3 +50,17 @@ export function hashPhone(phone) {
 export function isEncryptionConfigured() {
   return !!process.env.PHI_ENCRYPTION_KEY;
 }
+
+export function validateEncryptionOrThrow() {
+  if (process.env.NODE_ENV === "production" && !isEncryptionConfigured()) {
+    throw new Error(
+      "CRITICAL: PHI_ENCRYPTION_KEY is not set. Patient health data will be stored in PLAINTEXT. " +
+      "This is a HIPAA violation. Set PHI_ENCRYPTION_KEY to a 64-hex-char string and restart."
+    );
+  }
+}
+
+export function escapeRegex(str) {
+  if (!str) return "";
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

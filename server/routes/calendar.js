@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { protect } from "../middleware/auth.js";
 import { google } from "googleapis";
 import User from "../models/User.js";
@@ -11,6 +12,8 @@ const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/calendar/oauth-callback";
 
+const oauthStates = new Map();
+
 function getOAuth2Client() {
   if (!CLIENT_ID || !CLIENT_SECRET) return null;
   return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
@@ -21,11 +24,16 @@ router.get("/auth-url", async (req, res) => {
     const oauth2Client = getOAuth2Client();
     if (!oauth2Client) return res.status(400).json({ message: "Google Calendar not configured" });
 
+    const state = crypto.randomBytes(32).toString("hex");
+    oauthStates.set(state, { userId: req.user._id.toString(), createdAt: Date.now() });
+
+    setTimeout(() => oauthStates.delete(state), 10 * 60 * 1000);
+
     const url = oauth2Client.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",
       scope: ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.readonly"],
-      state: req.user._id.toString(),
+      state,
     });
     res.json({ url });
   } catch (error) {
@@ -38,12 +46,16 @@ router.get("/oauth-callback", async (req, res) => {
     const { code, state } = req.query;
     if (!code || !state) return res.status(400).json({ message: "Missing code or state" });
 
+    const stateData = oauthStates.get(state);
+    if (!stateData) return res.status(400).json({ message: "Invalid or expired OAuth state" });
+    oauthStates.delete(state);
+
     const oauth2Client = getOAuth2Client();
     if (!oauth2Client) return res.status(400).json({ message: "Google Calendar not configured" });
 
     const { tokens } = await oauth2Client.getToken(code);
 
-    await User.findByIdAndUpdate(state, {
+    await User.findByIdAndUpdate(stateData.userId, {
       googleCalendarConnected: true,
       googleRefreshToken: tokens.refresh_token || "",
       googleCalendarEmail: tokens.scope?.includes("calendar") ? "Connected" : "Unknown",

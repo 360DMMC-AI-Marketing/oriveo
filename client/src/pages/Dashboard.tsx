@@ -197,6 +197,19 @@ const SPECIALTY_SCALES: Record<string, Array<{ name: string; range: string; colo
   ],
 };
 
+const COLOR_CLASSES: Record<string, string> = {
+  red: "text-red-600 bg-red-100 border-red-200",
+  amber: "text-amber-600 bg-amber-100 border-amber-200",
+  blue: "text-blue-600 bg-blue-100 border-blue-200",
+  emerald: "text-emerald-600 bg-emerald-100 border-emerald-200",
+  green: "text-green-600 bg-green-100 border-green-200",
+  orange: "text-orange-600 bg-orange-100 border-orange-200",
+  cyan: "text-cyan-600 bg-cyan-100 border-cyan-200",
+  purple: "text-purple-600 bg-purple-100 border-purple-200",
+  violet: "text-violet-600 bg-violet-100 border-violet-200",
+  pink: "text-pink-600 bg-pink-100 border-pink-200",
+};
+
 const SPECIALTY_LABELS: Record<string, { title: string; subtitle: string }> = {
   "general-practice": { title: "General Practice Dashboard", subtitle: "Family medicine & primary care overview" },
   "cardiology": { title: "Cardiology Dashboard", subtitle: "Cardiovascular care & diagnostics overview" },
@@ -656,17 +669,21 @@ export default function Dashboard() {
           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Stethoscope className="h-4 w-4 text-primary" /> Clinical Assessment Scales — {labels.title.replace(" Dashboard", "")}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-              {SPECIALTY_SCALES[specialty].map((scale, i) => (
-                <div key={i} className={`flex items-center gap-3 rounded-lg border p-3 bg-${scale.color}-50/50 border-${scale.color}-200`}>
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-${scale.color}-100`}>
-                    <Activity className={`h-4 w-4 text-${scale.color}-600`} />
+              {SPECIALTY_SCALES[specialty].map((scale, i) => {
+                const colorClasses = COLOR_CLASSES[scale.color] || "text-gray-600 bg-gray-100 border-gray-200";
+                const parts = colorClasses.split(" ");
+                return (
+                  <div key={i} className={`flex items-center gap-3 rounded-lg border p-3 bg-opacity-50 ${parts[1]} ${parts[2]}`}>
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${parts[1]}`}>
+                      <Activity className={`h-4 w-4 ${parts[0]}`} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-900">{scale.name}</p>
+                      <p className="text-[10px] text-gray-500">{scale.range}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-900">{scale.name}</p>
-                    <p className="text-[10px] text-gray-500">{scale.range}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

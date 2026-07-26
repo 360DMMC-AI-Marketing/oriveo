@@ -48,9 +48,14 @@ export const getClinicalNote = async (req, res) => {
 
 export const updateClinicalNote = async (req, res) => {
   try {
+    const allowedFields = ["subjective","objective","assessment","plan","diagnoses","vitals","followUp","signedNotes","template"];
+    const sanitized = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) sanitized[key] = req.body[key];
+    }
     const note = await ClinicalNote.findOneAndUpdate(
       { _id: req.params.noteId, patient: req.params.id, isActive: true, isSigned: false, ...req.tenantFilter },
-      { $set: req.body },
+      { $set: sanitized },
       { new: true, runValidators: true }
     ).populate("createdBy", "name").populate("signedBy", "name");
     if (!note) return res.status(404).json({ message: "Note not found or already signed" });

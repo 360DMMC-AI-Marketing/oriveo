@@ -489,12 +489,15 @@ export default function Analytics() {
                     suppressContentEditableWarning
                     onInput={handleEditInput}
                     className="prose max-w-none p-8 min-h-[500px] outline-none focus:ring-0"
-                    dangerouslySetInnerHTML={{ __html: reportHtml }}
-                  />
+                  >
+                    {reportHtml}
+                  </div>
                 </div>
               ) : (
                 <div className="max-w-3xl mx-auto">
-                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: reportHtml }} />
+                  <div className="prose max-w-none">
+                    {reportHtml}
+                  </div>
                 </div>
               )}
             </div>
