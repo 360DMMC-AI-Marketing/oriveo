@@ -111,7 +111,7 @@ router.get("/providers", async (req, res) => {
   });
 });
 
-router.get("/config/:provider", async (req, res) => {
+router.get("/config/:provider", authorize("admin"), async (req, res) => {
   try {
     const doc = await Config.findOne({ provider: req.params.provider });
     res.json({ keys: doc ? Object.fromEntries(doc.keys) : {} });

@@ -73,7 +73,7 @@ router.get("/staff", async (req, res) => {
   }
 });
 
-router.post("/", authorize("admin"), async (req, res) => {
+router.post("/", authorize("admin", "doctor"), async (req, res) => {
   try {
     const room = await Room.create({ ...req.body, organization: req.user.organization });
     res.status(201).json(room);
@@ -82,7 +82,7 @@ router.post("/", authorize("admin"), async (req, res) => {
   }
 });
 
-router.put("/:id", authorize("admin"), async (req, res) => {
+router.put("/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
     const room = await Room.findOneAndUpdate(
       { _id: req.params.id, organization: req.user.organization },

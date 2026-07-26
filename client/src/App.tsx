@@ -48,10 +48,11 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="text-lg text-gray-500">Loading...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role) && !user.superAdmin) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -84,27 +85,27 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/patients" element={<Patients />} />
         <Route path="/patients/:id" element={<PatientDetail />} />
-        <Route path="/templates" element={<MedicalTemplates />} />
+        <Route path="/templates" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><MedicalTemplates /></ProtectedRoute>} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/calendar" element={<CalendarSchedule />} />
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/calls/:id" element={<CallDetail />} />
         <Route path="/users" element={<Navigate to="/clinic/users" replace />} />
-        <Route path="/audit-log" element={<AuditLog />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/voice-agent" element={<CallCenter />} />
-        <Route path="/schedule-call" element={<CallCenter />} />
-        <Route path="/call-review" element={<CallReview />} />
+        <Route path="/audit-log" element={<ProtectedRoute allowedRoles={["admin"]}><AuditLog /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse", "receptionist"]}><Reports /></ProtectedRoute>} />
+        <Route path="/voice-agent" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><CallCenter /></ProtectedRoute>} />
+        <Route path="/schedule-call" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><CallCenter /></ProtectedRoute>} />
+        <Route path="/call-review" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><CallReview /></ProtectedRoute>} />
         <Route path="/inbound-calls" element={<Navigate to="/voice-agent" replace />} />
         <Route path="/live-monitoring" element={<Navigate to="/voice-agent" replace />} />
-        <Route path="/command-center" element={<CommandCenter />} />
-        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/command-center" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><CommandCenter /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><Analytics /></ProtectedRoute>} />
         <Route path="/knowledge-base" element={<KnowledgeBase />} />
 
         <Route path="/clinic" element={<ClinicDashboard />} />
         <Route path="/clinic/settings" element={<Navigate to="/clinic" replace />} />
-        <Route path="/clinic/users" element={<ClinicUsers />} />
-        <Route path="/rooms" element={<Rooms />} />
+        <Route path="/clinic/users" element={<ProtectedRoute allowedRoles={["admin"]}><ClinicUsers /></ProtectedRoute>} />
+        <Route path="/rooms" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><Rooms /></ProtectedRoute>} />
 
         <Route path="/onboarding-guide" element={<OnboardingGuide />} />
         <Route path="/notifications" element={<Notifications />} />

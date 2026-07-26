@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { protect } from "../middleware/auth.js";
+import { protect, authorize } from "../middleware/auth.js";
 import { clinicalQuery } from "../services/clinicalSupport.js";
 import { suggestCptCode, getCptCodeInfo } from "../services/medicalCoding.js";
 import { SPECIALTY_TEMPLATES, getSpecialtyForKeywords } from "../config/specialtyTemplates.js";
@@ -23,6 +23,7 @@ import {
 const router = Router();
 
 router.use(protect);
+router.use(authorize("admin", "doctor", "nurse"));
 
 // Ambient note generation from transcript
 router.post("/ambient/generate", async (req, res) => {

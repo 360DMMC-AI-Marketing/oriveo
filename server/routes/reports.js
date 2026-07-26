@@ -16,7 +16,7 @@ const callIdParam = z.object({ callId: z.string().regex(/^[a-f\d]{24}$/i, "Inval
 const router = Router();
 router.use(protect);
 
-router.get("/", validate(reportQuerySchema, "query"), async (req, res) => {
+router.get("/", authorize("admin", "doctor", "nurse", "receptionist"), validate(reportQuerySchema, "query"), async (req, res) => {
   try {
     const { page = 1, limit = 50, patientId, signed, sort = "-createdAt" } = req.query;
     const filter = {};
@@ -44,7 +44,7 @@ router.get("/", validate(reportQuerySchema, "query"), async (req, res) => {
   }
 });
 
-router.get("/:id", validate(idParam, "params"), async (req, res) => {
+router.get("/:id", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
   try {
     const report = await Report.findById(req.params.id)
       .populate("patient", "name phone dob gender")
@@ -58,7 +58,7 @@ router.get("/:id", validate(idParam, "params"), async (req, res) => {
   }
 });
 
-router.get("/:id/pdf", validate(idParam, "params"), async (req, res) => {
+router.get("/:id/pdf", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
   try {
     const report = await Report.findById(req.params.id)
       .populate("patient", "name phone dob gender")
@@ -336,7 +336,7 @@ router.get("/:id/pdf", validate(idParam, "params"), async (req, res) => {
   }
 });
 
-router.get("/:id/fhir", validate(idParam, "params"), async (req, res) => {
+router.get("/:id/fhir", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
   try {
     const report = await Report.findById(req.params.id)
       .populate("patient", "name phone dob gender")
@@ -352,7 +352,7 @@ router.get("/:id/fhir", validate(idParam, "params"), async (req, res) => {
   }
 });
 
-router.get("/call/:callId", validate(callIdParam, "params"), async (req, res) => {
+router.get("/call/:callId", authorize("admin", "doctor", "nurse", "receptionist"), validate(callIdParam, "params"), async (req, res) => {
   try {
     const report = await Report.findOne({ call: req.params.callId })
       .populate("patient", "name phone dob gender")

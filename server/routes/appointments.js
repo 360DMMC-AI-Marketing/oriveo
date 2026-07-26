@@ -111,7 +111,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/", authorize("admin", "doctor", "receptionist"), validate(createAppointmentSchema), async (req, res) => {
+router.post("/", authorize("admin", "doctor", "nurse", "receptionist"), validate(createAppointmentSchema), async (req, res) => {
   try {
     const { date, time, provider } = req.body;
     const orgId = req.user.organization;

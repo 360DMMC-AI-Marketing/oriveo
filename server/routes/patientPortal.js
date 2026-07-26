@@ -7,7 +7,7 @@ import Availability from "../models/Availability.js";
 import Patient from "../models/Patient.js";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
-import { protect } from "../middleware/auth.js";
+import { protect, authorize } from "../middleware/auth.js";
 import { sendSms } from "../services/alertService.js";
 import { sendEmail } from "../services/emailService.js";
 import { getAvailableSlots } from "../utils/slotGenerator.js";
@@ -247,7 +247,7 @@ router.get("/availability", protect, async (req, res) => {
   }
 });
 
-router.put("/availability", protect, async (req, res) => {
+router.put("/availability", protect, authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
     const { slots } = req.body;
     if (!slots || !Array.isArray(slots)) return res.status(400).json({ message: "slots array required" });
@@ -790,7 +790,7 @@ async function buildReportData(orgId) {
   return { data, html };
 }
 
-router.post("/generate-monthly-report", protect, async (req, res) => {
+router.post("/generate-monthly-report", protect, authorize("admin", "doctor"), async (req, res) => {
   try {
     const report = await buildReportData(req.user.organization);
     if (!report) return res.status(404).json({ message: "Organization not found" });
@@ -800,7 +800,7 @@ router.post("/generate-monthly-report", protect, async (req, res) => {
   }
 });
 
-router.post("/send-monthly-report", protect, async (req, res) => {
+router.post("/send-monthly-report", protect, authorize("admin"), async (req, res) => {
   try {
     const { html, subject } = req.body;
     if (!html) return res.status(400).json({ message: "HTML content is required" });

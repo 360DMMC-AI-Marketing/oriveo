@@ -71,7 +71,7 @@ router.get("/campaigns/:id", (req, res) => {
   res.json({ campaign });
 });
 
-router.post("/campaigns/:id/pause", (req, res) => {
+router.post("/campaigns/:id/pause", authorize("admin", "doctor"), (req, res) => {
   const campaign = campaigns.find((c) => c.id === req.params.id);
   if (!campaign) return res.status(404).json({ message: "Campaign not found" });
   if (campaign.status !== "running") return res.status(400).json({ message: "Campaign is not running" });
@@ -79,7 +79,7 @@ router.post("/campaigns/:id/pause", (req, res) => {
   res.json({ campaign });
 });
 
-router.post("/campaigns/:id/resume", (req, res) => {
+router.post("/campaigns/:id/resume", authorize("admin", "doctor"), (req, res) => {
   const campaign = campaigns.find((c) => c.id === req.params.id);
   if (!campaign) return res.status(404).json({ message: "Campaign not found" });
   if (campaign.status !== "paused") return res.status(400).json({ message: "Campaign is not paused" });
