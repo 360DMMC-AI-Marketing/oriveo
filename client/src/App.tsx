@@ -1,9 +1,8 @@
 import { lazy, Suspense, Component, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { AnimatePresence, motion } from "framer-motion";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -14,14 +13,16 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{fontFamily:"monospace",padding:20,background:"#fff",color:"#000",whiteSpace:"pre-wrap",position:"fixed",inset:0,zIndex:99999,overflow:"auto"}}>
-          <h2 style={{color:"red",marginBottom:8}}>React ErrorBoundary</h2>
-          <p style={{color:"#666",marginBottom:16}}>{this.state.error?.message}</p>
-          <pre style={{fontSize:12,background:"#f5f5f5",padding:12,borderRadius:8,overflow:"auto"}}>{this.state.error?.stack}</pre>
-          <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
-            style={{marginTop:16,padding:"8px 16px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,cursor:"pointer"}}>
-            Refresh Page
-          </button>
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="max-w-md rounded-xl bg-white p-8 shadow-lg text-center">
+            <div className="text-4xl mb-4">!</div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+            <p className="text-gray-500 mb-4">An unexpected error occurred. Please try refreshing the page.</p>
+            <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700">
+              Refresh Page
+            </button>
+          </div>
         </div>
       );
     }
@@ -99,33 +100,18 @@ function RootRoute() {
   return <Landing />;
 }
 
-function PageTransition({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 function AppRoutes() {
-  const location = useLocation();
   return (
     <Suspense fallback={<PageLoader />}>
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<PageTransition><RootRoute /></PageTransition>} />
-          <Route path="/features" element={<PageTransition><Features /></PageTransition>} />
-          <Route path="/pricing" element={<PageTransition><Pricing /></PageTransition>} />
-          <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
-          <Route path="/login" element={<PageTransition><PublicRoute><Login /></PublicRoute></PageTransition>} />
-          <Route path="/signup" element={<PageTransition><PublicRoute><Signup /></PublicRoute></PageTransition>} />
-          <Route path="/:page" element={<PageTransition><StaticPage /></PageTransition>} />
-          <Route path="/book/:token" element={<PageTransition><PatientBooking /></PageTransition>} />
+      <Routes>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+          <Route path="/:page" element={<StaticPage />} />
+          <Route path="/book/:token" element={<PatientBooking />} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patients" element={<Patients />} />
@@ -162,7 +148,6 @@ function AppRoutes() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
-      </AnimatePresence>
     </Suspense>
   );
 }
