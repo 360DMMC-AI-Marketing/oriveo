@@ -36,8 +36,7 @@ export function extractAudioFeatures(call) {
     pauseRatio = duration > 0 ? totalPauseTime / duration : 0;
   }
 
-  // Simulated pitch/voice features from transcript sentiment + word patterns
-  // In production: extract from audio via WebAudio/ffmpeg + signal processing
+  // Derived signals for biomarker scoring
   const avgWordsPerResponse = patientTexts.length > 0
     ? wordCount / patientTexts.length
     : 0;
@@ -50,16 +49,57 @@ export function extractAudioFeatures(call) {
   // Question marks in responses suggest confusion/disorientation
   const questionInResponse = patientTexts.filter((t) => t.includes("?")).length;
 
+  // Voice features derived from transcript + call metadata
+  // These approximate real audio signals using available transcript data.
+  // In production: replace with actual audio signal processing (WebAudio/ffmpeg).
+  const responseLengths = patientTexts.map((t) => t.split(/\s+/).length);
+  const avgResponseLength = responseLengths.length > 0
+    ? responseLengths.reduce((a, b) => a + b, 0) / responseLengths.length
+    : 5;
+  const responseVariance = responseLengths.length > 1
+    ? responseLengths.reduce((sum, len) => sum + Math.pow(len - avgResponseLength, 2), 0) / responseLengths.length
+    : 0;
+  const responseStdDev = Math.sqrt(responseVariance);
+
+  // Pitch variability: proxy from response length consistency (more variable responses = more expressive speech)
+  const pitchVariability = Math.max(3, Math.min(20, 5 + responseStdDev * 0.8));
+
+  // Jitter: proxy from timestamp irregularity (more irregular gaps = more vocal instability)
+  const timestampVariance = timestamps.length > 2
+    ? (() => {
+        const gaps = [];
+        for (let i = 1; i < timestamps.length; i++) gaps.push(timestamps[i] - timestamps[i - 1]);
+        const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+        return gaps.reduce((sum, g) => sum + Math.pow(g - mean, 2), 0) / gaps.length;
+      })()
+    : 1;
+  const jitter = Math.round(Math.max(0.1, Math.min(2.0, Math.sqrt(timestampVariance) * 0.15)) * 100) / 100;
+
+  // Shimmer: proxy from pause consistency (irregular pauses suggest vocal amplitude variation)
+  const shimmer = Math.round(Math.max(0.2, Math.min(3.0, jitter * 1.3 + (pauseRatio || 0.1) * 2)) * 100) / 100;
+
+  // Pitch mean: proxy from speech rate and response patterns (faster, shorter responses = higher pitch tendency)
+  const speechRateFactor = speechRate ? Math.max(0, Math.min(1, (speechRate - 100) / 150)) : 0.5;
+  const pitchMean = Math.round(110 + speechRateFactor * 30 + shortResponseRatio * 20);
+
+  // Breath rate: proxy from pause ratio and speech rate (more pauses + slower speech = higher breath rate)
+  const pauseFactor = pauseRatio != null ? Math.min(1, pauseRatio * 3) : 0.2;
+  const breathRate = Math.round(14 + pauseFactor * 6 + (1 - speechRateFactor) * 4);
+
+  // Voice energy: proxy from transcript engagement (longer responses + more words = higher energy)
+  const engagementFactor = Math.min(1, wordCount / 200);
+  const voiceEnergy = Math.round((0.3 + engagementFactor * 0.5 + (shortResponseRatio < 0.3 ? 0.1 : 0)) * 100) / 100;
+
   return {
     speechRate: speechRate ? Math.round(speechRate) : null,
     pauseRatio: pauseRatio != null ? Math.round(pauseRatio * 100) / 100 : null,
     avgPauseDuration: avgPauseDuration != null ? Math.round(avgPauseDuration * 10) / 10 : null,
-    pitchMean: 120 + Math.random() * 40, // placeholder — real extraction from audio
-    pitchVariability: 5 + Math.random() * 15,
-    jitter: Math.round(Math.random() * 2 * 100) / 100,
-    shimmer: Math.round(Math.random() * 3 * 100) / 100,
-    breathRate: 14 + Math.round(Math.random() * 8),
-    voiceEnergy: Math.round(0.3 + Math.random() * 0.5 * 100) / 100,
+    pitchMean,
+    pitchVariability: Math.round(pitchVariability * 10) / 10,
+    jitter,
+    shimmer,
+    breathRate,
+    voiceEnergy,
     articulationRate: speechRate ? Math.round(speechRate * (1 - (pauseRatio || 0.2))) : null,
 
     // Derived signals for biomarker scoring
@@ -70,8 +110,6 @@ export function extractAudioFeatures(call) {
     _duration: duration,
   };
 }
-
-// Score clinical biomarkers from audio features
 export function scoreBiomarkers(features, call, patient) {
   if (!features) return null;
 
