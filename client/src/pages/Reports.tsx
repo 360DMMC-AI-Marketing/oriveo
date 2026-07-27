@@ -227,7 +227,7 @@ export default function Reports() {
         {loadingReport ? (
           <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         ) : singleReport ? (
-          <PrintableReport report={singleReport} user={user} signMutation={signMutation} onDownloadPdf={handleDownloadPdf} onDownloadFhir={handleDownloadFhir} />
+          <PrintableReport report={singleReport} user={user} signMutation={signMutation} onDownloadPdf={handleDownloadPdf} onDownloadFhir={handleDownloadFhir} onBack={() => setViewing(null)} />
         ) : (
           <p className="text-center text-gray-500 py-8">Report not found</p>
         )}
@@ -499,7 +499,7 @@ function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
   );
 }
 
-function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownloadFhir }: { report: any; user: any; signMutation: any; onDownloadPdf: (id: string) => void; onDownloadFhir: (id: string) => void }) {
+function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownloadFhir, onBack }: { report: any; user: any; signMutation: any; onDownloadPdf: (id: string) => void; onDownloadFhir: (id: string) => void; onBack: () => void }) {
   const navigate = useNavigate();
   const [doctorNotes, setDoctorNotes] = useState("");
   const [signatureName, setSignatureName] = useState("");
@@ -535,7 +535,7 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
     <div className="max-w-3xl mx-auto">
       {/* Action bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6 print:hidden">
-        <Button variant="ghost" onClick={() => navigate("/reports")} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700 self-start">
+        <Button variant="ghost" onClick={onBack} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700 self-start">
           <span className="text-lg leading-none">&larr;</span> Back to reports
         </Button>
         <div className="flex flex-wrap gap-2">
