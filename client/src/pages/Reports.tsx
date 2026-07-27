@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -500,6 +501,7 @@ function SignaturePad({ onSignature }: { onSignature: (sig: string) => void }) {
 }
 
 function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownloadFhir }: { report: any; user: any; signMutation: any; onDownloadPdf: (id: string) => void; onDownloadFhir: (id: string) => void }) {
+  const navigate = useNavigate();
   const [doctorNotes, setDoctorNotes] = useState("");
   const [signatureName, setSignatureName] = useState("");
   const [signatureImage, setSignatureImage] = useState("");
@@ -534,7 +536,7 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
     <div className="max-w-3xl mx-auto">
       {/* Action bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6 print:hidden">
-        <Button variant="ghost" onClick={() => window.history.back()} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700 self-start">
+        <Button variant="ghost" onClick={() => navigate("/reports")} className="gap-1.5 text-sm text-gray-500 hover:text-gray-700 self-start">
           <span className="text-lg leading-none">&larr;</span> Back to reports
         </Button>
         <div className="flex flex-wrap gap-2">
