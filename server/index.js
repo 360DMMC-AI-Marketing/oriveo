@@ -51,6 +51,7 @@ import tenantRoutes from "./routes/tenants.js";
 import populationHealthRoutes from "./routes/populationHealth.js";
 import biomarkerRoutes from "./routes/biomarkers.js";
 import roomRoutes from "./routes/rooms.js";
+import publicRoutes from "./routes/public.js";
 import { setIo } from "./services/socketManager.js";
 
 import helmet from "helmet";
@@ -268,6 +269,7 @@ app.use("/api/clinic-config", clinicConfigRoutes);
 app.use("/api/population-health", populationHealthRoutes);
 app.use("/api/biomarkers", biomarkerRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/public", publicRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({

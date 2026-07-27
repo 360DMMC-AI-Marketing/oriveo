@@ -1,139 +1,139 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Sparkles, ArrowLeft } from "lucide-react";
-import Logo from "@/components/ui/Logo";
+import { CheckCircle2, Sparkles } from "lucide-react";
 
 const plans = [
   {
-    name: "Starter", price: "$99", period: "/mo", desc: "For growing clinics", popular: false,
-    features: ["5 team members", "500 patients", "1,000 calls/month", "27 languages", "AI outbound calls", "Inbound triage", "Basic analytics", "Email support"],
+    name: "Starter",
+    price: "$99",
+    description: "For growing clinics",
+    features: [
+      "5 team members",
+      "500 patients",
+      "1,000 calls/mo",
+      "27 languages",
+      "AI outbound calls",
+      "Inbound triage",
+      "Basic analytics",
+      "Email support",
+    ],
   },
   {
-    name: "Pro", price: "$299", period: "/mo", desc: "For busy practices", popular: true,
-    features: ["25 team members", "5,000 patients", "10,000 calls/month", "27 languages", "Everything in Starter", "EHR integration", "Patient portal", "Priority support"],
+    name: "Pro",
+    price: "$299",
+    description: "For busy practices",
+    popular: true,
+    features: [
+      "25 team members",
+      "5,000 patients",
+      "10,000 calls/mo",
+      "Everything in Starter",
+      "EHR integration",
+      "Patient portal",
+      "Priority support",
+    ],
   },
   {
-    name: "Enterprise", price: "Custom", period: "", desc: "For health systems", popular: false,
-    features: ["Unlimited team members", "Unlimited patients", "Unlimited calls", "All languages", "Custom integrations", "Dedicated support", "SLA guarantee", "On-premise option"],
+    name: "Enterprise",
+    price: "Custom",
+    description: "For health systems",
+    features: [
+      "Unlimited everything",
+      "Custom integrations",
+      "Dedicated support",
+      "SLA guarantee",
+      "On-premise option",
+    ],
   },
 ];
 
 export default function Pricing() {
   const navigate = useNavigate();
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
-      {/* Nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <Logo size="md" variant="dark" />
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            <a href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Features</a>
-            <a href="/pricing" className="text-sm font-medium text-primary">Pricing</a>
-            <a href="/contact" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/login")} className="text-sm">Sign in</Button>
-            <Button onClick={() => navigate("/contact")} className="shadow-lg shadow-primary/20 text-sm px-5">Request a Demo</Button>
-          </div>
-        </div>
-      </header>
 
-      <div className="max-w-6xl mx-auto px-4 pt-28 pb-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-3">Simple, transparent pricing</h1>
-          <p className="text-gray-500 text-lg">Enterprise pricing tailored to your organization.</p>
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-20">
+          <p className="text-sm font-medium tracking-wide text-teal-600 uppercase mb-3">
+            Pricing
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            Simple, transparent pricing
+          </h1>
+          <p className="text-lg text-gray-500 max-w-xl mx-auto">
+            No hidden fees. No surprises. Start free, upgrade when you're ready.
+          </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map(p => (
-            <div key={p.name} className={`relative rounded-2xl border p-6 bg-white ${p.popular ? "ring-2 ring-primary shadow-lg shadow-primary/10 scale-105" : "shadow-sm"}`}>
-              {p.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1"><Sparkles className="h-3 w-3" /> Most Popular</div>}
-              <h3 className="text-lg font-bold">{p.name}</h3>
-              <p className="text-gray-500 text-sm mb-4">{p.desc}</p>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`relative flex flex-col rounded-2xl border p-8 ${
+                plan.popular
+                  ? "border-teal-600 shadow-lg"
+                  : "border-gray-200"
+              }`}
+            >
+              {plan.popular && (
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-4 py-1 text-xs font-semibold text-white whitespace-nowrap">
+                  <Sparkles className="h-3 w-3" />
+                  Most Popular
+                </span>
+              )}
+
               <div className="mb-6">
-                <span className="text-4xl font-bold">{p.price}</span>
-                <span className="text-gray-400 text-sm">{p.period}</span>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {plan.name}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
               </div>
-              <Link to="/signup">
-                <Button className={`w-full mb-6 ${p.popular ? "" : "variant-outline"}`}>{p.name === "Enterprise" ? "Contact Sales" : "Get Started"}</Button>
-              </Link>
-              <ul className="space-y-2.5">
-                {p.features.map(f => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                    <span className="text-gray-600">{f}</span>
+
+              <div className="mb-8">
+                <span className="text-4xl font-bold text-gray-900">
+                  {plan.price}
+                </span>
+                {plan.price !== "Custom" && (
+                  <span className="text-gray-500 text-sm ml-1">/mo</span>
+                )}
+              </div>
+
+              <ul className="space-y-3 mb-8 flex-1">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5 text-sm text-gray-600">
+                    <CheckCircle2 className="h-4 w-4 text-teal-600 mt-0.5 shrink-0" />
+                    {feature}
                   </li>
                 ))}
               </ul>
+
+              <Button
+                onClick={() =>
+                  plan.name === "Enterprise"
+                    ? navigate("/contact")
+                    : navigate("/signup")
+                }
+                className={`w-full cursor-pointer ${
+                  plan.popular
+                    ? "bg-teal-600 hover:bg-teal-700 text-white"
+                    : "bg-white border border-gray-300 text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
+              </Button>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-950 border-t border-gray-800 py-16">
-        <div className="mx-auto max-w-7xl px-8">
-          <div className="grid gap-8 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <Logo size="sm" variant="light" />
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
-                The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
-              </p>
-            </div>
-            {[
-              {
-                title: "Platform",
-                links: [
-                  { label: "Overview", to: "/features" },
-                  { label: "Features", to: "/features" },
-                  { label: "Integrations", to: "/integrations" },
-                  { label: "Security", to: "/security" },
-                  { label: "Compliance", to: "/compliance" },
-                ],
-              },
-              {
-                title: "Resources",
-                links: [
-                  { label: "Documentation", to: "/documentation" },
-                  { label: "API Reference", to: "/api-reference" },
-                  { label: "Case Studies", to: "/case-studies" },
-                  { label: "Whitepapers", to: "/whitepapers" },
-                  { label: "Blog", to: "/blog" },
-                ],
-              },
-              {
-                title: "Company",
-                links: [
-                  { label: "About Us", to: "/about-us" },
-                  { label: "Leadership", to: "/leadership" },
-                  { label: "Careers", to: "/careers" },
-                  { label: "Contact", to: "/contact" },
-                  { label: "Partners", to: "/partners" },
-                ],
-              },
-            ].map((col) => (
-              <div key={col.title}>
-                <h4 className="font-semibold text-gray-300 mb-4 text-sm uppercase tracking-wider">{col.title}</h4>
-                <div className="flex flex-col gap-3">
-                  {col.links.map((link) => (
-                    <a key={link.label} href={link.to} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">{link.label}</a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
-              <a href="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms of Service</a>
-              <a href="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA Notice</a>
-              <a href="/sla" className="hover:text-gray-300 transition-colors">SLA</a>
-            </div>
-          </div>
+        <div className="mt-24 text-center">
+          <p className="text-sm text-gray-400 mb-2">
+            Trusted by healthcare organizations across 27 countries
+          </p>
+          <p className="text-sm text-gray-400">
+            HIPAA compliant · SOC 2 certified · 99.9% uptime SLA
+          </p>
         </div>
-      </footer>
-    </div>
+      </div>
+    </section>
   );
 }

@@ -5,11 +5,11 @@ const footerColumns = [
   {
     title: "Platform",
     links: [
-      { label: "Overview", to: "/features" },
       { label: "Features", to: "/features" },
       { label: "Pricing", to: "/pricing" },
       { label: "Security", to: "/security" },
       { label: "Compliance", to: "/compliance" },
+      { label: "Integrations", to: "/integrations" },
     ],
   },
   {
@@ -18,6 +18,7 @@ const footerColumns = [
       { label: "Documentation", to: "/documentation" },
       { label: "API Reference", to: "/api-reference" },
       { label: "Case Studies", to: "/case-studies" },
+      { label: "Whitepapers", to: "/whitepapers" },
       { label: "Blog", to: "/blog" },
     ],
   },
@@ -25,6 +26,7 @@ const footerColumns = [
     title: "Company",
     links: [
       { label: "About Us", to: "/about-us" },
+      { label: "Leadership", to: "/leadership" },
       { label: "Careers", to: "/careers" },
       { label: "Contact", to: "/contact" },
       { label: "Partners", to: "/partners" },
@@ -32,15 +34,15 @@ const footerColumns = [
   },
 ];
 
-export default function Footer() {
+export default function PublicFooter() {
   return (
     <footer className="bg-gray-950 border-t border-gray-800 py-16">
-      <div className="mx-auto max-w-7xl px-8">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-5">
           <div className="md:col-span-2">
             <Logo size="sm" variant="light" />
             <p className="text-sm text-gray-500 leading-relaxed max-w-xs mt-3">
-              The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
+              The intelligence platform for patient communication.
             </p>
           </div>
           {footerColumns.map((col) => (
@@ -57,9 +59,9 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
           <div className="flex items-center gap-6 text-sm text-gray-500">
-            <Link to="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms of Service</Link>
-            <Link to="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA Notice</Link>
+            <Link to="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy</Link>
+            <Link to="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms</Link>
+            <Link to="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA</Link>
             <Link to="/sla" className="hover:text-gray-300 transition-colors">SLA</Link>
           </div>
         </div>

@@ -4,166 +4,117 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import Logo from "@/components/ui/Logo";
+import { Mail, Phone, MapPin, Clock } from "lucide-react";
 
 export default function Contact() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
-  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    organization: "",
+    message: "",
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) {
-      toast.error("Please fill in name, email, and message.");
-      return;
-    }
-    setSending(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    toast.success("Message sent! Our team will get back to you within 24 hours.");
-    setForm({ name: "", email: "", phone: "", company: "", message: "" });
-    setSending(false);
+    setLoading(true);
+    setTimeout(() => {
+      toast.success("Message sent! We'll be in touch shortly.");
+      setLoading(false);
+      setForm({ name: "", email: "", phone: "", organization: "", message: "" });
+    }, 1000);
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <Logo size="md" variant="dark" />
-          </div>
-          <div className="hidden lg:flex items-center gap-8">
-            <a href="/features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
-            <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-            <a href="/contact" className="text-sm text-primary font-medium transition-colors">Contact</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/login")} className="text-sm font-medium">Sign in</Button>
-            <Button onClick={() => navigate("/contact")} className="bg-primary hover:bg-primary-dark text-sm px-5">Request a Demo</Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section className="pt-36 pb-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="mx-auto max-w-3xl px-8 text-center">
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">Get in Touch</span>
-          <h1 className="mt-6 text-5xl font-bold text-gray-900">Contact Our Team</h1>
-          <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
-            Request a demo, ask questions, or let us know how we can help your organization.
+    <section className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        {/* Hero */}
+        <div className="text-center mb-20">
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">Get in Touch</h1>
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Request a demo, ask questions, or let us know how we can help.
           </p>
         </div>
-      </section>
 
-      {/* Contact Form */}
-      <section className="pb-24">
-        <div className="mx-auto max-w-2xl px-8">
-          <Card className="shadow-lg border-0">
-            <CardHeader className="text-center border-b bg-gray-50/50">
-              <CardTitle className="text-xl">Send us a message</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">We typically respond within 24 hours.</p>
-            </CardHeader>
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Dr. Jane Smith" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@clinic.com" required />
-                  </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 (555) 123-4567" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Organization</Label>
-                    <Input id="company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Memorial Health Systems" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
-                  <Textarea id="message" rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    placeholder="Tell us about your needs — demo request, integration questions, partnership inquiry, etc." required />
-                </div>
-                <Button type="submit" className="w-full h-12 text-base" disabled={sending}>
-                  {sending ? "Sending..." : "Send Message"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-950 border-t border-gray-800 py-16">
-        <div className="mx-auto max-w-7xl px-8">
-          <div className="grid gap-8 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <Logo size="sm" variant="light" />
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
-                The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
-              </p>
-            </div>
-            {[
-              {
-                title: "Platform",
-                links: [
-                  { label: "Overview", to: "/features" },
-                  { label: "Features", to: "/features" },
-                  { label: "Integrations", to: "/integrations" },
-                  { label: "Security", to: "/security" },
-                  { label: "Compliance", to: "/compliance" },
-                ],
-              },
-              {
-                title: "Resources",
-                links: [
-                  { label: "Documentation", to: "/documentation" },
-                  { label: "API Reference", to: "/api-reference" },
-                  { label: "Case Studies", to: "/case-studies" },
-                  { label: "Whitepapers", to: "/whitepapers" },
-                  { label: "Blog", to: "/blog" },
-                ],
-              },
-              {
-                title: "Company",
-                links: [
-                  { label: "About Us", to: "/about-us" },
-                  { label: "Leadership", to: "/leadership" },
-                  { label: "Careers", to: "/careers" },
-                  { label: "Contact", to: "/contact" },
-                  { label: "Partners", to: "/partners" },
-                ],
-              },
-            ].map((col) => (
-              <div key={col.title}>
-                <h4 className="font-semibold text-gray-300 mb-4 text-sm uppercase tracking-wider">{col.title}</h4>
-                <div className="flex flex-col gap-3">
-                  {col.links.map((link) => (
-                    <a key={link.label} href={link.to} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">{link.label}</a>
-                  ))}
-                </div>
+        {/* Two Column */}
+        <div className="grid md:grid-cols-5 gap-16">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="md:col-span-3 space-y-6">
+            <div className="grid sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input id="name" name="name" required value={form.name} onChange={handleChange} placeholder="Jane Doe" />
               </div>
-            ))}
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
-              <a href="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms of Service</a>
-              <a href="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA Notice</a>
-              <a href="/sla" className="hover:text-gray-300 transition-colors">SLA</a>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input id="email" name="email" type="email" required value={form.email} onChange={handleChange} placeholder="jane@company.com" />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organization</Label>
+                <Input id="organization" name="organization" value={form.organization} onChange={handleChange} placeholder="Acme Healthcare" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message *</Label>
+              <Textarea id="message" name="message" required rows={5} value={form.message} onChange={handleChange} placeholder="Tell us about your needs…" className="resize-none" />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+              {loading ? "Sending…" : "Send Message"}
+            </Button>
+          </form>
+
+          {/* Contact Info */}
+          <div className="md:col-span-2 space-y-10">
+            <div>
+              <h3 className="font-semibold mb-4">Contact Information</h3>
+              <ul className="space-y-4 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3">
+                  <Mail className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>hello@oriveo.com</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Phone className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>+1 (800) 555-0123</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>123 Innovation Drive<br />San Francisco, CA 94105</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>Mon – Fri, 8am – 6pm PT</span>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Quick Links</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li><a href="/pricing" className="hover:text-foreground transition-colors">View Pricing</a></li>
+                <li><a href="/docs" className="hover:text-foreground transition-colors">Documentation</a></li>
+                <li><a href="/security" className="hover:text-foreground transition-colors">Security & Compliance</a></li>
+                <li><a href="/about" className="hover:text-foreground transition-colors">About Us</a></li>
+              </ul>
             </div>
           </div>
         </div>
-      </footer>
-    </div>
+      </div>
+    </section>
   );
 }

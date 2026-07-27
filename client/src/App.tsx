@@ -36,6 +36,8 @@ function PageLoader() {
 
 const Layout = lazy(() => import("@/components/layout/Layout"));
 const AdminLayout = lazy(() => import("@/components/layout/AdminLayout"));
+const PublicNavbar = lazy(() => import("@/components/layout/PublicNavbar"));
+const PublicFooter = lazy(() => import("@/components/layout/PublicFooter"));
 const Landing = lazy(() => import("@/pages/Landing"));
 const Features = lazy(() => import("@/pages/Features"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
@@ -100,17 +102,27 @@ function RootRoute() {
   return <Landing />;
 }
 
+function PublicLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-white">
+      <PublicNavbar />
+      {children}
+      <PublicFooter />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
           <Route path="/" element={<RootRoute />} />
-          <Route path="/features" element={<Features />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="/features" element={<PublicLayout><Features /></PublicLayout>} />
+          <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
+          <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-          <Route path="/:page" element={<StaticPage />} />
+          <Route path="/:page" element={<PublicLayout><StaticPage /></PublicLayout>} />
           <Route path="/book/:token" element={<PatientBooking />} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />

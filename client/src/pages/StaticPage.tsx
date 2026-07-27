@@ -1,7 +1,5 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, ArrowRight } from "lucide-react";
-import Logo from "@/components/ui/Logo";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Shield } from "lucide-react";
 
 const pages: Record<string, { title: string; subtitle: string; body: string[] }> = {
   "privacy-policy": {
@@ -203,25 +201,8 @@ export default function StaticPage() {
   if (!content) return <NotFound />;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b border-gray-100 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <Logo size="md" variant="dark" />
-          </div>
-          <div className="hidden lg:flex items-center gap-8">
-            <a href="/features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
-            <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-            <a href="/contact" className="text-sm text-primary font-medium transition-colors">Contact</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/login")} className="text-sm font-medium">Sign in</Button>
-            <Button onClick={() => navigate("/contact")} className="bg-primary hover:bg-primary-dark text-sm px-5">Request a Demo</Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex-1 max-w-3xl mx-auto w-full px-8 py-16">
+    <div className="bg-white flex flex-col pt-24">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-6 lg:px-8 py-16">
         <button onClick={() => navigate(-1)} className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5 mb-8">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
@@ -240,69 +221,6 @@ export default function StaticPage() {
           ))}
         </div>
       </div>
-
-      <footer className="bg-gray-950 border-t border-gray-800 py-16">
-        <div className="mx-auto max-w-7xl px-8">
-          <div className="grid gap-8 md:grid-cols-5">
-            <div className="md:col-span-2">
-              <Logo size="sm" variant="light" />
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
-                The intelligence platform for patient communication. Trusted by 1,200+ healthcare organizations since 2003.
-              </p>
-            </div>
-            {[
-              {
-                title: "Platform",
-                links: [
-                  { label: "Overview", to: "/features" },
-                  { label: "Features", to: "/features" },
-                  { label: "Integrations", to: "/integrations" },
-                  { label: "Security", to: "/security" },
-                  { label: "Compliance", to: "/compliance" },
-                ],
-              },
-              {
-                title: "Resources",
-                links: [
-                  { label: "Documentation", to: "/documentation" },
-                  { label: "API Reference", to: "/api-reference" },
-                  { label: "Case Studies", to: "/case-studies" },
-                  { label: "Whitepapers", to: "/whitepapers" },
-                  { label: "Blog", to: "/blog" },
-                ],
-              },
-              {
-                title: "Company",
-                links: [
-                  { label: "About Us", to: "/about-us" },
-                  { label: "Leadership", to: "/leadership" },
-                  { label: "Careers", to: "/careers" },
-                  { label: "Contact", to: "/contact" },
-                  { label: "Partners", to: "/partners" },
-                ],
-              },
-            ].map((col) => (
-              <div key={col.title}>
-                <h4 className="font-semibold text-gray-300 mb-4 text-sm uppercase tracking-wider">{col.title}</h4>
-                <div className="flex flex-col gap-3">
-                  {col.links.map((link) => (
-                    <a key={link.label} href={link.to} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">{link.label}</a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Oriveo, Inc. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
-              <a href="/terms-of-service" className="hover:text-gray-300 transition-colors">Terms of Service</a>
-              <a href="/hipaa-notice" className="hover:text-gray-300 transition-colors">HIPAA Notice</a>
-              <a href="/sla" className="hover:text-gray-300 transition-colors">SLA</a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
