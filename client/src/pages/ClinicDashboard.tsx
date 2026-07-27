@@ -501,7 +501,7 @@ export default function ClinicDashboard() {
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-gray-500">Timezone:</span>
                       <span className="font-medium text-gray-900">{
-                        { "America/New_York": "Eastern Time", "America/Chicago": "Central Time", "America/Denver": "Mountain Time", "America/Los_Angeles": "Pacific Time", "Europe/London": "London (GMT)", "Europe/Paris": "Paris (CET)", "Asia/Dubai": "Dubai (GST)", "Asia/Tokyo": "Tokyo (JST)", "Australia/Sydney": "Sydney (AEST)", "Africa/Casablanca": "Casablanca (WET)" }[hours.timezone] || hours.timezone
+                        ({ "America/New_York": "Eastern Time", "America/Chicago": "Central Time", "America/Denver": "Mountain Time", "America/Los_Angeles": "Pacific Time", "Europe/London": "London (GMT)", "Europe/Paris": "Paris (CET)", "Asia/Dubai": "Dubai (GST)", "Asia/Tokyo": "Tokyo (JST)", "Australia/Sydney": "Sydney (AEST)", "Africa/Casablanca": "Casablanca (WET)" } as Record<string, string>)[hours.timezone] || hours.timezone
                       }</span>
                     </div>
 
