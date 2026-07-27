@@ -7,10 +7,16 @@ import Availability from "../models/Availability.js";
 import Patient from "../models/Patient.js";
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
+import Call from "../models/Call.js";
+import Questionnaire from "../models/Questionnaire.js";
+import Report from "../models/Report.js";
+import KnowledgeDoc from "../models/KnowledgeDoc.js";
+import AuditLog from "../models/AuditLog.js";
+import Notification from "../models/Notification.js";
 import { protect, authorize } from "../middleware/auth.js";
 import { sendSms } from "../services/alertService.js";
 import { sendEmail } from "../services/emailService.js";
-import { getAvailableSlots } from "../utils/slotGenerator.js";
+import { getAvailableSlots, validateSlot } from "../utils/slotGenerator.js";
 import { notifyForAppointment } from "../services/notificationService.js";
 
 const router = Router();
@@ -234,7 +240,7 @@ router.post("/book", async (req, res) => {
 });
 
 async function validateSlot2(orgId, date, time, duration, providerId) {
-  const { validateSlot } = await import("../utils/slotGenerator.js");
+
   return validateSlot(orgId, date, time, duration, providerId);
 }
 
@@ -289,17 +295,6 @@ function computeDayHourDist(calls) {
 }
 
 async function buildReportData(orgId) {
-  const Organization = (await import("../models/Organization.js")).default;
-  const User = (await import("../models/User.js")).default;
-  const Call = (await import("../models/Call.js")).default;
-  const Appointment = (await import("../models/Appointment.js")).default;
-  const Patient = (await import("../models/Patient.js")).default;
-  const Questionnaire = (await import("../models/Questionnaire.js")).default;
-  const Report = (await import("../models/Report.js")).default;
-  const KnowledgeDoc = (await import("../models/KnowledgeDoc.js")).default;
-  const BookingToken = (await import("../models/BookingToken.js")).default;
-  const AuditLog = (await import("../models/AuditLog.js")).default;
-  const Notification = (await import("../models/Notification.js")).default;
   const org = await Organization.findById(orgId);
   if (!org) return null;
   const now = new Date();
@@ -806,10 +801,8 @@ router.post("/send-monthly-report", protect, authorize("admin"), async (req, res
     const { html, subject } = req.body;
     if (!html) return res.status(400).json({ message: "HTML content is required" });
     const orgId = req.user.organization;
-    const User = (await import("../models/User.js")).default;
     const owner = await User.findOne({ organization: orgId, role: "admin" });
     if (!owner?.email) return res.status(400).json({ message: "No admin email found" });
-    const { sendEmail } = await import("../services/emailService.js");
     await sendEmail({ to: owner.email, subject: subject || "Monthly Report", html });
     res.json({ message: "Report sent to " + owner.email });
   } catch (error) {

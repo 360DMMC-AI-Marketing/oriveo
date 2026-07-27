@@ -352,7 +352,10 @@ router.put("/settings", requireSuperAdmin, validate(settingsSchema), async (req,
         { upsert: true, new: true }
       );
 
-      // Also update process.env at runtime for the current server instance
+      // Also update process.env at runtime for the current server instance.
+      // Security boundary: only the 7 whitelisted keys above are accepted (validated by settingsSchema).
+      // These are operational keys (Twilio, phone numbers) — NOT security keys (JWT_SECRET, PHI_ENCRYPTION_KEY).
+      // This endpoint is gated behind requireSuperAdmin.
       if (c.value) {
         process.env[c.key] = c.value;
       }

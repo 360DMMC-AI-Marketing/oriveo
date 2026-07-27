@@ -4,6 +4,7 @@ import { parse } from "csv-parse/sync";
 import path from "path";
 import fs from "fs";
 import Patient from "../models/Patient.js";
+import Organization from "../models/Organization.js";
 import {
   getPatients,
   getPatient,
@@ -63,7 +64,7 @@ router.post("/import", authorize("admin"), csvUpload.single("file"), async (req,
     const results = { imported: 0, skipped: 0, errors: [] };
     let orgSpecialty = "general-practice";
     if (req.user.organization) {
-      const org = await (await import("../models/Organization.js")).default.findById(req.user.organization).lean();
+      const org = await Organization.findById(req.user.organization).lean();
       if (org?.specialty) orgSpecialty = org.specialty;
     }
     for (const row of records) {

@@ -23,7 +23,7 @@ router.get("/", async (req, res) => {
       query.date = { $gte: new Date(req.query.start), $lte: new Date(req.query.end) };
     }
     if (req.user.role === "doctor" || req.user.role === "nurse") {
-      const patients = await (await import("../models/Patient.js")).default.find({ assignedDoctor: req.user._id }).select("_id");
+      const patients = await Patient.find({ assignedDoctor: req.user._id }).select("_id");
       query.patient = { $in: patients.map((p) => p._id) };
     }
     const appointments = await Appointment.find(query)
@@ -40,7 +40,7 @@ router.get("/stats", async (req, res) => {
   try {
     const match = { ...req.tenantFilter };
     if (req.user.role === "doctor" || req.user.role === "nurse") {
-      const patients = await (await import("../models/Patient.js")).default.find({ assignedDoctor: req.user._id }).select("_id");
+      const patients = await Patient.find({ assignedDoctor: req.user._id }).select("_id");
       match.patient = { $in: patients.map((p) => p._id) };
     }
 

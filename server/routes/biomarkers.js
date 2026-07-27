@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { protect, authorize } from "../middleware/auth.js";
 import VoiceBiomarker from "../models/VoiceBiomarker.js";
+import Call from "../models/Call.js";
 import { processCallBiomarkers, getPatientTrend, getFlaggedPatients } from "../services/biomarkerService.js";
 
 const router = Router();
@@ -76,7 +77,6 @@ router.post("/process/:callId", authorize("admin", "doctor"), async (req, res) =
 // POST /biomarkers/process-batch - process all unprocessed calls
 router.post("/process-batch", authorize("admin"), async (req, res) => {
   try {
-    const Call = (await import("../models/Call.js")).default;
     const calls = await Call.find({
       organization: req.user.organization,
       status: "completed",

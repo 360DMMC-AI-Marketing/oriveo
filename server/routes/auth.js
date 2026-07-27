@@ -1,6 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import rateLimit from "express-rate-limit";
@@ -25,6 +26,14 @@ const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { message: "Too many requests, please try again after 15 minutes" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const twoFactorVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many verification attempts, please try again after 15 minutes" },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -262,7 +271,7 @@ router.post("/2fa/disable", protect, async (req, res) => {
   }
 });
 
-router.post("/2fa/verify", async (req, res) => {
+router.post("/2fa/verify", twoFactorVerifyLimiter, async (req, res) => {
   try {
     const { email, token, backupCode } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
@@ -299,7 +308,6 @@ router.post("/2fa/verify", async (req, res) => {
     }
 
     // Generate JWT (same as login)
-    const jwt = (await import("jsonwebtoken")).default;
     const jwtToken = jwt.sign(
       { id: user._id, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET,

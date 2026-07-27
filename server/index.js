@@ -344,9 +344,23 @@ httpServer.on("upgrade", async (request, socket, head) => {
   const pathname = url.parse(request.url).pathname;
 
   if (pathname.startsWith("/inbound-media-stream/")) {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit("connection", ws, request);
-    });
+    const match = pathname.match(/^\/inbound-media-stream\/(.+)$/);
+    if (match) {
+      // Validate callId exists in DB before accepting connection
+      const Call = (await import("./models/Call.js")).default;
+      const call = await Call.findById(match[1]).select("_id").lean();
+      if (!call) {
+        socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit("connection", ws, request);
+      });
+    } else {
+      socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+      socket.destroy();
+    }
     return;
   }
 
