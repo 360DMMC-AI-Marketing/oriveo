@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Save, Loader2, User, Lock, Clock, RotateCcw, ChevronDown, ChevronRight } from "lucide-react";
+import { Save, Loader2, User, Lock, Clock, RotateCcw, ChevronDown, ChevronRight, Shield, ShieldOff } from "lucide-react";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -22,12 +23,15 @@ interface Slot {
 
 export default function MyProfile() {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   if (!user) return null;
   const [name, setName] = useState(user.name || "");
   const [phone, setPhone] = useState(user.phone || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showAvailability, setShowAvailability] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
+  const [disable2FAPassword, setDisable2FAPassword] = useState("");
   const [slots, setSlots] = useState<Slot[]>(() =>
     DAYS.map((_, i) => ({ dayOfWeek: i, startTime: "09:00", endTime: "17:00", slotDuration: 30, bufferBetween: 0, isActive: i > 0 && i < 6 }))
   );
@@ -86,6 +90,17 @@ export default function MyProfile() {
       toast.success("Reset to org defaults");
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to reset"),
+  });
+
+  const disable2FAMutation = useMutation({
+    mutationFn: (password: string) => api.post("/auth/2fa/disable", { password }),
+    onSuccess: () => {
+      updateUser({ twoFactorEnabled: false } as any);
+      setDisable2FAPassword("");
+      setShow2FA(false);
+      toast.success("Two-factor authentication disabled");
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to disable 2FA"),
   });
 
   function updateSlot(index: number, field: keyof Slot, value: any) {
@@ -229,6 +244,66 @@ export default function MyProfile() {
             Change Password
           </Button>
         </CardContent>
+      </Card>
+
+      <Card>
+        <button
+          onClick={() => setShow2FA(!show2FA)}
+          className="flex w-full items-center gap-2 px-6 py-3 text-left cursor-pointer hover:bg-gray-50 transition-colors rounded-t-lg"
+        >
+          <Shield className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-semibold text-gray-900 flex-1">Two-Factor Authentication</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.twoFactorEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+            {user.twoFactorEnabled ? "Enabled" : "Disabled"}
+          </span>
+          {show2FA ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+        </button>
+        {show2FA && (
+          <CardContent className="space-y-4 border-t pt-4">
+            <p className="text-xs text-gray-500">
+              Two-factor authentication adds an extra layer of security by requiring a verification code from your authenticator app when signing in.
+            </p>
+            {user.twoFactorEnabled ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-emerald-600">
+                  <Shield className="h-4 w-4" />
+                  <span className="font-medium">2FA is enabled on your account</span>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Enter your password to disable 2FA</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      placeholder="Current password"
+                      value={disable2FAPassword}
+                      onChange={(e) => setDisable2FAPassword(e.target.value)}
+                      className="h-9 text-sm max-w-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => disable2FAMutation.mutate(disable2FAPassword)}
+                      disabled={disable2FAMutation.isPending || !disable2FAPassword}
+                      className="text-danger border-danger/30 hover:bg-danger/5"
+                    >
+                      <ShieldOff className="mr-1 h-3.5 w-3.5" />
+                      Disable
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => navigate("/2fa-setup")}
+                className="rounded-lg"
+              >
+                <Shield className="mr-1 h-4 w-4" />
+                Enable 2FA
+              </Button>
+            )}
+          </CardContent>
+        )}
       </Card>
     </div>
   );

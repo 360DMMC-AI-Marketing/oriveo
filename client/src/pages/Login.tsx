@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, Shield, Lock, CheckCircle } from "lucide-react";
 import Logo from "@/components/ui/Logo";
+import api from "@/lib/api";
 
 export default function Login() {
   const { login } = useAuth();
@@ -21,7 +22,14 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      const { data } = await api.post("/auth/login", { email, password });
+      if (data.requires2FA) {
+        navigate("/2fa-verify", { state: { email: data.email } });
+        return;
+      }
+      localStorage.setItem("oriveo_token", data.token);
+      localStorage.setItem("oriveo_user", JSON.stringify(data.user));
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid email or password");
     } finally {
@@ -113,7 +121,7 @@ export default function Login() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
-                  <button type="button" onClick={() => {}} className="text-xs font-medium text-primary hover:text-primary-dark transition-colors">
+                  <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-primary hover:text-primary-dark transition-colors">
                     Forgot password?
                   </button>
                 </div>

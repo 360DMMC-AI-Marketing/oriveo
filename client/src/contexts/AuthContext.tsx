@@ -13,6 +13,8 @@ interface User {
   language: string;
   superAdmin?: boolean;
   organization?: { _id: string; name: string; slug: string; specialty?: string; clinicType?: string; clinicSize?: string; billingSetup?: { codeSet: string }; hasDepartments?: boolean } | null;
+  emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -64,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post("/auth/login", { email, password });
+    if (data.requires2FA) {
+      throw { requires2FA: true, email: data.email };
+    }
     localStorage.setItem("oriveo_token", data.token);
     localStorage.setItem("oriveo_user", JSON.stringify(data.user));
     setToken(data.token);

@@ -44,6 +44,11 @@ const Pricing = lazy(() => import("@/pages/Pricing"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/SignupWizard"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const TwoFactorVerify = lazy(() => import("@/pages/TwoFactorVerify"));
+const TwoFactorSetup = lazy(() => import("@/pages/TwoFactorSetup"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const StaticPage = lazy(() => import("@/pages/StaticPage"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Patients = lazy(() => import("@/pages/Patients"));
@@ -122,6 +127,10 @@ function AppRoutes() {
           <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+          <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+          <Route path="/2fa-verify" element={<PublicRoute><TwoFactorVerify /></PublicRoute>} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/:page" element={<PublicLayout><StaticPage /></PublicLayout>} />
           <Route path="/book/:token" element={<PatientBooking />} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -132,6 +141,7 @@ function AppRoutes() {
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/calendar" element={<CalendarSchedule />} />
           <Route path="/my-profile" element={<MyProfile />} />
+          <Route path="/2fa-setup" element={<TwoFactorSetup />} />
           <Route path="/calls/:id" element={<CallDetail />} />
           <Route path="/users" element={<Navigate to="/clinic/users" replace />} />
           <Route path="/audit-log" element={<ProtectedRoute allowedRoles={["admin"]}><AuditLog /></ProtectedRoute>} />

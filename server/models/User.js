@@ -25,6 +25,14 @@ const userSchema = new mongoose.Schema(
     googleCalendarConnected: { type: Boolean, default: false },
     googleRefreshToken: { type: String, default: "" },
     googleCalendarEmail: { type: String, default: "" },
+    emailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String, default: "" },
+    emailVerificationExpires: { type: Date, default: null },
+    passwordResetToken: { type: String, default: "" },
+    passwordResetExpires: { type: Date, default: null },
+    twoFactorSecret: { type: String, default: "" },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorBackupCodes: { type: [String], default: [] },
   },
   { timestamps: true }
 );
@@ -42,6 +50,13 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.twoFactorSecret;
+  delete obj.twoFactorBackupCodes;
+  delete obj.passwordResetToken;
+  delete obj.passwordResetExpires;
+  delete obj.emailVerificationToken;
+  delete obj.emailVerificationExpires;
+  delete obj.googleRefreshToken;
   return obj;
 };
 

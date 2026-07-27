@@ -1,10 +1,12 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Organization from "../models/Organization.js";
 import Subscription from "../models/Subscription.js";
 import { SPECIALTIES_BY_TYPE, getSpecialty } from "../config/specialties.js";
 import { getDepartmentsForSpecialty } from "../config/specialtyDepartments.js";
+import { sendVerificationEmail } from "../services/emailService.js";
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -113,6 +115,23 @@ export const signup = async (req, res) => {
 
     await user.populate("organization", "name slug specialty clinicType clinicSize billingSetup");
     const token = generateToken(user);
+
+    // Send verification email (non-blocking)
+    try {
+      const CLIENT_URL = process.env.CLIENT_URL || "https://2.25.167.45:8443";
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      user.emailVerificationToken = hashedToken;
+      user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+      await user.save({ validateModifiedOnly: true });
+      sendVerificationEmail({
+        toEmail: user.email,
+        toName: user.name,
+        verifyUrl: `${CLIENT_URL}/verify-email?token=${rawToken}`,
+        companyName: process.env.PRACTICE_NAME || "Oriveo",
+      }).catch(() => {});
+    } catch { /* ignore email errors */ }
+
     res.status(201).json({ token, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -128,6 +147,9 @@ export const login = async (req, res) => {
     }
     if (!user.isActive) {
       return res.status(403).json({ message: "Account is deactivated" });
+    }
+    if (user.twoFactorEnabled) {
+      return res.json({ requires2FA: true, email: user.email });
     }
     const token = generateToken(user);
     res.json({ token, user });
