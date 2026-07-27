@@ -224,7 +224,6 @@ export default function Reports() {
   if (viewing) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" onClick={() => setViewing(null)} className="gap-1 text-sm">&larr; Back to reports</Button>
         {loadingReport ? (
           <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         ) : singleReport ? (
