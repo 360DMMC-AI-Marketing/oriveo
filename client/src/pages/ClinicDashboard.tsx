@@ -10,7 +10,7 @@ import LanguageSelect from "@/components/LanguageSelect";
 import {
   Building2, Users, Phone, Activity, CreditCard, ArrowUpRight,
   CheckCircle2, Save, Loader2, RefreshCw, Globe2, Globe, Database,
-  Bell, MessageSquare, Shield, Mail, XCircle, Bot, Settings2, Clock
+  Bell, MessageSquare, Shield, Mail, XCircle, Bot, Settings2, Clock, Edit3
 } from "lucide-react";
 
 const PLAN_FEATURES: Record<string, { label: string; price: string; features: string[] }> = {
@@ -94,7 +94,9 @@ export default function ClinicDashboard() {
   // ===== Settings state =====
   const [form, setForm] = useState<any>(null);
   const [hours, setHours] = useState<any>(null);
+  const [editingHours, setEditingHours] = useState(false);
   const initialized = useRef(false);
+  const canEditHours = user?.role === "admin" || user?.role === "doctor";
 
   const saveMutation = useMutation({
     mutationFn: (body: any) => {
@@ -119,6 +121,7 @@ export default function ClinicDashboard() {
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ["org", "settings"] });
       if (res?.data?.organization) updateUser({ organization: res.data.organization });
+      setEditingHours(false);
       toast.success("Business hours saved");
     },
     onError: (e: any) => toast.error(e.response?.data?.message || e.message),
@@ -474,122 +477,192 @@ export default function ClinicDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4" /> Business Hours</CardTitle>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={hours.enabled}
-                  onChange={e => setHours({ ...hours, enabled: e.target.checked })}
-                  className="sr-only peer" />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-              </label>
+              <div className="flex items-center gap-3">
+                {canEditHours && editingHours && (
+                  <Button variant="ghost" size="sm" onClick={() => setEditingHours(false)} className="text-xs text-gray-500">Cancel</Button>
+                )}
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={hours.enabled}
+                    onChange={e => canEditHours && setEditingHours(true) || setHours({ ...hours, enabled: e.target.checked })}
+                    className="sr-only peer" disabled={!canEditHours} />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
             </CardHeader>
             {hours.enabled && (
               <CardContent className="space-y-4">
-                <p className="text-xs text-gray-500">
-                  AI answers 24/7 by default. During closed hours, calls follow your after-hours action setting below.
-                </p>
+                {!editingHours ? (
+                  /* ========== VIEW MODE ========== */
+                  <div className="space-y-4">
+                    <p className="text-xs text-gray-500">
+                      AI answers 24/7 by default. During closed hours, calls follow your after-hours action setting below.
+                    </p>
 
-                {/* Timezone */}
-                <div className="max-w-xs">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-                  <select value={hours.timezone}
-                    onChange={e => setHours({ ...hours, timezone: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option value="America/New_York">Eastern Time</option>
-                    <option value="America/Chicago">Central Time</option>
-                    <option value="America/Denver">Mountain Time</option>
-                    <option value="America/Los_Angeles">Pacific Time</option>
-                    <option value="Europe/London">London (GMT)</option>
-                    <option value="Europe/Paris">Paris (CET)</option>
-                    <option value="Asia/Dubai">Dubai (GST)</option>
-                    <option value="Asia/Tokyo">Tokyo (JST)</option>
-                    <option value="Australia/Sydney">Sydney (AEST)</option>
-                    <option value="Africa/Casablanca">Casablanca (WET)</option>
-                  </select>
-                </div>
-
-                {/* Day schedule */}
-                <div className="space-y-2">
-                  {(["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).map(day => {
-                    const dayLabels: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
-                    const d = hours.days[day];
-                    return (
-                      <div key={day} className="flex items-center gap-3 py-1.5">
-                        <span className="w-24 text-sm font-medium text-gray-700">{dayLabels[day]}</span>
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="checkbox" checked={!d.closed}
-                            onChange={e => setHours({
-                              ...hours,
-                              days: { ...hours.days, [day]: { ...d, closed: !e.target.checked } },
-                            })}
-                            className="rounded border-gray-300 text-primary focus:ring-primary" />
-                          <span className="text-xs text-gray-500">{d.closed ? "Closed" : "Open"}</span>
-                        </label>
-                        {!d.closed && (
-                          <>
-                            <input type="time" value={d.open}
-                              onChange={e => setHours({
-                                ...hours,
-                                days: { ...hours.days, [day]: { ...d, open: e.target.value } },
-                              })}
-                              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                            <span className="text-gray-400 text-sm">to</span>
-                            <input type="time" value={d.close}
-                              onChange={e => setHours({
-                                ...hours,
-                                days: { ...hours.days, [day]: { ...d, close: e.target.value } },
-                              })}
-                              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* After Hours Action */}
-                <div className="border-t pt-4 space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">When clinic is closed, AI should:</label>
-                  <div className="flex gap-4">
-                    {([
-                      { value: "take-message", label: "Take a message", desc: "AI collects info and logs a callback request" },
-                      { value: "transfer", label: "Transfer to number", desc: "Forward the call to an on-call number" },
-                    ] as const).map(opt => (
-                      <label key={opt.value} className={`flex-1 rounded-lg border p-3 cursor-pointer transition-colors ${
-                        hours.afterHoursAction === opt.value
-                          ? "border-primary bg-primary/5 ring-1 ring-primary"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}>
-                        <input type="radio" name="afterHours" value={opt.value} checked={hours.afterHoursAction === opt.value}
-                          onChange={() => setHours({ ...hours, afterHoursAction: opt.value })}
-                          className="sr-only" />
-                        <p className="text-sm font-medium text-gray-900">{opt.label}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
-                      </label>
-                    ))}
-                  </div>
-
-                  {hours.afterHoursAction === "transfer" && (
-                    <div className="max-w-xs">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Number</label>
-                      <Input value={hours.transferNumber}
-                        onChange={e => setHours({ ...hours, transferNumber: e.target.value })}
-                        placeholder="+1234567890" />
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-500">Timezone:</span>
+                      <span className="font-medium text-gray-900">{
+                        { "America/New_York": "Eastern Time", "America/Chicago": "Central Time", "America/Denver": "Mountain Time", "America/Los_Angeles": "Pacific Time", "Europe/London": "London (GMT)", "Europe/Paris": "Paris (CET)", "Asia/Dubai": "Dubai (GST)", "Asia/Tokyo": "Tokyo (JST)", "Australia/Sydney": "Sydney (AEST)", "Africa/Casablanca": "Casablanca (WET)" }[hours.timezone] || hours.timezone
+                      }</span>
                     </div>
-                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Closed Message (optional)</label>
-                    <Input value={hours.closedMessage}
-                      onChange={e => setHours({ ...hours, closedMessage: e.target.value })}
-                      placeholder="We're currently closed. Leave a message and we'll call you back." />
-                    <p className="text-xs text-gray-400 mt-1">Played to callers during closed hours when set to "Take a message"</p>
+                    <div className="space-y-1">
+                      {(["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).map(day => {
+                        const dayLabels: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+                        const d = hours.days[day];
+                        return (
+                          <div key={day} className="flex items-center gap-3 py-1">
+                            <span className="w-24 text-sm font-medium text-gray-700">{dayLabels[day]}</span>
+                            {d.closed ? (
+                              <span className="text-sm text-gray-400 italic">Closed</span>
+                            ) : (
+                              <span className="text-sm text-gray-900">{d.open} — {d.close}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-500">When clinic is closed:</span>
+                        <span className="font-medium text-gray-900">
+                          {hours.afterHoursAction === "transfer" ? "Transfer to on-call number" : "Take a message"}
+                        </span>
+                      </div>
+                      {hours.afterHoursAction === "transfer" && hours.transferNumber && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-500">Transfer number:</span>
+                          <span className="font-medium text-gray-900">{hours.transferNumber}</span>
+                        </div>
+                      )}
+                      {hours.afterHoursAction === "take-message" && hours.closedMessage && (
+                        <div className="text-sm">
+                          <span className="text-gray-500">Closed message: </span>
+                          <span className="font-medium text-gray-900">"{hours.closedMessage}"</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {canEditHours && (
+                      <div className="flex justify-end pt-2">
+                        <Button variant="outline" onClick={() => setEditingHours(true)} className="gap-1">
+                          <Edit3 className="h-4 w-4" /> Edit Hours
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  /* ========== EDIT MODE ========== */
+                  <>
+                    <p className="text-xs text-gray-500">
+                      AI answers 24/7 by default. During closed hours, calls follow your after-hours action setting below.
+                    </p>
 
-                <div className="flex justify-end pt-2">
-                  <Button onClick={() => saveHoursMutation.mutate(hours)} disabled={saveHoursMutation.isPending} className="gap-1">
-                    <Save className="h-4 w-4" /> {saveHoursMutation.isPending ? "Saving..." : "Save Hours"}
-                  </Button>
-                </div>
+                    {/* Timezone */}
+                    <div className="max-w-xs">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+                      <select value={hours.timezone}
+                        onChange={e => setHours({ ...hours, timezone: e.target.value })}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="America/New_York">Eastern Time</option>
+                        <option value="America/Chicago">Central Time</option>
+                        <option value="America/Denver">Mountain Time</option>
+                        <option value="America/Los_Angeles">Pacific Time</option>
+                        <option value="Europe/London">London (GMT)</option>
+                        <option value="Europe/Paris">Paris (CET)</option>
+                        <option value="Asia/Dubai">Dubai (GST)</option>
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                        <option value="Australia/Sydney">Sydney (AEST)</option>
+                        <option value="Africa/Casablanca">Casablanca (WET)</option>
+                      </select>
+                    </div>
+
+                    {/* Day schedule */}
+                    <div className="space-y-2">
+                      {(["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).map(day => {
+                        const dayLabels: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+                        const d = hours.days[day];
+                        return (
+                          <div key={day} className="flex items-center gap-3 py-1.5">
+                            <span className="w-24 text-sm font-medium text-gray-700">{dayLabels[day]}</span>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input type="checkbox" checked={!d.closed}
+                                onChange={e => setHours({
+                                  ...hours,
+                                  days: { ...hours.days, [day]: { ...d, closed: !e.target.checked } },
+                                })}
+                                className="rounded border-gray-300 text-primary focus:ring-primary" />
+                              <span className="text-xs text-gray-500">{d.closed ? "Closed" : "Open"}</span>
+                            </label>
+                            {!d.closed && (
+                              <>
+                                <input type="time" value={d.open}
+                                  onChange={e => setHours({
+                                    ...hours,
+                                    days: { ...hours.days, [day]: { ...d, open: e.target.value } },
+                                  })}
+                                  className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <span className="text-gray-400 text-sm">to</span>
+                                <input type="time" value={d.close}
+                                  onChange={e => setHours({
+                                    ...hours,
+                                    days: { ...hours.days, [day]: { ...d, close: e.target.value } },
+                                  })}
+                                  className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* After Hours Action */}
+                    <div className="border-t pt-4 space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">When clinic is closed, AI should:</label>
+                      <div className="flex gap-4">
+                        {([
+                          { value: "take-message", label: "Take a message", desc: "AI collects info and logs a callback request" },
+                          { value: "transfer", label: "Transfer to number", desc: "Forward the call to an on-call number" },
+                        ] as const).map(opt => (
+                          <label key={opt.value} className={`flex-1 rounded-lg border p-3 cursor-pointer transition-colors ${
+                            hours.afterHoursAction === opt.value
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}>
+                            <input type="radio" name="afterHours" value={opt.value} checked={hours.afterHoursAction === opt.value}
+                              onChange={() => setHours({ ...hours, afterHoursAction: opt.value })}
+                              className="sr-only" />
+                            <p className="text-sm font-medium text-gray-900">{opt.label}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                          </label>
+                        ))}
+                      </div>
+
+                      {hours.afterHoursAction === "transfer" && (
+                        <div className="max-w-xs">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Number</label>
+                          <Input value={hours.transferNumber}
+                            onChange={e => setHours({ ...hours, transferNumber: e.target.value })}
+                            placeholder="+1234567890" />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Custom Closed Message (optional)</label>
+                        <Input value={hours.closedMessage}
+                          onChange={e => setHours({ ...hours, closedMessage: e.target.value })}
+                          placeholder="We're currently closed. Leave a message and we'll call you back." />
+                        <p className="text-xs text-gray-400 mt-1">Played to callers during closed hours when set to "Take a message"</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Button onClick={() => saveHoursMutation.mutate(hours)} disabled={saveHoursMutation.isPending} className="gap-1">
+                        <Save className="h-4 w-4" /> {saveHoursMutation.isPending ? "Saving..." : "Save Hours"}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             )}
           </Card>

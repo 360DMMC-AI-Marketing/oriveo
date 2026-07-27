@@ -68,11 +68,11 @@ export default function CommandPalette() {
     <>
       <button
         onClick={toggle}
-        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-colors"
+        className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-400 hover:border-primary/30 hover:bg-primary/5 hover:text-primary/60 transition-all w-64 lg:w-80"
       >
-        <Search className="h-3.5 w-3.5" />
-        <span>Search...</span>
-        <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 rounded border bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+        <Search className="h-4 w-4 shrink-0" />
+        <span>Search pages, actions...</span>
+        <kbd className="ml-auto hidden sm:inline-flex items-center gap-0.5 rounded-md border bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
           <span className="text-xs">⌘</span>K
         </kbd>
       </button>
