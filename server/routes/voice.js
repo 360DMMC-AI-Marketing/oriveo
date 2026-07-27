@@ -182,6 +182,10 @@ async function handleFunctionCall(callId, functionName, args) {
             patientForDnc.doNotCall = true;
             patientForDnc.doNotCallReason = args.reason || "Patient request";
             await patientForDnc.save();
+            await Call.updateMany(
+              { patient: patientForDnc._id, status: { $in: ["scheduled", "queued", "pending"] }, _id: { $ne: callId } },
+              { $set: { status: "cancelled", notes: "Cancelled — patient requested Do Not Call during call", completedAt: new Date() } }
+            );
           }
         }
         return { success: true, message: "I've noted that. You will not receive further calls from us." };
@@ -616,6 +620,19 @@ router.put("/:patientId/do-not-call", protect, authorize("admin", "doctor", "nur
       { new: true }
     );
     if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    if (req.body.doNotCall) {
+      const cancelled = await Call.updateMany(
+        { patient: req.params.patientId, status: { $in: ["scheduled", "queued", "pending"] } },
+        { $set: {
+          status: "cancelled",
+          notes: `Cancelled — patient marked Do Not Call${req.body.reason ? `: ${req.body.reason}` : ""}`,
+          completedAt: new Date(),
+        }}
+      );
+      console.log(`[DNC] Cancelled ${cancelled.modifiedCount} scheduled calls for patient ${req.params.patientId}`);
+    }
+
     res.json({ patient });
   } catch (error) {
     res.status(500).json({ message: error.message });

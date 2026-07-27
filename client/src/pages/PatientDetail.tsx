@@ -22,6 +22,7 @@ import VitalsTab from "@/components/patients/VitalsTab";
 import VisitsTab from "@/components/patients/VisitsTab";
 import ReportsTab from "@/components/patients/ReportsTab";
 import ClinicalTab from "@/components/patients/ClinicalTab";
+import DncBadge from "@/components/DncBadge";
 import VoiceBiomarkersTab from "@/components/patients/VoiceBiomarkersTab";
 
 export default function PatientDetail() {
@@ -193,6 +194,7 @@ export default function PatientDetail() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{patient.name}</h1>
+              {patient.doNotCall && <DncBadge reason={patient.doNotCallReason} />}
               {patient.patientType === "pet" && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Pet</span>
               )}

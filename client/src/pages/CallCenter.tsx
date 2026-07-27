@@ -16,6 +16,7 @@ import {
   PhoneIncoming, PhoneOutgoing, CheckCircle, Clock, XCircle, Siren,
   Star, Brain, ArrowRight, AlertTriangle, Radio
 } from "lucide-react";
+import DncBadge from "@/components/DncBadge";
 import { medicalTemplates } from "@/data/medicalTemplates";
 import { dentalTemplates } from "@/data/dentalTemplates";
 import { veterinaryTemplates } from "@/data/veterinaryTemplates";
@@ -520,7 +521,8 @@ export default function CallCenter() {
                           onMouseLeave={() => setHoveredInstr(null)}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between border-b last:border-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium">{p.name}</span>
+                            <span className={`font-medium ${p.doNotCall ? "text-gray-400 line-through" : ""}`}>{p.name}</span>
+                            {p.doNotCall && <DncBadge reason={p.doNotCallReason} />}
                             {p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date()) && (
                               <Star className="h-3 w-3 text-amber-500 shrink-0" />
                             )}
@@ -595,16 +597,22 @@ export default function CallCenter() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">&nbsp;</label>
-                  <Button onClick={handleQuickCall} disabled={!selectedPatient} className="h-10 gap-2 px-6">
-                    <Phone className="h-4 w-4" /> Call Now
+                  <Button onClick={handleQuickCall} disabled={!selectedPatient || selectedPatient?.doNotCall} className="h-10 gap-2 px-6">
+                    <Phone className="h-4 w-4" /> {selectedPatient?.doNotCall ? "Do Not Call" : "Call Now"}
                   </Button>
                 </div>
               </div>
               {selectedPatient && (
-                <div className="mt-3 flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+                <div className={`mt-3 flex items-center gap-3 rounded-lg px-3 py-2 ${selectedPatient.doNotCall ? "bg-red-50 border border-red-200" : "bg-primary/5 border border-primary/20"}`}>
                   <div className="flex-1">
-                    <span className="font-medium text-sm">{selectedPatient.name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{selectedPatient.phone}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{selectedPatient.name}</span>
+                      {selectedPatient.doNotCall && <DncBadge reason={selectedPatient.doNotCallReason} />}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{selectedPatient.phone}</span>
+                    {selectedPatient.doNotCall && (
+                      <p className="text-xs text-red-600 mt-1 font-medium">This patient has opted out of calls and cannot be contacted.</p>
+                    )}
                   </div>
                   {selectedPatient.language && selectedPatient.language !== "en" && (
                     <span className="text-xs uppercase text-muted-foreground/60 border rounded px-1">{selectedPatient.language}</span>
@@ -707,11 +715,15 @@ export default function CallCenter() {
               </h2>
               <div className="grid gap-1 sm:grid-cols-2">
                 {batchFilteredPatients.map((p: any) => (
-                  <label key={p._id} className="flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                  <label key={p._id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer ${p.doNotCall ? "bg-red-50/50 border-red-200 opacity-70" : "hover:bg-gray-50"}`}>
                     <input type="checkbox" checked={selectedIds.has(p._id)} onChange={() => togglePatient(p._id)}
+                      disabled={p.doNotCall}
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium truncate">{p.name}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-sm font-medium truncate ${p.doNotCall ? "text-gray-400 line-through" : ""}`}>{p.name}</span>
+                        {p.doNotCall && <DncBadge reason={p.doNotCallReason} />}
+                      </div>
                       <div className="text-xs text-muted-foreground">{p.phone}</div>
                     </div>
                     {memberIds.has(p._id) && <span className="text-[10px] text-gray-400 shrink-0">in group</span>}

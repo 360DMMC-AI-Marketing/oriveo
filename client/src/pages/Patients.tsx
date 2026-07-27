@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2, PawPrint, Star,
 } from "lucide-react";
+import DncBadge from "@/components/DncBadge";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import { toast } from "sonner";
@@ -334,6 +335,7 @@ export default function Patients() {
                             <Link to={`/patients/${m._id}`} className="flex items-center gap-2 min-w-0 flex-1">
                               {m.patientType === "pet" ? <PawPrint className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
                               <span className="text-sm font-medium truncate">{m.name}</span>
+                              {m.doNotCall && <DncBadge reason={m.doNotCallReason} />}
                               <span className="text-xs text-muted-foreground shrink-0">{m.patientType === "pet" ? m.species || "Pet" : m.phone}</span>
                               {m.primaryDiagnosis && <span className="text-[10px] text-blue-600 bg-blue-50 rounded px-1 truncate">{m.primaryDiagnosis}</span>}
                             </Link>
@@ -388,6 +390,7 @@ export default function Patients() {
                     <div className="text-sm font-medium hover:text-primary truncate flex items-center gap-1.5">
                       {p.patientType === "pet" ? <PawPrint className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
                       <span>{p.name}</span>
+                      {p.doNotCall && <DncBadge reason={p.doNotCallReason} />}
                       {p.callInstructions?.templateName && (!p.callInstructions.expiresAt || new Date(p.callInstructions.expiresAt) > new Date()) && (
                         <Star className="h-3 w-3 text-amber-500 shrink-0" />
                       )}
@@ -404,9 +407,11 @@ export default function Patients() {
                     </div>
                   </Link>
                   <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <button onClick={() => callPatient(p)} className="p-1.5 rounded hover:bg-primary/10 text-gray-400 hover:text-primary" title="Call">
-                      <Phone className="h-3.5 w-3.5" />
-                    </button>
+                    {!p.doNotCall && (
+                      <button onClick={() => callPatient(p)} className="p-1.5 rounded hover:bg-primary/10 text-gray-400 hover:text-primary" title="Call">
+                        <Phone className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     {groups.length > 0 && !memberIds.has(p._id) && (
                       <div className="relative group">
                         <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Add to group">
