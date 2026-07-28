@@ -455,6 +455,98 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Call Instructions */}
+          {(user?.role === "admin" || user?.role === "doctor") && (
+            <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold text-gray-700">Today's Call Instructions</span>
+                  {activeInstructions.length > 0 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">{activeInstructions.length}</span>
+                  )}
+                </div>
+                <Button variant="outline" size="sm" className="rounded-lg text-xs h-7" onClick={() => setShowCallInstrForm(!showCallInstrForm)}>
+                  <Plus className="h-3 w-3 mr-1" /> Add
+                </Button>
+              </div>
+              <div className="p-3 space-y-2">
+                {showCallInstrForm && (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900">Set Call Instruction</p>
+                      <button onClick={() => setShowCallInstrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type="text" placeholder="Search patient..." value={callInstrDraft.patientName}
+                        onChange={(e) => { setCallInstrDraft({ ...callInstrDraft, patientName: e.target.value, patientId: "" }); }}
+                        className="flex w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm" />
+                      {callInstrDraft.patientName && !callInstrDraft.patientId && (
+                        <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-lg max-h-40 overflow-y-auto">
+                          {patients.filter((p: any) => p.name?.toLowerCase().includes(callInstrDraft.patientName.toLowerCase())).slice(0, 5).map((p: any) => (
+                            <button key={p._id} onClick={() => setCallInstrDraft({ ...callInstrDraft, patientId: p._id, patientName: p.name })}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">{p.name}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <select value={callInstrDraft.templateId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
+                        const q = allTemplates.find((t: any) => t.id === val);
+                        if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || val }); }
+                      }}
+                      className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                      <option value="">Select template...</option>
+                      {allTemplates.map((t) => <option key={t.id} value={t.id}>{t.condition}</option>)}
+                    </select>
+                    <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
+                      rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" placeholder="Notes for staff..." />
+                    <Button size="sm" className="rounded-lg" disabled={!callInstrDraft.patientId || !callInstrDraft.templateId || updatePatientMutation.isPending}
+                      onClick={() => updatePatientMutation.mutate({
+                        patientId: callInstrDraft.patientId,
+                        callInstructions: { templateId: callInstrDraft.templateId, templateName: callInstrDraft.templateName, notes: callInstrDraft.notes, setBy: user?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+                      })}>
+                      <Save className="h-3.5 w-3.5 mr-1" /> Save
+                    </Button>
+                  </div>
+                )}
+                {activeInstructions.length === 0 ? (
+                  <div className="py-4 text-center text-gray-400">
+                    <ClipboardList className="mx-auto mb-2 h-5 w-5" />
+                    <p className="text-xs">No active call instructions today</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {activeInstructions.map((p: any) => {
+                      const ci = p.callInstructions;
+                      const hoursLeft = Math.max(0, Math.round((new Date(ci.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+                      return (
+                        <div key={p._id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/50 p-2.5">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <Star className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                              <p className="text-xs font-medium truncate">{p.name || "Unknown"}</p>
+                            </div>
+                            <p className="text-[10px] text-gray-500">
+                              {ci.templateName} · expires in {hoursLeft}h
+                            </p>
+                          </div>
+                          <Link to={`/voice-agent?patientId=${p._id}&patientName=${encodeURIComponent(p.name)}`}
+                            className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors ml-2">
+                            Call
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Charts */}
           {completedCalls.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -584,97 +676,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-
-          {(user?.role === "admin" || user?.role === "doctor") && (
-            <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-semibold text-gray-700">Today's Call Instructions</span>
-                  {activeInstructions.length > 0 && (
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">{activeInstructions.length}</span>
-                  )}
-                </div>
-                <Button variant="outline" size="sm" className="rounded-lg text-xs h-7" onClick={() => setShowCallInstrForm(!showCallInstrForm)}>
-                  <Plus className="h-3 w-3 mr-1" /> Add
-                </Button>
-              </div>
-              <div className="p-3 space-y-2">
-                {showCallInstrForm && (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900">Set Call Instruction</p>
-                      <button onClick={() => setShowCallInstrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
-                    </div>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input type="text" placeholder="Search patient..." value={callInstrDraft.patientName}
-                        onChange={(e) => { setCallInstrDraft({ ...callInstrDraft, patientName: e.target.value, patientId: "" }); }}
-                        className="flex w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm" />
-                      {callInstrDraft.patientName && !callInstrDraft.patientId && (
-                        <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-lg max-h-40 overflow-y-auto">
-                          {patients.filter((p: any) => p.name?.toLowerCase().includes(callInstrDraft.patientName.toLowerCase())).slice(0, 5).map((p: any) => (
-                            <button key={p._id} onClick={() => setCallInstrDraft({ ...callInstrDraft, patientId: p._id, patientName: p.name })}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">{p.name}</button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <select value={callInstrDraft.templateId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
-                        const q = allTemplates.find((t: any) => t.id === val);
-                        if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || val }); }
-                      }}
-                      className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-                      <option value="">Select template...</option>
-                      {allTemplates.map((t) => <option key={t.id} value={t.id}>{t.condition}</option>)}
-                    </select>
-                    <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
-                      rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" placeholder="Notes for staff..." />
-                    <Button size="sm" className="rounded-lg" disabled={!callInstrDraft.patientId || !callInstrDraft.templateId || updatePatientMutation.isPending}
-                      onClick={() => updatePatientMutation.mutate({
-                        patientId: callInstrDraft.patientId,
-                        callInstructions: { templateId: callInstrDraft.templateId, templateName: callInstrDraft.templateName, notes: callInstrDraft.notes, setBy: user?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
-                      })}>
-                      <Save className="h-3.5 w-3.5 mr-1" /> Save
-                    </Button>
-                  </div>
-                )}
-                {activeInstructions.length === 0 ? (
-                  <div className="py-4 text-center text-gray-400">
-                    <ClipboardList className="mx-auto mb-2 h-5 w-5" />
-                    <p className="text-xs">No active call instructions today</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {activeInstructions.map((p: any) => {
-                      const ci = p.callInstructions;
-                      const hoursLeft = Math.max(0, Math.round((new Date(ci.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
-                      return (
-                        <div key={p._id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/50 p-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <Star className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                              <p className="text-xs font-medium truncate">{p.name || "Unknown"}</p>
-                            </div>
-                            <p className="text-[10px] text-gray-500">
-                              {ci.templateName} · expires in {hoursLeft}h
-                            </p>
-                          </div>
-                          <Link to={`/voice-agent?patientId=${p._id}&patientName=${encodeURIComponent(p.name)}`}
-                            className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-[10px] font-medium text-white hover:bg-primary/90 transition-colors ml-2">
-                            Call
-                          </Link>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* System Summary */}
           <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
