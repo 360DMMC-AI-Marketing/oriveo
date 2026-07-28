@@ -1,23 +1,17 @@
 import { useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import Logo from "@/components/ui/Logo";
 import {
-  LayoutDashboard, Users, Phone, Settings, LogOut, Stethoscope,
-  UserPlus, ClipboardList, Bot, BarChart3, BookOpen, ShieldCheck,
-  ChevronDown, ChevronRight, Menu, Calendar, Clock, ScrollText,
-  FileText, PhoneIncoming, Radio, Building2, CreditCard, UserCircle,
-  Dog, Smile, HeartPulse, X,
+  LayoutDashboard, Users, Phone, Stethoscope,
+  ClipboardList, BarChart3, ShieldCheck,
+  ChevronDown, ChevronRight, Menu, Calendar, ScrollText,
+  FileText, Radio, Building2, UserPlus,
+  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft
 } from "lucide-react";
 
 const TYPE_ICONS: Record<string, any> = { human: HeartPulse, dental: Smile, veterinary: Dog };
-const TYPE_LABELS: Record<string, string> = { human: "Medical", dental: "Dental", veterinary: "Veterinary" };
-const TYPE_SUBTITLES: Record<string, string> = {
-  human: "Medical Voice Assistant",
-  dental: "Dental Voice AI",
-  veterinary: "Veterinary Voice AI",
-};
+const TYPE_LABELS: Record<string, string> = { human: "Oriveo", dental: "Oriveo Dental", veterinary: "Oriveo Vet" };
 
 interface NavChild { to: string; icon: React.ElementType; label: string; roles: string[]; }
 interface NavGroup { label: string; icon: React.ElementType; roles: string[]; children: NavChild[]; }
@@ -45,7 +39,6 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
       children: [
         { to: "/patients", icon: Users, label: "Patients", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/appointments", icon: Calendar, label: "Appointments", roles: ["admin", "doctor", "nurse", "receptionist"] },
-        ...(clinicType === "veterinary" ? [{ to: "/patients", icon: Dog, label: "Species", roles: ["admin", "doctor"] as string[] }] : []),
         { to: "/templates", icon: ClipboardList, label: "Templates & Forms", roles: ["admin", "doctor", "nurse"] },
       ],
     },
@@ -69,7 +62,6 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const clinicType = user?.organization?.clinicType || "human";
   const isLarge = user?.organization?.clinicSize === "large";
   const navGroups = getNavGroups(clinicType, isLarge);
@@ -86,25 +78,26 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const toggleGroup = (label: string) => setExpandedGroups((p) => ({ ...p, [label]: !p[label] }));
   const filteredGroups = navGroups.filter((g) => g.roles.includes(user.role));
   const TypeIcon = TYPE_ICONS[clinicType] || HeartPulse;
-  const typeLabel = TYPE_LABELS[clinicType] || "Medical";
-  const subtitle = TYPE_SUBTITLES[clinicType] || TYPE_SUBTITLES.human;
+  const typeLabel = TYPE_LABELS[clinicType] || "Oriveo";
 
   const sidebarContent = (
     <>
-      <div className="flex items-center justify-between border-b px-6 py-5">
+      <div className="flex h-16 items-center justify-between border-b border-gray-800 px-5">
         <div className="flex items-center gap-3">
-          <Logo size="md" variant="dark" showText={false} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
+            <TypeIcon className="h-4 w-4 text-primary" />
+          </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Oriveo</h1>
-            <p className="text-xs text-gray-500">{subtitle}</p>
+            <h1 className="text-sm font-bold text-white tracking-tight">{typeLabel}</h1>
+            <p className="text-[10px] text-gray-500 leading-tight">Healthcare AI</p>
           </div>
         </div>
-        <button onClick={onClose} className="lg:hidden p-1 rounded-lg hover:bg-gray-100 text-gray-400">
-          <X className="h-5 w-5" />
+        <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-gray-800 text-gray-500 lg:hidden">
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {filteredGroups.map((group) => {
           const visibleChildren = group.children.filter((child) => child.roles.includes(user.role));
           if (visibleChildren.length === 0) return null;
@@ -112,24 +105,39 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           const isGroupActive = visibleChildren.some((child) => location.pathname.startsWith(child.to));
           return (
             <div key={group.label}>
-              <button onClick={() => toggleGroup(group.label)} aria-expanded={isExpanded} aria-label={`${group.label} section`}
-                className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer",
-                  isGroupActive ? "bg-primary-light text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                )}>
-                <group.icon className="h-5 w-5 flex-shrink-0" />
+              <button
+                onClick={() => toggleGroup(group.label)}
+                aria-expanded={isExpanded}
+                aria-label={`${group.label} section`}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer",
+                  isGroupActive ? "text-white" : "text-gray-400 hover:text-gray-200"
+                )}
+              >
+                <group.icon className="h-4.5 w-4.5 flex-shrink-0" />
                 <span className="flex-1 text-left">{group.label}</span>
-                {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                {isExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
+                )}
               </button>
               {isExpanded && (
-                <div className="ml-2 mt-1 space-y-0.5 border-l-2 border-gray-100 pl-3">
+                <div className="mt-0.5 space-y-0.5">
                   {visibleChildren.map((child) => {
                     const isActive = location.pathname.startsWith(child.to);
                     return (
-                      <NavLink key={child.to} to={child.to}
-                        className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative",
-                          isActive ? "bg-primary/10 text-primary" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                        )}>
-                        {isActive && <span className="absolute -left-[13px] top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary" />}
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        onClick={() => onClose()}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ml-5 border-l border-gray-800",
+                          isActive
+                            ? "bg-primary/10 text-primary border-l-primary"
+                            : "text-gray-400 hover:text-gray-200 hover:border-gray-600"
+                        )}
+                      >
                         <child.icon className="h-4 w-4 flex-shrink-0" />
                         {child.label}
                       </NavLink>
@@ -141,21 +149,27 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           );
         })}
       </nav>
+
+      <div className="border-t border-gray-800 p-3">
+        <button
+          onClick={logout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-all duration-150"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Sign out
+        </button>
+      </div>
     </>
   );
 
   return (
     <>
-      {/* Mobile sidebar */}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-white transition-transform duration-200 ease-out lg:hidden",
-        open ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {sidebarContent}
-      </aside>
-
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col border-r bg-white">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-gray-900 transition-transform duration-200 ease-out lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         {sidebarContent}
       </aside>
     </>

@@ -5,10 +5,8 @@ import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { GreetingHeader } from "@/components/dashboard/GreetingHeader";
-import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { StatCard } from "@/components/ui/StatCard";
-import { MiniBarChart, MiniPieChart, MiniLineChart } from "@/components/dashboard/MiniChart";
+import { MiniBarChart, MiniPieChart } from "@/components/dashboard/MiniChart";
 import { getHumanWidgets } from "@/components/dashboards/HumanDashboardWidgets";
 import { getDentalWidgets } from "@/components/dashboards/DentalDashboardWidgets";
 import { getVetWidgets } from "@/components/dashboards/VetDashboardWidgets";
@@ -19,9 +17,13 @@ import {
   Phone, AlertTriangle, CheckCircle, Clock,
   Activity, Brain, Users, Calendar, TrendingUp,
   ArrowRight, BarChart3, Siren, ShieldAlert,
-  Heart, Stethoscope, X,
+  Heart, Stethoscope, X, Mic,
   Eye, Award, ClipboardList, Star, Plus, Search, Save
 } from "lucide-react";
+import {
+  PieChart, Pie, Cell, LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 const WIDGET_ICONS: Record<string, any> = {
   patientsToday: Users, appointments: Calendar, avgSeverity: TrendingUp,
@@ -164,6 +166,13 @@ const COLOR_CLASSES: Record<string, string> = {
   pink: "text-pink-600 bg-pink-100 border-pink-200",
 };
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -264,599 +273,539 @@ export default function Dashboard() {
 
   const WidgetIcon = (name: string) => WIDGET_ICONS[name] || Activity;
   const isLoading = loadingPatients || loadingCalls || loadingDashboard;
+  const firstName = user?.name?.split(" ")[0] || "there";
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+  function accentFromColor(color: string): string {
+    const map: Record<string, string> = {
+      blue: "#2563eb", red: "#ef4444", emerald: "#10b981", amber: "#f59e0b",
+      violet: "#8b5cf6", green: "#22c55e", orange: "#f97316", cyan: "#06b6d4",
+      purple: "#a855f7", pink: "#ec4899",
+    };
+    return map[color] || "#6b7280";
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-
-        {/* ── Section 1: Greeting + Quick Actions ── */}
-        <GreetingHeader userName={user?.name || ""} userRole={user?.role || ""} />
-
-        {/* ── Loading State ── */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        )}
-
-        {/* ── Section 2: Emergency Alerts ── */}
-        {emergencyCalls.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border-2 border-red-200 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm">
-            <div className="p-5">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                    <Siren className="h-5 w-5 text-red-600" />
-                  </div>
-                  <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+    <div className="space-y-6">
+      {/* ── Emergency Alert Banner ── */}
+      {emergencyCalls.length > 0 && (
+        <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm">
+          <div className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                  <Siren className="h-5 w-5 text-red-600" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-red-800">
-                    Active Emergencies
-                  </h2>
-                  <p className="text-sm text-red-600">
-                    {emergencyCalls.length} patient{emergencyCalls.length > 1 ? "s" : ""} need immediate attention
-                  </p>
-                </div>
+                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
               </div>
-              <div className="mt-4 space-y-2">
-                {emergencyCalls.map((call: any) => (
-                  <div key={call._id} className="flex items-center justify-between rounded-xl border border-red-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                        <ShieldAlert className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <Link to={`/calls/${call._id}`} className="text-sm font-semibold text-gray-900 hover:underline">
-                          {call.patient?.name || "Unknown"}
-                        </Link>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {call.redFlags?.filter((f: any) => f.tier === 0).map((f: any, i: number) => (
-                            <span key={i} className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                              {f.keyword}
-                            </span>
-                          ))}
-                          {call.aiSeverityScore >= 7 && (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                              Severity: {call.aiSeverityScore}/10
-                            </span>
-                          )}
-                        </div>
-                        {call.aiSummary && <p className="text-xs text-gray-500 truncate mt-0.5 max-w-md">{call.aiSummary}</p>}
-                      </div>
+              <div>
+                <h2 className="text-base font-bold text-red-800">Active Emergencies</h2>
+                <p className="text-sm text-red-600">{emergencyCalls.length} patient{emergencyCalls.length > 1 ? "s" : ""} need immediate attention</p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {emergencyCalls.map((call: any) => (
+                <div key={call._id} className="flex items-center justify-between rounded-xl border border-red-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                      <ShieldAlert className="h-5 w-5 text-red-600" />
                     </div>
-                    {call.emergencyActionTaken === "none" && (user?.role === "admin" || user?.role === "doctor") && (
-                      <div className="flex gap-1.5 shrink-0 ml-2">
-                        <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs gap-1 rounded-lg" onClick={() => setConfirmEmergency({ callId: call._id, target: "911" })} disabled={emergencyMutation.isPending}>
-                          <Phone className="h-3 w-3" /> 911
-                        </Button>
-                        <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 h-8 text-xs gap-1 rounded-lg" onClick={() => setConfirmEmergency({ callId: call._id, target: "clinic" })} disabled={emergencyMutation.isPending}>
-                          <Phone className="h-3 w-3" /> Clinic
-                        </Button>
-                      </div>
-                    )}
-                    {call.emergencyActionTaken !== "none" && (
-                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-3 py-1 shrink-0 ml-2">
-                        &#10003; {call.emergencyActionTaken === "called_911" ? "911 Called" : "Action Taken"}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Emergency Confirm Modal ── */}
-        {confirmEmergency && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmEmergency(null)}>
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Confirm Emergency Call</h3>
-                  <p className="text-sm text-gray-500">This will place an outbound call to {confirmEmergency.target === "911" ? "emergency services (911)" : "the clinic on-call number"}.</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" className="rounded-xl" onClick={() => setConfirmEmergency(null)}>Cancel</Button>
-                <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl" onClick={() => { emergencyMutation.mutate(confirmEmergency); setConfirmEmergency(null); }} disabled={emergencyMutation.isPending}>
-                  {emergencyMutation.isPending ? "Calling..." : `Call ${confirmEmergency.target === "911" ? "911" : "Clinic"}`}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!isLoading && (
-          <>
-            {/* ── Section 3: Key Metrics ── */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {widgets.map((w) => {
-                const IconComp = WidgetIcon(w.key);
-                const value = dashboardData?.data?.[w.key];
-                const displayValue = value !== undefined && value !== null
-                  ? value
-                  : (w.key === "avgSeverity" || w.key === "avgProgress" ? "—" : "0");
-                return (
-                  <StatCard
-                    key={w.key}
-                    icon={IconComp}
-                    label={w.label}
-                    value={displayValue}
-                    accent={
-                      w.color === "blue" ? "#2563eb" :
-                      w.color === "red" ? "#ef4444" :
-                      w.color === "emerald" ? "#10b981" :
-                      w.color === "amber" ? "#f59e0b" :
-                      w.color === "violet" ? "#8b5cf6" :
-                      w.color === "green" ? "#22c55e" :
-                      w.color === "orange" ? "#f97316" :
-                      w.color === "cyan" ? "#06b6d4" :
-                      w.color === "purple" ? "#a855f7" :
-                      w.color === "pink" ? "#ec4899" : "#6b7280"
-                    }
-                  />
-                );
-              })}
-            </div>
-
-            {/* ── Section 4: Analytics Snapshot ── */}
-            <CollapsibleSection
-              id="analytics"
-              title="Analytics & Insights"
-              icon={<BarChart3 className="h-4 w-4" />}
-              badge={completedCalls.length > 0 ? completedCalls.length : undefined}
-              defaultOpen={true}
-              accentColor="#0a7c6f"
-            >
-              <div className="space-y-5 p-5">
-                {/* QA Summary Row */}
-                {(dashboardData?.data || qaScoresData?.summary) && (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <StatCard icon={Calendar} label="No-Show Rate" value={appointmentStats?.noShowRate ?? (dashboardData?.data?.noShowRate || "—")} accent="#2563eb" />
-                    <StatCard icon={Award} label="Avg QA Score" value={`${qaScoresData?.summary?.averageOverall ?? "—"}${qaScoresData?.summary?.averageOverall ? "%" : ""}`} accent="#10b981" />
-                    <StatCard icon={Eye} label="Accuracy" value={`${qaScoresData?.summary?.averageAccuracy ?? "—"}${qaScoresData?.summary?.averageAccuracy ? "%" : ""}`} accent="#f59e0b" />
-                    <StatCard icon={Heart} label="Empathy" value={`${qaScoresData?.summary?.averageEmpathy ?? "—"}${qaScoresData?.summary?.averageEmpathy ? "%" : ""}`} accent="#a855f7" />
-                  </div>
-                )}
-
-                {/* Charts Row */}
-                {completedCalls.length > 0 && (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-semibold text-gray-700">Call Volume (Last 7 Days)</span>
-                      </div>
-                      <MiniBarChart data={callVolumeData} />
-                    </div>
-                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        <span className="text-xs font-semibold text-gray-700">Severity Distribution</span>
-                      </div>
-                      <MiniPieChart data={severityData} colors={["#10b981", "#f59e0b", "#ef4444"]} />
-                      <div className="mt-2 flex justify-center gap-4">
-                        {severityData.map((d, i) => (
-                          <div key={d.name} className="flex items-center gap-1.5">
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ["#10b981", "#f59e0b", "#ef4444"][i] }} />
-                            <span className="text-[10px] font-medium text-gray-500">{d.name}</span>
-                          </div>
+                    <div className="min-w-0 flex-1">
+                      <Link to={`/calls/${call._id}`} className="text-sm font-semibold text-gray-900 hover:underline">{call.patient?.name || "Unknown"}</Link>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {call.redFlags?.filter((f: any) => f.tier === 0).map((f: any, i: number) => (
+                          <span key={i} className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">{f.keyword}</span>
                         ))}
-                      </div>
-                    </div>
-                    {qaTrendsData?.trends?.length > 0 && (
-                      <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                        <div className="mb-3 flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-primary" />
-                          <span className="text-xs font-semibold text-gray-700">QA Score Trend</span>
-                        </div>
-                        <MiniLineChart data={qaTrendsData.trends.slice(-7)} dataKey="avgScore" />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Admin: Condition Prevalence + High Risk */}
-                {user?.role === "admin" && dashboardData?.data?.conditionPrevalence?.length > 0 && (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-semibold text-gray-700">Condition Prevalence (Last 30 Days)</span>
-                      </div>
-                      <MiniPieChart
-                        data={dashboardData.data.conditionPrevalence.map((c: any) => ({ name: c.name || c._id, value: c.count }))}
-                        colors={CHART_COLORS}
-                        innerRadius={40}
-                        outerRadius={70}
-                        height={180}
-                      />
-                    </div>
-                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <ShieldAlert className="h-4 w-4 text-red-500" />
-                        <span className="text-xs font-semibold text-gray-700">High-Risk Patients</span>
-                      </div>
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                        {dashboardData.data.highRiskPatients?.length === 0 ? (
-                          <div className="py-6 text-center text-gray-400 text-sm">No high-risk patients detected</div>
-                        ) : (
-                          dashboardData.data.highRiskPatients?.slice(0, 6).map((hp: any, i: number) => (
-                            <Link key={i} to={`/calls/${hp._id}`} className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50/50 p-2.5 hover:bg-red-50 transition-colors">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100">
-                                  <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-medium text-gray-900 truncate">{hp.patient?.name || "Unknown"}</p>
-                                  <p className="text-[10px] text-gray-500 truncate">{hp.conditionName || "Severity"} · {hp.aiSeverityScore}/10</p>
-                                </div>
-                              </div>
-                            </Link>
-                          ))
+                        {call.aiSeverityScore >= 7 && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Severity: {call.aiSeverityScore}/10</span>
                         )}
                       </div>
+                      {call.aiSummary && <p className="text-xs text-gray-500 truncate mt-0.5 max-w-md">{call.aiSummary}</p>}
                     </div>
                   </div>
-                )}
-              </div>
-            </CollapsibleSection>
-
-            {/* ── Section 5: Clinical Tools ── */}
-            {(user?.role === "admin" || user?.role === "doctor") && (
-              <CollapsibleSection
-                id="clinical"
-                title="Clinical Tools"
-                icon={<Stethoscope className="h-4 w-4" />}
-                badge={activeInstructions.length > 0 ? activeInstructions.length : undefined}
-                defaultOpen={true}
-                accentColor="#2563eb"
-              >
-                <div className="space-y-5 p-5">
-                  {/* Specialty Scales */}
-                  {user?.role === "admin" && SPECIALTY_SCALES[specialty]?.length > 0 && (
-                    <div>
-                      <p className="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Assessment Scales</p>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {SPECIALTY_SCALES[specialty].map((scale, i) => {
-                          const colorClasses = COLOR_CLASSES[scale.color] || "text-gray-600 bg-gray-100 border-gray-200";
-                          const parts = colorClasses.split(" ");
-                          return (
-                            <div key={i} className={`flex items-center gap-3 rounded-xl border p-3 ${parts[1]} ${parts[2]}`}>
-                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${parts[1]}`}>
-                                <Activity className={`h-4 w-4 ${parts[0]}`} />
-                              </div>
-                              <div>
-                                <p className="text-xs font-medium text-gray-900">{scale.name}</p>
-                                <p className="text-[10px] text-gray-500">{scale.range}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {call.emergencyActionTaken === "none" && (user?.role === "admin" || user?.role === "doctor") && (
+                    <div className="flex gap-1.5 shrink-0 ml-2">
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs gap-1 rounded-lg" onClick={() => setConfirmEmergency({ callId: call._id, target: "911" })} disabled={emergencyMutation.isPending}>
+                        <Phone className="h-3 w-3" /> 911
+                      </Button>
+                      <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 h-8 text-xs gap-1 rounded-lg" onClick={() => setConfirmEmergency({ callId: call._id, target: "clinic" })} disabled={emergencyMutation.isPending}>
+                        <Phone className="h-3 w-3" /> Clinic
+                      </Button>
                     </div>
                   )}
-
-                  {/* Call Instructions */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Today's Call Instructions</p>
-                      {(user?.role === "admin" || user?.role === "doctor") && (
-                        <Button variant="outline" size="sm" className="rounded-lg text-xs h-7" onClick={() => setShowCallInstrForm(!showCallInstrForm)}>
-                          <Plus className="h-3 w-3 mr-1" /> Add
-                        </Button>
-                      )}
-                    </div>
-
-                    {showCallInstrForm && (
-                      <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">Set Call Instruction (expires in 24h)</p>
-                          <button onClick={() => setShowCallInstrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
-                        </div>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search patient..."
-                            value={callInstrDraft.patientName}
-                            onChange={(e) => { setCallInstrDraft({ ...callInstrDraft, patientName: e.target.value, patientId: "" }); }}
-                            className="flex w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm"
-                          />
-                          {callInstrDraft.patientName && !callInstrDraft.patientId && (
-                            <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-lg max-h-40 overflow-y-auto">
-                              {patients.filter((p: any) => p.name?.toLowerCase().includes(callInstrDraft.patientName.toLowerCase())).slice(0, 5).map((p: any) => (
-                                <button key={p._id} onClick={() => setCallInstrDraft({ ...callInstrDraft, patientId: p._id, patientName: p.name })}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">{p.name}</button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <select value={callInstrDraft.templateId}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
-                            const q = allTemplates.find((t: any) => t.id === val);
-                            if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || val }); }
-                          }}
-                          className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-                          <option value="">Select template...</option>
-                          {allTemplates.map((t) => <option key={t.id} value={t.id}>{t.condition}</option>)}
-                        </select>
-                        <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
-                          rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                          placeholder="Notes for staff..." />
-                        <Button size="sm" className="rounded-lg" disabled={!callInstrDraft.patientId || !callInstrDraft.templateId || updatePatientMutation.isPending}
-                          onClick={() => updatePatientMutation.mutate({
-                            patientId: callInstrDraft.patientId,
-                            callInstructions: { templateId: callInstrDraft.templateId, templateName: callInstrDraft.templateName, notes: callInstrDraft.notes, setBy: user?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
-                          })}>
-                          <Save className="h-3.5 w-3.5 mr-1" /> Save
-                        </Button>
-                      </div>
-                    )}
-
-                    {activeInstructions.length === 0 ? (
-                      <div className="py-8 text-center text-gray-400">
-                        <ClipboardList className="mx-auto mb-2 h-8 w-8" />
-                        <p className="text-sm">No active call instructions today</p>
-                        <p className="text-xs mt-1">{(user?.role === "admin" || user?.role === "doctor") ? "Add instructions for your patients above" : "No instructions set by doctors today"}</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {activeInstructions.map((p: any) => {
-                          const ci = p.callInstructions;
-                          const hoursLeft = Math.max(0, Math.round((new Date(ci.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
-                          const setByName = ci.setBy?.name || "Doctor";
-                          return (
-                            <div key={p._id} className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/50 p-3 hover:bg-amber-50 transition-colors">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-                                  <Star className="h-4 w-4 text-amber-600" />
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium text-gray-900 truncate">{p.name || "Unknown"}</p>
-                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">{ci.templateName}</span>
-                                  </div>
-                                  {ci.notes && <p className="text-xs text-gray-500 truncate mt-0.5">{ci.notes}</p>}
-                                  <p className="text-[10px] text-gray-400 mt-0.5">Set by {setByName} · expires in {hoursLeft}h</p>
-                                </div>
-                              </div>
-                              <Link to={`/voice-agent?patientId=${p._id}&patientName=${encodeURIComponent(p.name)}`}
-                                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors">
-                                Schedule Call
-                              </Link>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  {call.emergencyActionTaken !== "none" && (
+                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-3 py-1 shrink-0 ml-2">
+                      &#10003; {call.emergencyActionTaken === "called_911" ? "911 Called" : "Action Taken"}
+                    </span>
+                  )}
                 </div>
-              </CollapsibleSection>
-            )}
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* ── Section 6: Patient Activity ── */}
-            <CollapsibleSection
-              id="activity"
-              title="Patient Activity"
-              icon={<Users className="h-4 w-4" />}
-              badge={highSeverity.length > 0 ? highSeverity.length : undefined}
-              defaultOpen={true}
-              accentColor="#f59e0b"
-            >
-              <div className="p-5">
-                <div className="grid gap-5 lg:grid-cols-3">
-                  {/* Main: High Risk + Recent Checkups */}
-                  <div className="lg:col-span-2 space-y-4">
-                    {highSeverity.length > 0 && (
-                      <div className="rounded-xl border border-red-200 bg-red-50/30 p-4">
-                        <div className="mb-3 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-red-600" />
-                          <span className="text-xs font-semibold text-red-700">High Risk Patients ({highSeverity.length})</span>
-                        </div>
-                        <div className="space-y-2">
-                          {highSeverity.slice(0, 4).map((call: any) => (
-                            <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center justify-between rounded-lg border border-red-200 bg-white p-3 hover:bg-red-50 transition-colors">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 truncate">{call.patient?.name || "Unknown"}</p>
-                                  <p className="text-xs text-gray-500 truncate">Severity: {call.aiSeverityScore}/10 · {new Date(call.createdAt).toLocaleDateString()}</p>
-                                </div>
-                              </div>
-                              <ArrowRight className="h-4 w-4 text-gray-400" />
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+      {/* ── Emergency Confirm Modal ── */}
+      {confirmEmergency && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmEmergency(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Confirm Emergency Call</h3>
+                <p className="text-sm text-gray-500">This will place an outbound call to {confirmEmergency.target === "911" ? "emergency services (911)" : "the clinic on-call number"}.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setConfirmEmergency(null)}>Cancel</Button>
+              <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl" onClick={() => { emergencyMutation.mutate(confirmEmergency); setConfirmEmergency(null); }} disabled={emergencyMutation.isPending}>
+                {emergencyMutation.isPending ? "Calling..." : `Call ${confirmEmergency.target === "911" ? "911" : "Clinic"}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Brain className="h-4 w-4 text-primary" />
-                          <span className="text-xs font-semibold text-gray-700">Latest AI Checkup Results</span>
-                        </div>
-                        <Link to="/call-review" className="text-xs font-medium text-primary hover:underline">View all</Link>
-                      </div>
-                      <div className="space-y-2">
-                        {recentCompleted.length === 0 ? (
-                          <div className="py-8 text-center text-gray-400">
-                            <Brain className="mx-auto mb-2 h-8 w-8" />
-                            <p className="text-sm">No checkups completed yet</p>
-                            <p className="text-xs mt-1">Schedule calls and the AI will handle patient checkups automatically</p>
+      {/* ── Section 1: Greeting + Quick Actions ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">
+            {getGreeting()}, {firstName}
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">{today}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/voice-agent"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-primary-dark"
+          >
+            <Phone className="h-3.5 w-3.5" />
+            Schedule Call
+          </Link>
+          <Link
+            to="/patients"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Patients
+          </Link>
+          <Link
+            to="/call-review"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"
+          >
+            <Mic className="h-3.5 w-3.5" />
+            AI Review
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Section 2: Stat Cards ── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {widgets.map((w) => {
+          const IconComp = WidgetIcon(w.key);
+          const value = dashboardData?.data?.[w.key];
+          const displayValue = value !== undefined && value !== null
+            ? value
+            : (w.key === "avgSeverity" || w.key === "avgProgress" ? "—" : "0");
+          return (
+            <StatCard
+              key={w.key}
+              icon={IconComp}
+              label={w.label}
+              value={displayValue}
+              accent={accentFromColor(w.color)}
+            />
+          );
+        })}
+      </div>
+
+      {/* ── Section 3: Two-Column Main Content ── */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left: Analytics + Charts */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* QA Mini Stats */}
+          {(dashboardData?.data || qaScoresData?.summary) && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-xs text-gray-500">No-Show Rate</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{appointmentStats?.noShowRate ?? (dashboardData?.data?.noShowRate || "—")}</p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-xs text-gray-500">Avg QA Score</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{qaScoresData?.summary?.averageOverall ?? "—"}{qaScoresData?.summary?.averageOverall ? "%" : ""}</p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-xs text-gray-500">Accuracy</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{qaScoresData?.summary?.averageAccuracy ?? "—"}{qaScoresData?.summary?.averageAccuracy ? "%" : ""}</p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-xs text-gray-500">Empathy</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{qaScoresData?.summary?.averageEmpathy ?? "—"}{qaScoresData?.summary?.averageEmpathy ? "%" : ""}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Charts */}
+          {completedCalls.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
+                  <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                  Call Volume (Last 7 Days)
+                </p>
+                <MiniBarChart data={callVolumeData} />
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  Severity Distribution
+                </p>
+                <MiniPieChart data={severityData} colors={["#10b981", "#f59e0b", "#ef4444"]} />
+              </div>
+            </div>
+          )}
+
+          {/* Admin: Condition Prevalence + High Risk */}
+          {user?.role === "admin" && dashboardData?.data?.conditionPrevalence?.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
+                  <Activity className="h-3.5 w-3.5 text-primary" />
+                  Condition Prevalence
+                </p>
+                <MiniPieChart
+                  data={dashboardData.data.conditionPrevalence.map((c: any) => ({ name: c.name || c._id, value: c.count }))}
+                  colors={CHART_COLORS}
+                  innerRadius={40}
+                  outerRadius={70}
+                  height={180}
+                />
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
+                  <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+                  High-Risk Patients
+                </p>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {dashboardData.data.highRiskPatients?.length === 0 ? (
+                    <div className="py-6 text-center text-gray-400 text-sm">No high-risk patients detected</div>
+                  ) : (
+                    dashboardData.data.highRiskPatients?.slice(0, 6).map((hp: any, i: number) => (
+                      <Link key={i} to={`/calls/${hp._id}`} className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50/50 p-2.5 hover:bg-red-50 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100">
+                            <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
                           </div>
-                        ) : (
-                          recentCompleted.map((call: any) => (
-                            <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 hover:bg-gray-50 transition-colors">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${(call.aiSeverityScore || 0) >= 7 ? "bg-red-100" : (call.aiSeverityScore || 0) >= 4 ? "bg-amber-100" : "bg-emerald-100"}`}>
-                                  <CheckCircle className={`h-4 w-4 ${(call.aiSeverityScore || 0) >= 7 ? "text-red-600" : (call.aiSeverityScore || 0) >= 4 ? "text-amber-600" : "text-emerald-600"}`} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
-                                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${(call.aiSeverityScore || 0) >= 7 ? "bg-red-100 text-red-700" : (call.aiSeverityScore || 0) >= 4 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                                      {call.aiSeverityScore || "?"}/10
-                                    </span>
-                                  </div>
-                                  {call.aiSummary && <p className="text-xs text-gray-500 truncate mt-0.5">{call.aiSummary}</p>}
-                                </div>
-                              </div>
-                              <span className="text-xs text-gray-400 shrink-0 ml-2">{new Date(call.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                            </Link>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sidebar: Upcoming Calls */}
-                  <div>
-                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-500" />
-                        <span className="text-xs font-semibold text-gray-700">Upcoming Auto-Calls</span>
-                      </div>
-                      <div className="space-y-2">
-                        {upcomingScheduled.length === 0 ? (
-                          <div className="py-6 text-center text-gray-400">
-                            <Clock className="mx-auto mb-2 h-6 w-6" />
-                            <p className="text-sm">No scheduled calls</p>
-                            <Link to="/patients" className="mt-2 inline-block text-xs text-primary hover:underline">Schedule automated checkups</Link>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-900 truncate">{hp.patient?.name || "Unknown"}</p>
+                            <p className="text-[10px] text-gray-500 truncate">{hp.conditionName || "Severity"} · {hp.aiSeverityScore}/10</p>
                           </div>
-                        ) : (
-                          upcomingScheduled.map((call: any) => (
-                            <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 hover:bg-gray-50 transition-colors">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100">
-                                <Clock className="h-4 w-4 text-blue-600" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
-                                <p className="text-xs text-gray-500">{call.scheduledAt ? new Date(call.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "No date set"}</p>
-                              </div>
-                            </Link>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
-            </CollapsibleSection>
+            </div>
+          )}
+        </div>
 
-            {/* ── Section 7: System Overview ── */}
-            <CollapsibleSection
-              id="system"
-              title="System Overview"
-              icon={<BarChart3 className="h-4 w-4" />}
-              defaultOpen={false}
-              accentColor="#6b7280"
-            >
+        {/* Right: Recent Activity + Quick Info */}
+        <div className="space-y-6">
+          {/* Recent Checkups */}
+          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-gray-700">Recent Checkups</span>
+              </div>
+              <Link to="/call-review" className="text-xs font-medium text-primary hover:underline">View all</Link>
+            </div>
+            <div className="p-3 space-y-2">
+              {recentCompleted.length === 0 ? (
+                <div className="py-6 text-center text-gray-400">
+                  <Brain className="mx-auto mb-2 h-6 w-6" />
+                  <p className="text-xs">No checkups yet</p>
+                </div>
+              ) : (
+                recentCompleted.map((call: any) => (
+                  <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-50 transition-colors">
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${(call.aiSeverityScore || 0) >= 7 ? "bg-red-100" : (call.aiSeverityScore || 0) >= 4 ? "bg-amber-100" : "bg-emerald-100"}`}>
+                      <CheckCircle className={`h-4 w-4 ${(call.aiSeverityScore || 0) >= 7 ? "text-red-600" : (call.aiSeverityScore || 0) >= 4 ? "text-amber-600" : "text-emerald-600"}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
+                      <p className="text-xs text-gray-500 truncate">{call.aiSeverityScore ? `Severity: ${call.aiSeverityScore}/10` : "Completed"}</p>
+                    </div>
+                    <span className="text-[10px] text-gray-400 shrink-0">{new Date(call.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Upcoming Calls */}
+          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+              <Clock className="h-4 w-4 text-blue-500" />
+              <span className="text-xs font-semibold text-gray-700">Upcoming Calls</span>
+              {upcomingScheduled.length > 0 && (
+                <span className="ml-auto rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">{upcomingScheduled.length}</span>
+              )}
+            </div>
+            <div className="p-3 space-y-2">
+              {upcomingScheduled.length === 0 ? (
+                <div className="py-6 text-center text-gray-400">
+                  <Clock className="mx-auto mb-2 h-5 w-5" />
+                  <p className="text-xs">No scheduled calls</p>
+                </div>
+              ) : (
+                upcomingScheduled.map((call: any) => (
+                  <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-50 transition-colors">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
+                      <p className="text-xs text-gray-500">{call.scheduledAt ? new Date(call.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "No date"}</p>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* System Summary */}
+          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+              <BarChart3 className="h-4 w-4 text-gray-500" />
+              <span className="text-xs font-semibold text-gray-700">System Summary</span>
+            </div>
+            <div className="p-3 space-y-2">
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Total Checkups</span>
+                <span className="text-sm font-bold">{completedCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Avg Severity</span>
+                <span className="text-sm font-bold">{completedCalls.length > 0 ? (completedCalls.reduce((s: number, c: any) => s + (c.aiSeverityScore || 0), 0) / completedCalls.length).toFixed(1) : "—"}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">In Progress</span>
+                <span className="text-sm font-bold text-blue-600">{inProgressCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Failed</span>
+                <span className="text-sm font-bold text-red-600">{failedCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">No-Show Rate</span>
+                <span className="text-sm font-bold">{dashboardData?.data?.noShowRate || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Active Patients</span>
+                <span className="text-sm font-bold">{dashboardData?.data?.activeTreatments || 0}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">AI Checkups</span>
+                <span className="text-sm font-bold">{dashboardData?.data?.aiAssessments || completedCalls.length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 4: Clinical Tools (admin/doctor only) ── */}
+      {(user?.role === "admin" || user?.role === "doctor") && (
+        <div className="space-y-4">
+          {/* Call Instructions */}
+          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-gray-700">Today's Call Instructions</span>
+                {activeInstructions.length > 0 && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">{activeInstructions.length}</span>
+                )}
+              </div>
+              <Button variant="outline" size="sm" className="rounded-lg text-xs h-7" onClick={() => setShowCallInstrForm(!showCallInstrForm)}>
+                <Plus className="h-3 w-3 mr-1" /> Add
+              </Button>
+            </div>
+            <div className="p-5">
+              {showCallInstrForm && (
+                <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-900">Set Call Instruction (expires in 24h)</p>
+                    <button onClick={() => setShowCallInstrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input type="text" placeholder="Search patient..." value={callInstrDraft.patientName}
+                      onChange={(e) => { setCallInstrDraft({ ...callInstrDraft, patientName: e.target.value, patientId: "" }); }}
+                      className="flex w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm" />
+                    {callInstrDraft.patientName && !callInstrDraft.patientId && (
+                      <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow-lg max-h-40 overflow-y-auto">
+                        {patients.filter((p: any) => p.name?.toLowerCase().includes(callInstrDraft.patientName.toLowerCase())).slice(0, 5).map((p: any) => (
+                          <button key={p._id} onClick={() => setCallInstrDraft({ ...callInstrDraft, patientId: p._id, patientName: p.name })}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">{p.name}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <select value={callInstrDraft.templateId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) { setCallInstrDraft({ ...callInstrDraft, templateId: "", templateName: "" }); return; }
+                      const q = allTemplates.find((t: any) => t.id === val);
+                      if (q) { setCallInstrDraft({ ...callInstrDraft, templateId: val, templateName: q.condition || val }); }
+                    }}
+                    className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                    <option value="">Select template...</option>
+                    {allTemplates.map((t) => <option key={t.id} value={t.id}>{t.condition}</option>)}
+                  </select>
+                  <textarea value={callInstrDraft.notes} onChange={(e) => setCallInstrDraft({ ...callInstrDraft, notes: e.target.value })}
+                    rows={2} className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" placeholder="Notes for staff..." />
+                  <Button size="sm" className="rounded-lg" disabled={!callInstrDraft.patientId || !callInstrDraft.templateId || updatePatientMutation.isPending}
+                    onClick={() => updatePatientMutation.mutate({
+                      patientId: callInstrDraft.patientId,
+                      callInstructions: { templateId: callInstrDraft.templateId, templateName: callInstrDraft.templateName, notes: callInstrDraft.notes, setBy: user?._id, setAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+                    })}>
+                    <Save className="h-3.5 w-3.5 mr-1" /> Save
+                  </Button>
+                </div>
+              )}
+
+              {activeInstructions.length === 0 ? (
+                <div className="py-6 text-center text-gray-400">
+                  <ClipboardList className="mx-auto mb-2 h-6 w-6" />
+                  <p className="text-xs">No active call instructions today</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {activeInstructions.map((p: any) => {
+                    const ci = p.callInstructions;
+                    const hoursLeft = Math.max(0, Math.round((new Date(ci.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+                    return (
+                      <div key={p._id} className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Star className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            <p className="text-sm font-medium truncate">{p.name || "Unknown"}</p>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {ci.templateName} · expires in {hoursLeft}h
+                          </p>
+                        </div>
+                        <Link to={`/voice-agent?patientId=${p._id}&patientName=${encodeURIComponent(p.name)}`}
+                          className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors ml-2">
+                          Call
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Specialty Scales (admin only) */}
+          {user?.role === "admin" && SPECIALTY_SCALES[specialty]?.length > 0 && (
+            <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+              <div className="border-b border-gray-100 px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold text-gray-700">Clinical Assessment Scales</span>
+                </div>
+              </div>
               <div className="p-5">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100">
-                        <CheckCircle className="h-4.5 w-4.5 text-emerald-600" />
+                  {SPECIALTY_SCALES[specialty].map((scale, i) => {
+                    const colorClasses = COLOR_CLASSES[scale.color] || "text-gray-600 bg-gray-100 border-gray-200";
+                    const parts = colorClasses.split(" ");
+                    return (
+                      <div key={i} className={`flex items-center gap-3 rounded-xl border p-3 ${parts[1]} ${parts[2]}`}>
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${parts[1]}`}>
+                          <Activity className={`h-4 w-4 ${parts[0]}`} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-900">{scale.name}</p>
+                          <p className="text-[10px] text-gray-500">{scale.range}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Total Checkups</p>
-                        <p className="text-lg font-bold">{completedCalls.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100">
-                        <TrendingUp className="h-4.5 w-4.5 text-amber-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Avg Severity</p>
-                        <p className="text-lg font-bold">{completedCalls.length > 0 ? (completedCalls.reduce((s: number, c: any) => s + (c.aiSeverityScore || 0), 0) / completedCalls.length).toFixed(1) : "—"}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100">
-                        <Activity className="h-4.5 w-4.5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">In Progress</p>
-                        <p className="text-lg font-bold text-blue-600">{inProgressCalls.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-100">
-                        <AlertTriangle className="h-4.5 w-4.5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Failed</p>
-                        <p className="text-lg font-bold text-red-600">{failedCalls.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100">
-                        <Calendar className="h-4.5 w-4.5 text-violet-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">No-Show Rate</p>
-                        <p className="text-lg font-bold">{dashboardData?.data?.noShowRate || "—"}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-100">
-                        <Users className="h-4.5 w-4.5 text-cyan-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Active Patients</p>
-                        <p className="text-lg font-bold">{dashboardData?.data?.activeTreatments || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100">
-                        <Award className="h-4.5 w-4.5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Total AI Checkups</p>
-                        <p className="text-lg font-bold">{dashboardData?.data?.aiAssessments || completedCalls.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-100">
-                        <Heart className="h-4.5 w-4.5 text-pink-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Follow-ups Needed</p>
-                        <p className="text-lg font-bold">{calls.filter((c: any) => { const s = c.aiSummary || ""; return s.includes("follow") || s.includes("urgent") || (c.aiSeverityScore || 0) >= 5; }).length}</p>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            </CollapsibleSection>
-          </>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── High Risk Patients (bottom, if not shown above) ── */}
+      {highSeverity.length > 0 && (user?.role !== "admin" || !dashboardData?.data?.conditionPrevalence?.length) && (
+        <div className="rounded-xl border border-red-200 bg-white shadow-sm">
+          <div className="border-b border-red-100 px-5 py-3">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-xs font-semibold">High Risk Patients</span>
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700 ml-auto">{highSeverity.length}</span>
+            </div>
+          </div>
+          <div className="p-3 space-y-2">
+            {highSeverity.slice(0, 4).map((call: any) => (
+              <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center justify-between rounded-lg border border-red-200 p-3 hover:bg-red-50 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
+                    <p className="text-xs text-gray-500">Severity: {call.aiSeverityScore}/10</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── QA Score Trend (bottom chart) ── */}
+      {qaTrendsData?.trends?.length > 0 && (
+        <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold text-gray-700">QA Score Trend (Last 14 Days)</span>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={qaTrendsData.trends}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false}
+                    tickFormatter={(v) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px" }} />
+                  <Line type="monotone" dataKey="avgScore" stroke="#0a7c6f" strokeWidth={2.5} dot={{ r: 3, fill: "#0a7c6f" }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
