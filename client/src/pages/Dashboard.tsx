@@ -547,6 +547,44 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* System Summary */}
+          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+              <BarChart3 className="h-4 w-4 text-gray-500" />
+              <span className="text-xs font-semibold text-gray-700">System Summary</span>
+            </div>
+            <div className="p-3 space-y-2">
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Total Checkups</span>
+                <span className="text-sm font-bold">{completedCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Avg Severity</span>
+                <span className="text-sm font-bold">{completedCalls.length > 0 ? (completedCalls.reduce((s: number, c: any) => s + (c.aiSeverityScore || 0), 0) / completedCalls.length).toFixed(1) : "—"}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">In Progress</span>
+                <span className="text-sm font-bold text-blue-600">{inProgressCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Failed</span>
+                <span className="text-sm font-bold text-red-600">{failedCalls.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">No-Show Rate</span>
+                <span className="text-sm font-bold">{dashboardData?.data?.noShowRate || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">Active Patients</span>
+                <span className="text-sm font-bold">{dashboardData?.data?.activeTreatments || 0}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-xs text-gray-600">AI Checkups</span>
+                <span className="text-sm font-bold">{dashboardData?.data?.aiAssessments || completedCalls.length}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Charts */}
           {completedCalls.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -677,43 +715,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* System Summary */}
-          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
-              <BarChart3 className="h-4 w-4 text-gray-500" />
-              <span className="text-xs font-semibold text-gray-700">System Summary</span>
-            </div>
-            <div className="p-3 space-y-2">
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">Total Checkups</span>
-                <span className="text-sm font-bold">{completedCalls.length}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">Avg Severity</span>
-                <span className="text-sm font-bold">{completedCalls.length > 0 ? (completedCalls.reduce((s: number, c: any) => s + (c.aiSeverityScore || 0), 0) / completedCalls.length).toFixed(1) : "—"}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">In Progress</span>
-                <span className="text-sm font-bold text-blue-600">{inProgressCalls.length}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">Failed</span>
-                <span className="text-sm font-bold text-red-600">{failedCalls.length}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">No-Show Rate</span>
-                <span className="text-sm font-bold">{dashboardData?.data?.noShowRate || "—"}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">Active Patients</span>
-                <span className="text-sm font-bold">{dashboardData?.data?.activeTreatments || 0}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-xs text-gray-600">AI Checkups</span>
-                <span className="text-sm font-bold">{dashboardData?.data?.aiAssessments || completedCalls.length}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
