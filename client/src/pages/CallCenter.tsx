@@ -387,7 +387,7 @@ export default function CallCenter() {
 
   const TAB_CONFIG = [
     { id: "quick" as Tab, label: "Quick Call", icon: Phone },
-    { id: "batch" as Tab, label: "Batch", icon: Users },
+    { id: "batch" as Tab, label: "Group Call", icon: Users },
     { id: "live" as Tab, label: "Live", icon: Radio, badge: realtimeCalls.length || undefined },
     { id: "history" as Tab, label: "History", icon: FileText, badge: historyCalls.length || undefined },
   ];
