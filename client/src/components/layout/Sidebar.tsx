@@ -150,15 +150,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-gray-800 p-3">
-        <button
-          onClick={logout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-all duration-150"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Sign out
-        </button>
-      </div>
     </>
   );
 
