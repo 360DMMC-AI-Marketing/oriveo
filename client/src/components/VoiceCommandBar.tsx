@@ -123,7 +123,7 @@ export default function VoiceCommandBar() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-24" onClick={() => setIsOpen(false)}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm pt-24" onClick={() => setIsOpen(false)}>
       <div className="w-full max-w-lg mx-4 rounded-xl border bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 border-b px-4 py-3">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${listening ? "bg-red-100" : "bg-gray-100"}`}>

@@ -31,6 +31,7 @@ export default function CalendarSchedule() {
   const [instrEditPatient, setInstrEditPatient] = useState<string | null>(null);
   const [instrDraft, setInstrDraft] = useState({ templateId: "", templateName: "", notes: "" });
   const [hoveredPatientInstr, setHoveredPatientInstr] = useState<{ patient: any; ci: any; x: number; y: number } | null>(null);
+  const [confirmRemoveCall, setConfirmRemoveCall] = useState<string | null>(null);
 
   const { data: callsData, isLoading: callsLoading } = useQuery({ queryKey: ["calls"], queryFn: () => api.get("/calls").then((r) => r.data) });
   const { data: patientsData } = useQuery({ queryKey: ["patients"], queryFn: () => api.get("/patients").then((r) => r.data) });
@@ -436,14 +437,7 @@ export default function CalendarSchedule() {
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
-                  onClick={() => {
-                    if (window.confirm("Remove this scheduled call?")) {
-                      api.delete(`/calls/${call._id}`).then(() => {
-                        queryClient.invalidateQueries({ queryKey: ["calls"] });
-                        toast.success("Call removed");
-                      }).catch(() => toast.error("Failed to remove call"));
-                    }
-                  }}
+                  onClick={() => setConfirmRemoveCall(call._id)}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -754,6 +748,35 @@ export default function CalendarSchedule() {
                 <span className="text-[10px] text-amber-600">{new Date(hoveredPatientInstr.ci.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Remove call confirm */}
+      {confirmRemoveCall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmRemoveCall(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                <X className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Remove scheduled call?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setConfirmRemoveCall(null)}>Cancel</Button>
+              <Button variant="destructive" className="rounded-xl" onClick={() => {
+                api.delete(`/calls/${confirmRemoveCall}`).then(() => {
+                  queryClient.invalidateQueries({ queryKey: ["calls"] });
+                  toast.success("Call removed");
+                }).catch(() => toast.error("Failed to remove call"));
+                setConfirmRemoveCall(null);
+              }}>
+                Remove
+              </Button>
+            </div>
           </div>
         </div>
       )}

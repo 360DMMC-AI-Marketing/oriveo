@@ -431,8 +431,8 @@ export default function Analytics() {
 
       {/* Report Modal */}
       {showReportModal && reportHtml && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Dark header bar */}
             <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-5">
               <div className="flex items-center justify-between">

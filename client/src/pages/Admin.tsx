@@ -62,6 +62,7 @@ export default function Admin() {
 
 function OrganizationsTab({ onCreate, showCreate, onClose }: { onCreate: () => void; showCreate: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const [confirmDeleteOrg, setConfirmDeleteOrg] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "organizations"],
     queryFn: () => api.get("/admin/organizations").then(r => r.data),
@@ -125,13 +126,36 @@ function OrganizationsTab({ onCreate, showCreate, onClose }: { onCreate: () => v
                   <Button size="sm" variant="outline" onClick={() => updateOrg.mutate({ id: org._id, isActive: !org.isActive })}>
                     {org.isActive ? "Deactivate" : "Activate"}
                   </Button>
-                  <Button size="sm" variant="outline" className="text-red-600" onClick={() => { if (confirm("Delete this organization?")) deleteOrg.mutate(org._id); }}>
+                  <Button size="sm" variant="outline" className="text-red-600" onClick={() => setConfirmDeleteOrg(org._id)}>
                     Delete
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Delete org confirm */}
+      {confirmDeleteOrg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDeleteOrg(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                <Building2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Delete organization?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setConfirmDeleteOrg(null)}>Cancel</Button>
+              <Button variant="destructive" className="rounded-xl" onClick={() => { deleteOrg.mutate(confirmDeleteOrg); setConfirmDeleteOrg(null); }}>
+                Delete
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -552,8 +552,8 @@ function PrintableReport({ report, user, signMutation, onDownloadPdf, onDownload
 
       {/* Signing Overlay */}
       {showSign && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm print:hidden p-0 sm:p-4" onClick={() => setShowSign(false)}>
-          <div className="bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-lg sm:mx-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm print:hidden p-0 sm:p-4" onClick={() => setShowSign(false)}>
+          <div className="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-lg sm:mx-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-t-xl sm:rounded-xl" onClick={(e) => e.stopPropagation()}>
             {/* Sign header */}
             <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-5 sm:px-7 py-4 sm:py-5 shrink-0">
               <div className="flex items-center justify-between">

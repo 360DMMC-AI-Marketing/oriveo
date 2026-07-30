@@ -223,7 +223,7 @@ export default function PatientDetail() {
       </div>
 
       {showBookingLink && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBookingLink(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowBookingLink(false)}>
           <div className="max-w-sm w-full mx-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-gray-900 mb-1">Send Booking Link</h3>
             <p className="text-sm text-gray-500 mb-4">Patient will pick an available time slot and book themselves.</p>
@@ -515,7 +515,7 @@ export default function PatientDetail() {
       </Tabs>
 
       {showErasureConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowErasureConfirm(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowErasureConfirm(false)}>
           <div className="max-w-sm w-full mx-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-red-600 mb-2">Confirm Erasure</h3>
             <p className="text-sm text-gray-600 mb-4">This will permanently delete all personal data for <strong>{patient.name}</strong>. Call recordings, documents, and audit logs will be anonymized. This cannot be undone.</p>
@@ -530,7 +530,7 @@ export default function PatientDetail() {
       )}
 
       {editingPatient && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-10" onClick={() => setEditingPatient(false)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-10" onClick={() => setEditingPatient(false)}>
           <div className="max-w-lg w-full mx-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Edit Patient</h2>

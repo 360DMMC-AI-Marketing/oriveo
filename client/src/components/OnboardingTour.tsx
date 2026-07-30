@@ -40,7 +40,7 @@ export default function OnboardingTour() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <Card className="mx-4 w-full max-w-lg shadow-2xl">
         <div className="h-2 w-full rounded-t-xl bg-gradient-to-r from-primary to-primary/60" />
         <CardContent className="p-6">

@@ -27,6 +27,8 @@ export default function Patients() {
   const [groupSearch, setGroupSearch] = useState("");
   const [patientType, setPatientType] = useState<"human" | "pet">(isVet ? "pet" : "human");
   const [hoveredInstr, setHoveredInstr] = useState<{ patient: any; x: number; y: number } | null>(null);
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<string | null>(null);
+  const [confirmDeletePatient, setConfirmDeletePatient] = useState<string | null>(null);
   const [patientForm, setPatientForm] = useState({
     name: "", phone: "", email: "", language: "en", primaryDiagnosis: "", chronicConditions: "",
     allergies: "", currentMedications: "", pastSurgeries: "", medicalNotes: "", assignedDoctor: "",
@@ -287,7 +289,7 @@ export default function Patients() {
                       <Phone className="h-3 w-3" /> Call All
                     </Button>
                     <button
-                      onClick={() => { if (confirm("Delete group?")) deleteGroup.mutate(group._id); }}
+                      onClick={() => setConfirmDeleteGroup(group._id)}
                       className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -427,7 +429,7 @@ export default function Patients() {
                         </div>
                       </div>
                     )}
-                    <button onClick={(e) => { e.preventDefault(); if (confirm(`Delete "${p.name}"?`)) deletePatient.mutate(p._id); }}
+                    <button onClick={(e) => { e.preventDefault(); setConfirmDeletePatient(p._id); }}
                       className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500" title="Delete">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -465,6 +467,52 @@ export default function Patients() {
                 <span className="text-[10px] text-amber-600">{new Date(hoveredInstr.patient.callInstructions.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete group confirm */}
+      {confirmDeleteGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDeleteGroup(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Delete group?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setConfirmDeleteGroup(null)}>Cancel</Button>
+              <Button variant="destructive" className="rounded-xl" onClick={() => { deleteGroup.mutate(confirmDeleteGroup); setConfirmDeleteGroup(null); }}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete patient confirm */}
+      {confirmDeletePatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDeletePatient(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Delete patient?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setConfirmDeletePatient(null)}>Cancel</Button>
+              <Button variant="destructive" className="rounded-xl" onClick={() => { deletePatient.mutate(confirmDeletePatient); setConfirmDeletePatient(null); }}>
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
       )}
