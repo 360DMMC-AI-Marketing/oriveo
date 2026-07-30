@@ -125,7 +125,7 @@ for (var i = 0; i < groupData.length; i++) {
     name: g.name,
     description: g.description,
     diagnosisFilter: g.diagnosisFilter,
-    members: memberIds.map(function(m) { return m._id; }),
+    members: memberIds,
     createdAt: new Date(),
     updatedAt: new Date()
   });
