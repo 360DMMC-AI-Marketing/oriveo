@@ -177,6 +177,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [confirmEmergency, setConfirmEmergency] = useState<{ callId: string; target: "911" | "clinic" } | null>(null);
+  const [showEmergencies, setShowEmergencies] = useState(false);
   const [showCallInstrForm, setShowCallInstrForm] = useState(false);
   const [callInstrDraft, setCallInstrDraft] = useState({ patientId: "", patientName: "", templateId: "", templateName: "", notes: "" });
 
@@ -295,64 +296,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ── Emergency Alert Banner ── */}
-      {emergencyCalls.length > 0 && (
-        <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm">
-          <div className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                  <Siren className="h-5 w-5 text-red-600" />
-                </div>
-                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-red-800">Active Emergencies</h2>
-                <p className="text-sm text-red-600">{emergencyCalls.length} patient{emergencyCalls.length > 1 ? "s" : ""} need immediate attention</p>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              {emergencyCalls.map((call: any) => (
-                <div key={call._id} className="flex items-center justify-between rounded-xl border border-red-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                      <ShieldAlert className="h-5 w-5 text-red-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <Link to={`/calls/${call._id}`} className="text-sm font-semibold text-gray-900 hover:underline">{call.patient?.name || "Unknown"}</Link>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {call.redFlags?.filter((f: any) => f.tier === 0).map((f: any, i: number) => (
-                          <span key={i} className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">{f.keyword}</span>
-                        ))}
-                        {call.aiSeverityScore >= 7 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Severity: {call.aiSeverityScore}/10</span>
-                        )}
-                      </div>
-                      {call.aiSummary && <p className="text-xs text-gray-500 truncate mt-0.5 max-w-md">{call.aiSummary}</p>}
-                    </div>
-                  </div>
-                  {call.emergencyActionTaken === "none" && (user?.role === "admin" || user?.role === "doctor") && (
-                    <div className="flex gap-1.5 shrink-0 ml-2">
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs gap-1 rounded-lg" onClick={() => setConfirmEmergency({ callId: call._id, target: "911" })} disabled={emergencyMutation.isPending}>
-                        <Phone className="h-3 w-3" /> 911
-                      </Button>
-                      <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 h-8 text-xs gap-1 rounded-lg" onClick={() => setConfirmEmergency({ callId: call._id, target: "clinic" })} disabled={emergencyMutation.isPending}>
-                        <Phone className="h-3 w-3" /> Clinic
-                      </Button>
-                    </div>
-                  )}
-                  {call.emergencyActionTaken !== "none" && (
-                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-3 py-1 shrink-0 ml-2">
-                      &#10003; {call.emergencyActionTaken === "called_911" ? "911 Called" : "Action Taken"}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Emergency Confirm Modal ── */}
       {confirmEmergency && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setConfirmEmergency(null)}>
@@ -371,6 +314,66 @@ export default function Dashboard() {
               <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl" onClick={() => { emergencyMutation.mutate(confirmEmergency); setConfirmEmergency(null); }} disabled={emergencyMutation.isPending}>
                 {emergencyMutation.isPending ? "Calling..." : `Call ${confirmEmergency.target === "911" ? "911" : "Clinic"}`}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Emergencies Modal ── */}
+      {showEmergencies && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/50 backdrop-blur-sm" onClick={() => setShowEmergencies(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                  <Siren className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Active Emergencies</h2>
+                  <p className="text-sm text-red-600">{emergencyCalls.length} patient{emergencyCalls.length > 1 ? "s" : ""} need immediate attention</p>
+                </div>
+              </div>
+              <button onClick={() => setShowEmergencies(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-5 space-y-3">
+              {emergencyCalls.map((call: any) => (
+                <div key={call._id} className="flex items-center justify-between rounded-xl border border-red-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                      <ShieldAlert className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Link to={`/calls/${call._id}`} className="text-sm font-semibold text-gray-900 hover:underline" onClick={() => setShowEmergencies(false)}>{call.patient?.name || "Unknown"}</Link>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {call.redFlags?.filter((f: any) => f.tier === 0).map((f: any, i: number) => (
+                          <span key={i} className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">{f.keyword}</span>
+                        ))}
+                        {call.aiSeverityScore >= 7 && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Severity: {call.aiSeverityScore}/10</span>
+                        )}
+                      </div>
+                      {call.aiSummary && <p className="text-xs text-gray-500 mt-0.5">{call.aiSummary}</p>}
+                    </div>
+                  </div>
+                  {call.emergencyActionTaken === "none" && (user?.role === "admin" || user?.role === "doctor") && (
+                    <div className="flex gap-1.5 shrink-0 ml-2">
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs gap-1 rounded-lg" onClick={() => { setShowEmergencies(false); setConfirmEmergency({ callId: call._id, target: "911" }); }} disabled={emergencyMutation.isPending}>
+                        <Phone className="h-3 w-3" /> 911
+                      </Button>
+                      <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 h-8 text-xs gap-1 rounded-lg" onClick={() => { setShowEmergencies(false); setConfirmEmergency({ callId: call._id, target: "clinic" }); }} disabled={emergencyMutation.isPending}>
+                        <Phone className="h-3 w-3" /> Clinic
+                      </Button>
+                    </div>
+                  )}
+                  {call.emergencyActionTaken !== "none" && (
+                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-3 py-1 shrink-0 ml-2">
+                      &#10003; {call.emergencyActionTaken === "called_911" ? "911 Called" : "Action Taken"}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -406,6 +409,18 @@ export default function Dashboard() {
             <Mic className="h-3.5 w-3.5" />
             AI Review
           </Link>
+          {emergencyCalls.length > 0 && (
+            <button
+              onClick={() => setShowEmergencies(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-red-700 relative"
+            >
+              <Siren className="h-3.5 w-3.5" />
+              Emergencies
+              <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-red-600">
+                {emergencyCalls.length}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

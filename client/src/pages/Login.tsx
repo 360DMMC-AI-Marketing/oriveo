@@ -29,7 +29,7 @@ export default function Login() {
       }
       localStorage.setItem("oriveo_token", data.token);
       localStorage.setItem("oriveo_user", JSON.stringify(data.user));
-      window.location.href = "/dashboard";
+      window.location.href = data.user.superAdmin ? "/admin" : "/dashboard";
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid email or password");
     } finally {
