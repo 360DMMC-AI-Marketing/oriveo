@@ -117,7 +117,7 @@ for (var i = 0; i < groupData.length; i++) {
   var memberIds = [];
   // Assign first 5-8 patients to each group
   for (var j = i * 7; j < Math.min(i * 7 + 8, patients.length); j++) {
-    memberIds.push({ _id: patients[j]._id, name: patients[j].name });
+    memberIds.push(patients[j]._id);
   }
   db.groups.insertOne({
     _id: ObjectId(),
@@ -125,7 +125,7 @@ for (var i = 0; i < groupData.length; i++) {
     name: g.name,
     description: g.description,
     diagnosisFilter: g.diagnosisFilter,
-    members: memberIds.map(function(m) { return { _id: m._id, name: m.name }; }),
+    members: memberIds.map(function(m) { return m._id; }),
     createdAt: new Date(),
     updatedAt: new Date()
   });
@@ -215,7 +215,7 @@ for (var i = 0; i < callScripts.length; i++) {
   var callDoc = {
     _id: callId,
     organization: orgId,
-    patient: { _id: callPatient._id, name: callPatient.name, phone: callPatient.phone },
+    patient: callPatient._id,
     status: cs.status,
     aiSeverityScore: cs.severity,
     aiSummary: cs.summary,
@@ -272,7 +272,7 @@ for (var i = 0; i < 20; i++) {
   db.appointments.insertOne({
     _id: ObjectId(),
     organization: orgId,
-    patient: { _id: aptPatient._id, name: aptPatient.name, phone: aptPatient.phone },
+    patient: aptPatient._id,
     type: appointmentTypes[i % appointmentTypes.length],
     status: status,
     date: aptDate,
