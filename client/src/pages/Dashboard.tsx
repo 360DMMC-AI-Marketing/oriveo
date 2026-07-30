@@ -338,42 +338,80 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="overflow-y-auto p-5 space-y-3">
-              {emergencyCalls.map((call: any) => (
-                <div key={call._id} className="flex items-center justify-between rounded-xl border border-red-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                      <ShieldAlert className="h-5 w-5 text-red-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <Link to={`/calls/${call._id}`} className="text-sm font-semibold text-gray-900 hover:underline" onClick={() => setShowEmergencies(false)}>{call.patient?.name || "Unknown"}</Link>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {call.redFlags?.filter((f: any) => f.tier === 0).map((f: any, i: number) => (
-                          <span key={i} className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">{f.keyword}</span>
-                        ))}
-                        {call.aiSeverityScore >= 7 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Severity: {call.aiSeverityScore}/10</span>
-                        )}
+              {/* Active Emergencies */}
+              <div className="flex items-center gap-2 mb-2">
+                <Siren className="h-4 w-4 text-red-500" />
+                <span className="text-xs font-semibold text-gray-700">Active Emergencies</span>
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">{emergencyCalls.length}</span>
+              </div>
+              {emergencyCalls.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">No active emergencies</p>
+              ) : (
+                emergencyCalls.map((call: any) => (
+                  <div key={call._id} className="flex items-center justify-between rounded-xl border border-red-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                        <ShieldAlert className="h-5 w-5 text-red-600" />
                       </div>
-                      {call.aiSummary && <p className="text-xs text-gray-500 mt-0.5">{call.aiSummary}</p>}
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/calls/${call._id}`} className="text-sm font-semibold text-gray-900 hover:underline" onClick={() => setShowEmergencies(false)}>{call.patient?.name || "Unknown"}</Link>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {call.redFlags?.filter((f: any) => f.tier === 0).map((f: any, i: number) => (
+                            <span key={i} className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">{f.keyword}</span>
+                          ))}
+                          {call.aiSeverityScore >= 7 && (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Severity: {call.aiSeverityScore}/10</span>
+                          )}
+                        </div>
+                        {call.aiSummary && <p className="text-xs text-gray-500 mt-0.5">{call.aiSummary}</p>}
+                      </div>
                     </div>
+                    {call.emergencyActionTaken === "none" && (user?.role === "admin" || user?.role === "doctor") && (
+                      <div className="flex gap-1.5 shrink-0 ml-2">
+                        <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs gap-1 rounded-lg" onClick={() => { setShowEmergencies(false); setConfirmEmergency({ callId: call._id, target: "911" }); }} disabled={emergencyMutation.isPending}>
+                          <Phone className="h-3 w-3" /> 911
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 h-8 text-xs gap-1 rounded-lg" onClick={() => { setShowEmergencies(false); setConfirmEmergency({ callId: call._id, target: "clinic" }); }} disabled={emergencyMutation.isPending}>
+                          <Phone className="h-3 w-3" /> Clinic
+                        </Button>
+                      </div>
+                    )}
+                    {call.emergencyActionTaken !== "none" && (
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-3 py-1 shrink-0 ml-2">
+                        &#10003; {call.emergencyActionTaken === "called_911" ? "911 Called" : "Action Taken"}
+                      </span>
+                    )}
                   </div>
-                  {call.emergencyActionTaken === "none" && (user?.role === "admin" || user?.role === "doctor") && (
-                    <div className="flex gap-1.5 shrink-0 ml-2">
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs gap-1 rounded-lg" onClick={() => { setShowEmergencies(false); setConfirmEmergency({ callId: call._id, target: "911" }); }} disabled={emergencyMutation.isPending}>
-                        <Phone className="h-3 w-3" /> 911
-                      </Button>
-                      <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50 h-8 text-xs gap-1 rounded-lg" onClick={() => { setShowEmergencies(false); setConfirmEmergency({ callId: call._id, target: "clinic" }); }} disabled={emergencyMutation.isPending}>
-                        <Phone className="h-3 w-3" /> Clinic
-                      </Button>
-                    </div>
-                  )}
-                  {call.emergencyActionTaken !== "none" && (
-                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-3 py-1 shrink-0 ml-2">
-                      &#10003; {call.emergencyActionTaken === "called_911" ? "911 Called" : "Action Taken"}
-                    </span>
-                  )}
+                ))
+              )}
+
+              {/* High Risk Patients */}
+              {highSeverity.length > 0 && (
+                <div className="border-t border-gray-100 pt-4 mt-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldAlert className="h-4 w-4 text-amber-500" />
+                    <span className="text-xs font-semibold text-gray-700">High Risk Patients</span>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">{highSeverity.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {highSeverity.map((call: any) => (
+                      <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center justify-between rounded-lg border border-amber-200 p-3 hover:bg-amber-50 transition-colors" onClick={() => setShowEmergencies(false)}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
+                            <p className="text-xs text-gray-500">Severity: {call.aiSeverityScore}/10</p>
+                            {call.aiSummary && <p className="text-xs text-gray-400 truncate max-w-md mt-0.5">{call.aiSummary}</p>}
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-400 shrink-0" />
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -417,7 +455,7 @@ export default function Dashboard() {
               <Siren className="h-3.5 w-3.5" />
               Emergencies
               <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-red-600">
-                {emergencyCalls.length}
+                {highSeverity.length}
               </span>
             </button>
           )}
@@ -622,45 +660,18 @@ export default function Dashboard() {
 
           {/* Admin: Condition Prevalence + High Risk */}
           {user?.role === "admin" && dashboardData?.data?.conditionPrevalence?.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-                <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5 text-primary" />
-                  Condition Prevalence
-                </p>
-                <MiniPieChart
-                  data={dashboardData.data.conditionPrevalence.map((c: any) => ({ name: c.name || c._id, value: c.count }))}
-                  colors={CHART_COLORS}
-                  innerRadius={40}
-                  outerRadius={70}
-                  height={180}
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-                <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
-                  <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
-                  High-Risk Patients
-                </p>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {dashboardData.data.highRiskPatients?.length === 0 ? (
-                    <div className="py-6 text-center text-gray-400 text-sm">No high-risk patients detected</div>
-                  ) : (
-                    dashboardData.data.highRiskPatients?.slice(0, 6).map((hp: any, i: number) => (
-                      <Link key={i} to={`/calls/${hp._id}`} className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50/50 p-2.5 hover:bg-red-50 transition-colors">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100">
-                            <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-gray-900 truncate">{hp.patient?.name || "Unknown"}</p>
-                            <p className="text-[10px] text-gray-500 truncate">{hp.conditionName || "Severity"} · {hp.aiSeverityScore}/10</p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              </div>
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="mb-3 text-xs font-semibold text-gray-700 flex items-center gap-2">
+                <Activity className="h-3.5 w-3.5 text-primary" />
+                Condition Prevalence
+              </p>
+              <MiniPieChart
+                data={dashboardData.data.conditionPrevalence.map((c: any) => ({ name: c.name || c._id, value: c.count }))}
+                colors={CHART_COLORS}
+                innerRadius={40}
+                outerRadius={70}
+                height={180}
+              />
             </div>
           )}
         </div>
@@ -764,34 +775,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── High Risk Patients (bottom, if not shown above) ── */}
-      {highSeverity.length > 0 && (user?.role !== "admin" || !dashboardData?.data?.conditionPrevalence?.length) && (
-        <div className="rounded-xl border border-red-200 bg-white shadow-sm">
-          <div className="border-b border-red-100 px-5 py-3">
-            <div className="flex items-center gap-2 text-red-700">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-xs font-semibold">High Risk Patients</span>
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700 ml-auto">{highSeverity.length}</span>
-            </div>
-          </div>
-          <div className="p-3 space-y-2">
-            {highSeverity.slice(0, 4).map((call: any) => (
-              <Link key={call._id} to={`/calls/${call._id}`} className="flex items-center justify-between rounded-lg border border-red-200 p-3 hover:bg-red-50 transition-colors">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{call.patient?.name || "Unknown"}</p>
-                    <p className="text-xs text-gray-500">Severity: {call.aiSeverityScore}/10</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* ── QA Score Trend (bottom chart) ── */}
       {qaTrendsData?.trends?.length > 0 && (
