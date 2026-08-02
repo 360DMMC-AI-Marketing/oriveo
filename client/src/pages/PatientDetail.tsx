@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity, ClipboardList } from "lucide-react";
+import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity, ClipboardList, Loader2 } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,7 @@ export default function PatientDetail() {
   const [generatedQuestions, setGeneratedQuestions] = useState<any[] | null>(null);
   const [generating, setGenerating] = useState(false);
   const [showBookingLink, setShowBookingLink] = useState(false);
+  const [showPortal, setShowPortal] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
   const [editingKb, setEditingKb] = useState(false);
   const [kbDraft, setKbDraft] = useState("");
@@ -219,6 +220,9 @@ export default function PatientDetail() {
           <Button variant="outline" size="sm" onClick={() => setShowBookingLink(true)}>
             <Calendar className="mr-2 h-4 w-4" /> Send Booking Link
           </Button>
+          {patient.email && <Button variant="outline" size="sm" onClick={() => setShowPortal(true)}>
+            <Lock className="mr-2 h-4 w-4" /> Patient Portal
+          </Button>}
         </div>
       </div>
 
@@ -241,6 +245,13 @@ export default function PatientDetail() {
             <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setShowBookingLink(false)}>Cancel</Button>
           </div>
         </div>
+      )}
+
+      {showPortal && (
+        <PortalAccessModal
+          patient={patient}
+          onClose={() => setShowPortal(false)}
+        />
       )}
 
       {showSchedule && (
@@ -592,6 +603,47 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function PortalAccessModal({ patient, onClose }: { patient: any; onClose: () => void }) {
+  const [password, setPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const enable = async () => {
+    if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    setSaving(true);
+    try {
+      await api.post(`/patients/${patient._id}/portal`, { password });
+      toast.success("Portal account enabled");
+      const portalUrl = `${window.location.origin}/patient-portal`;
+      navigator.clipboard?.writeText(portalUrl);
+      toast.info("Portal URL copied to clipboard");
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Failed to enable portal");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="max-w-sm w-full mx-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2"><Lock className="h-5 w-5" /> Patient Portal</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Enable {patient.name}'s portal account. They log in at <span className="font-medium text-gray-700">/patient-portal</span> with their email ({patient.email}) and this password to see appointments, lab results and prescriptions.
+        </p>
+        <label className="mb-1 block text-sm font-medium">Set Portal Password</label>
+        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 6 characters" />
+        <div className="flex gap-2 mt-4">
+          <Button className="flex-1" disabled={saving || password.length < 6} onClick={enable}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Lock className="h-4 w-4 mr-1" />} Enable Portal
+          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -40,6 +40,7 @@ import adminRoutes from "./routes/admin.js";
 import inboundRoutes from "./routes/inbound.js";
 import notificationRoutes from "./routes/notifications.js";
 import patientPortalRoutes from "./routes/patientPortal.js";
+import patientAuthRoutes from "./routes/patientAuth.js";
 import billingRoutes from "./routes/billing.js";
 import availabilityRoutes from "./routes/availability.js";
 import calendarRoutes from "./routes/calendar.js";
@@ -51,6 +52,9 @@ import tenantRoutes from "./routes/tenants.js";
 import populationHealthRoutes from "./routes/populationHealth.js";
 import biomarkerRoutes from "./routes/biomarkers.js";
 import roomRoutes from "./routes/rooms.js";
+import homeCareRoutes from "./routes/homecare.js";
+import labRoutes from "./routes/labs.js";
+import prescriptionRoutes from "./routes/prescriptions.js";
 import publicRoutes from "./routes/public.js";
 import { setIo } from "./services/socketManager.js";
 
@@ -258,6 +262,7 @@ app.use("/api/ehr", ehrRoutes);
 app.use("/api/twilio", inboundRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/patient-portal", patientPortalRoutes);
+app.use("/api/patient-auth", patientAuthRoutes);
 app.use("/api/languages", languageRoutes);
 app.use("/api/clinical", clinicalRoutes);
 app.use("/api/automation", automationRoutes);
@@ -269,6 +274,9 @@ app.use("/api/clinic-config", clinicConfigRoutes);
 app.use("/api/population-health", populationHealthRoutes);
 app.use("/api/biomarkers", biomarkerRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/homecare", homeCareRoutes);
+app.use("/api/labs", labRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/public", publicRoutes);
 
 app.get("/api/health", (req, res) => {

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import encryptPlugin from "../utils/encryptPlugin.js";
 
 const patientSchema = new mongoose.Schema(
@@ -55,6 +56,11 @@ const patientSchema = new mongoose.Schema(
     ownerName: { type: String, default: "" },
     ownerPhone: { type: String, default: "" },
     ownerEmail: { type: String, default: "" },
+
+    portalEnabled: { type: Boolean, default: false },
+    portalPassword: { type: String, default: "" },
+    portalPasswordResetToken: { type: String, default: "" },
+    portalPasswordResetExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -68,6 +74,11 @@ patientSchema.pre("save", function (next) {
   }
   next();
 });
+
+patientSchema.methods.comparePortalPassword = async function (candidatePassword) {
+  if (!this.portalPassword) return false;
+  return bcrypt.compare(candidatePassword, this.portalPassword);
+};
 
 patientSchema.index({ organization: 1 });
 patientSchema.index({ organization: 1, specialty: 1 });

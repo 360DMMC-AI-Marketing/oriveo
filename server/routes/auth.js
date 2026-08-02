@@ -387,7 +387,7 @@ router.post("/invite", protect, authorize("admin"), validate(inviteSchema), asyn
 
 router.get("/team", protect, authorize("admin"), async (req, res) => {
   try {
-    const users = await User.find({}, "name email role isActive createdAt").sort({ createdAt: -1 });
+    const users = await User.find({ organization: req.user.organization }, "name email role isActive createdAt").sort({ createdAt: -1 });
     res.json({ users });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -396,8 +396,9 @@ router.get("/team", protect, authorize("admin"), async (req, res) => {
 
 router.delete("/team/:id", protect, authorize("admin"), async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, organization: req.user.organization });
     if (!user) return res.status(404).json({ message: "User not found" });
+    await User.findByIdAndDelete(user._id);
     res.json({ message: "User deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });

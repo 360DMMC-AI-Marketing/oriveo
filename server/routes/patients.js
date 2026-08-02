@@ -3,6 +3,7 @@ import multer from "multer";
 import { parse } from "csv-parse/sync";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 import Patient from "../models/Patient.js";
 import Organization from "../models/Organization.js";
 import {
@@ -55,6 +56,24 @@ router.get("/search/documents", searchDocuments);
 router.get("/:id/unified", getUnifiedPatient);
 router.get("/:id/vitals", getVitalSigns);
 router.get("/:id", getPatient);
+
+router.post("/:id/portal", authorize("admin", "doctor"), async (req, res) => {
+  try {
+    const { password, enabled } = req.body;
+    const patient = await Patient.findOne({ _id: req.params.id, organization: req.user.organization });
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+    if (password) {
+      if (String(password).length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+      patient.portalPassword = await bcrypt.hash(String(password), 10);
+      patient.portalEnabled = true;
+    }
+    if (enabled !== undefined) patient.portalEnabled = Boolean(enabled);
+    await patient.save();
+    res.json({ message: "Portal access updated", portalEnabled: patient.portalEnabled });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 router.post("/import", authorize("admin"), csvUpload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "CSV file required" });

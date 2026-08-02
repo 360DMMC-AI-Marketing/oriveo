@@ -75,6 +75,11 @@ const CalendarSettings = lazy(() => import("@/pages/CalendarSettings"));
 const MyProfile = lazy(() => import("@/pages/MyProfile"));
 const Rooms = lazy(() => import("@/pages/Rooms"));
 const ClinicSettings = lazy(() => import("@/pages/ClinicSettings"));
+const HomeCare = lazy(() => import("@/pages/HomeCare"));
+const Labs = lazy(() => import("@/pages/Labs"));
+const Prescriptions = lazy(() => import("@/pages/Prescriptions"));
+const PatientPortal = lazy(() => import("@/pages/PatientPortal"));
+const FamilyPortal = lazy(() => import("@/pages/FamilyPortal"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -134,11 +139,16 @@ function AppRoutes() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/:page" element={<PublicLayout><StaticPage /></PublicLayout>} />
           <Route path="/book/:token" element={<PatientBooking />} />
+          <Route path="/family/:token" element={<FamilyPortal />} />
+          <Route path="/patient-portal" element={<PatientPortal />} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/patients/:id" element={<PatientDetail />} />
           <Route path="/templates" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><MedicalTemplates /></ProtectedRoute>} />
+          <Route path="/home-care" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse", "caregiver"]}><HomeCare /></ProtectedRoute>} />
+          <Route path="/labs" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><Labs /></ProtectedRoute>} />
+          <Route path="/prescriptions" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><Prescriptions /></ProtectedRoute>} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/calendar" element={<CalendarSchedule />} />
           <Route path="/my-profile" element={<MyProfile />} />

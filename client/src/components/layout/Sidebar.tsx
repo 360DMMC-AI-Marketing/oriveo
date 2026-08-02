@@ -7,7 +7,7 @@ import {
   ClipboardList, BarChart3, ShieldCheck,
   ChevronDown, ChevronRight, Menu, Calendar, ScrollText,
   FileText, Radio, Building2, UserPlus,
-  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft
+  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft, Home, FlaskConical, Pill
 } from "lucide-react";
 
 const TYPE_ICONS: Record<string, any> = { human: HeartPulse, dental: Smile, veterinary: Dog };
@@ -40,6 +40,9 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
         { to: "/patients", icon: Users, label: "Patients", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/appointments", icon: Calendar, label: "Appointments", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/templates", icon: ClipboardList, label: "Templates & Forms", roles: ["admin", "doctor", "nurse"] },
+        { to: "/home-care", icon: Home, label: "Home Care", roles: ["admin", "doctor", "nurse", "caregiver"] },
+        { to: "/labs", icon: FlaskConical, label: "Lab Results", roles: ["admin", "doctor", "nurse"] },
+        { to: "/prescriptions", icon: Pill, label: "Prescriptions", roles: ["admin", "doctor"] },
       ],
     },
     {
