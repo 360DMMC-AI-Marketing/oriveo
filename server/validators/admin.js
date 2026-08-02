@@ -21,8 +21,8 @@ export const addOrgUserSchema = z.object({
 });
 
 export const subscriptionSchema = z.object({
-  plan: z.enum(["starter", "professional", "enterprise", "custom"]),
-  status: z.enum(["active", "inactive", "past_due", "cancelled", "trial"]).optional(),
+  plan: z.enum(["starter", "pro", "enterprise"]).optional(),
+  status: z.enum(["trialing", "active", "suspended", "cancelled", "expired"]).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   features: z.object({}).passthrough().optional(),

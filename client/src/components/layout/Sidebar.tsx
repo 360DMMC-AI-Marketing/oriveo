@@ -49,6 +49,7 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
         { to: "/clinic/users", icon: UserPlus, label: "Team", roles: ["admin"] },
         ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Rooms", roles: ["admin", "doctor", "nurse", "receptionist"] as string[] }] : []),
         { to: "/audit-log", icon: ScrollText, label: "Audit Log", roles: ["admin"] },
+        { to: "/clinic/settings", icon: Settings, label: "Settings", roles: ["admin"] },
       ],
     },
   ];

@@ -74,6 +74,7 @@ const AdminAvailability = lazy(() => import("@/pages/AdminAvailability"));
 const CalendarSettings = lazy(() => import("@/pages/CalendarSettings"));
 const MyProfile = lazy(() => import("@/pages/MyProfile"));
 const Rooms = lazy(() => import("@/pages/Rooms"));
+const ClinicSettings = lazy(() => import("@/pages/ClinicSettings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -155,7 +156,7 @@ function AppRoutes() {
           <Route path="/analytics" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><Analytics /></ProtectedRoute>} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/clinic" element={<ClinicDashboard />} />
-          <Route path="/clinic/settings" element={<Navigate to="/clinic" replace />} />
+          <Route path="/clinic/settings" element={<ProtectedRoute allowedRoles={["admin"]}><ClinicSettings /></ProtectedRoute>} />
           <Route path="/clinic/users" element={<ProtectedRoute allowedRoles={["admin"]}><ClinicUsers /></ProtectedRoute>} />
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/onboarding-guide" element={<OnboardingGuide />} />
