@@ -205,7 +205,7 @@ async function seed() {
     newPatientDocs.push({
       ...dp,
       organization: admin.organization,
-      dob: new Date(dp.dob),
+      dob: dp.dob ? new Date(dp.dob) : null,
       createdBy: admin._id,
       assignedDoctor: assigned,
       lastCheckupDate: daysAgo(rn(10, 90)),
