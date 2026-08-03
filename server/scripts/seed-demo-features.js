@@ -379,11 +379,9 @@ async function seed() {
   await HomeVisit.insertMany(visitBatch);
   console.log(`✓ Created ${visitBatch.length} home visits`);
 
-  // Family link (BookingToken) for one care plan
+  // Family link (BookingToken) for one care plan — created AFTER booking-token cleanup so it survives
   const familyPatient = carePlanDocs[0].patient;
   const familyToken = crypto.randomBytes(24).toString("hex");
-  await BookingToken.create({ patient: familyPatient, organization: admin.organization, token: familyToken, expiresAt: daysFromNow(30) });
-  console.log(`✓ Family link: /family/${familyToken}`);
 
   // ── 6. Calls & emergencies ───────────────────────────────
   const existingCalls = await Call.find({ organization: admin.organization });
@@ -660,6 +658,9 @@ async function seed() {
   const bookingDocs = await BookingToken.insertMany(bookingBatch);
   console.log(`✓ Created ${bookingDocs.length} booking tokens`);
   console.log(`   Booking link: /book/${bookingDocs[0].token}`);
+
+  await BookingToken.create({ patient: familyPatient, organization: admin.organization, token: familyToken, expiresAt: daysFromNow(30) });
+  console.log(`✓ Family link: /family/${familyToken}`);
 
   // ── 14. Notifications ────────────────────────────────────
   const orgUser = await User.find({ organization: admin.organization });
