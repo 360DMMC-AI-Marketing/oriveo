@@ -1,7 +1,5 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import Organization from "../models/Organization.js";
-import { SPECIALTIES_BY_TYPE } from "../config/specialties.js";
 
 export const protect = async (req, res, next) => {
   try {
@@ -24,17 +22,6 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Session expired, please login again" });
     }
     req.tenantFilter = req.user.superAdmin ? {} : { organization: req.user.organization || null };
-    if (!req.user.superAdmin && req.user.organization) {
-      const org = await Organization.findById(req.user.organization);
-      if (org) {
-        const validIds = (SPECIALTIES_BY_TYPE[org.clinicType] || []).map(s => s.id);
-        if (validIds.length > 0 && !validIds.includes(org.specialty)) {
-          org.specialty = validIds[0];
-          await org.save();
-        }
-        req.tenantFilter.specialty = org.specialty;
-      }
-    }
     return next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
