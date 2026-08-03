@@ -7,7 +7,7 @@ import {
   ClipboardList, BarChart3, ShieldCheck,
   ChevronDown, ChevronRight, Menu, Calendar, ScrollText,
   FileText, Radio, Building2, UserPlus,
-  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft, Home, FlaskConical, Pill
+  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft, Home
 } from "lucide-react";
 
 const TYPE_ICONS: Record<string, any> = { human: HeartPulse, dental: Smile, veterinary: Dog };
@@ -35,14 +35,12 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
       ],
     },
     {
-      label: "Clinical", icon: Stethoscope, roles: ["admin", "doctor", "nurse", "receptionist"],
+      label: "Clinical", icon: Stethoscope, roles: ["admin", "doctor", "nurse", "receptionist", "caregiver"],
       children: [
         { to: "/patients", icon: Users, label: "Patients", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/appointments", icon: Calendar, label: "Appointments", roles: ["admin", "doctor", "nurse", "receptionist"] },
         { to: "/templates", icon: ClipboardList, label: "Templates & Forms", roles: ["admin", "doctor", "nurse"] },
-        { to: "/home-care", icon: Home, label: "Home Care", roles: ["admin", "doctor", "nurse", "caregiver"] },
-        { to: "/labs", icon: FlaskConical, label: "Lab Results", roles: ["admin", "doctor", "nurse"] },
-        { to: "/prescriptions", icon: Pill, label: "Prescriptions", roles: ["admin", "doctor"] },
+        { to: "/care/home-care", icon: Home, label: "Patient Care", roles: ["admin", "doctor", "nurse", "caregiver"] },
       ],
     },
     {

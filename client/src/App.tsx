@@ -80,6 +80,7 @@ const Labs = lazy(() => import("@/pages/Labs"));
 const Prescriptions = lazy(() => import("@/pages/Prescriptions"));
 const PatientPortal = lazy(() => import("@/pages/PatientPortal"));
 const FamilyPortal = lazy(() => import("@/pages/FamilyPortal"));
+const CareLayout = lazy(() => import("@/components/layout/CareLayout"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -146,9 +147,15 @@ function AppRoutes() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/patients/:id" element={<PatientDetail />} />
           <Route path="/templates" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><MedicalTemplates /></ProtectedRoute>} />
-          <Route path="/home-care" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse", "caregiver"]}><HomeCare /></ProtectedRoute>} />
-          <Route path="/labs" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><Labs /></ProtectedRoute>} />
-          <Route path="/prescriptions" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><Prescriptions /></ProtectedRoute>} />
+          <Route path="/home-care" element={<Navigate to="/care/home-care" replace />} />
+          <Route path="/labs" element={<Navigate to="/care/labs" replace />} />
+          <Route path="/prescriptions" element={<Navigate to="/care/prescriptions" replace />} />
+          <Route path="/care" element={<ProtectedRoute><CareLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/care/home-care" replace />} />
+            <Route path="home-care" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse", "caregiver"]}><HomeCare /></ProtectedRoute>} />
+            <Route path="labs" element={<ProtectedRoute allowedRoles={["admin", "doctor", "nurse"]}><Labs /></ProtectedRoute>} />
+            <Route path="prescriptions" element={<ProtectedRoute allowedRoles={["admin", "doctor"]}><Prescriptions /></ProtectedRoute>} />
+          </Route>
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/calendar" element={<CalendarSchedule />} />
           <Route path="/my-profile" element={<MyProfile />} />
