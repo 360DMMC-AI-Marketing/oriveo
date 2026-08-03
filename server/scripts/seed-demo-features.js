@@ -265,6 +265,7 @@ async function seed() {
     const status = i % 10 === 0 ? "in-progress" : i % 13 === 0 ? "ordered" : i % 11 === 0 ? "cancelled" : "completed";
     labBatch.push({
       organization: admin.organization,
+      createdBy: admin._id,
       patient: patient._id,
       orderedBy: pick(admins),
       panel,
@@ -506,6 +507,7 @@ async function seed() {
       call: call._id,
       patient: call.patient,
       organization: admin.organization,
+      createdBy: admin._id,
       generatedBy: call.startedBy || admin._id,
       specialty: "general-practice",
       clinicType: "human",
