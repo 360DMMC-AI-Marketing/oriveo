@@ -219,16 +219,19 @@ async function seed() {
     console.log(`✓ Created ${newPatientDocs.length} new patients`);
   }
 
-  // Enrich existing patients (specialty, assigned doctor, dates)
+  // Enrich existing patients (specialty, assigned doctor, dates) — updateOne skips full-doc validation
   patients = await Patient.find({ organization: admin.organization });
   let enriched = 0;
   for (const p of patients) {
-    let need = false;
-    if (!p.specialty) { p.specialty = p.patientType === "pet" ? "veterinary" : "general"; need = true; }
-    if (!p.lastCheckupDate) { p.lastCheckupDate = daysAgo(rn(10, 90)); need = true; }
-    if (!p.nextScheduledDate) { p.nextScheduledDate = daysFromNow(rn(1, 30)); need = true; }
-    if (!p.assignedDoctor) { p.assignedDoctor = pick(admins); need = true; }
-    if (need) { await p.save(); enriched++; }
+    const $set = {};
+    if (!p.specialty) { $set.specialty = p.patientType === "pet" ? "veterinary" : "general"; }
+    if (!p.lastCheckupDate) { $set.lastCheckupDate = daysAgo(rn(10, 90)); }
+    if (!p.nextScheduledDate) { $set.nextScheduledDate = daysFromNow(rn(1, 30)); }
+    if (!p.assignedDoctor) { $set.assignedDoctor = pick(admins); }
+    if (Object.keys($set).length) {
+      await Patient.updateOne({ _id: p._id }, { $set });
+      enriched++;
+    }
   }
   console.log(`✓ Enriched ${enriched} existing patients`);
 
@@ -236,9 +239,8 @@ async function seed() {
   const portalPatients = await Patient.find({ organization: admin.organization, email: { $in: ["jwilson@email.com", "mgarcia@email.com", "rocky.owner@email.com"] } });
   for (const p of portalPatients) {
     if (!p.portalEnabled) {
-      p.portalEnabled = true;
-      p.portalPassword = await bcrypt.hash("test1234", 10);
-      await p.save();
+      const portalPassword = await bcrypt.hash("test1234", 10);
+      await Patient.updateOne({ _id: p._id }, { $set: { portalEnabled: true, portalPassword } });
       console.log(`✓ Portal enabled for ${p.name}`);
     }
   }
