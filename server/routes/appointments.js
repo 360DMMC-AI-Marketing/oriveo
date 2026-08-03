@@ -16,7 +16,7 @@ router.use(protect);
 
 router.get("/", async (req, res) => {
   try {
-    const query = {};
+    const query = { ...req.tenantFilter };
     if (req.query.patient) query.patient = req.query.patient;
     if (req.query.status) query.status = req.query.status;
     if (req.query.start && req.query.end) {
