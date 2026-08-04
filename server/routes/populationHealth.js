@@ -148,6 +148,9 @@ router.get("/summary", async (req, res) => {
     }));
 
     // --- Risk Predictions ---
+    // A patient is considered at risk when their most recent call is high severity (>= 7,
+    // matching the threshold used by the dashboard, calendar and patient tiles) OR their
+    // last three calls show a rising severity trend.
     const patientCallHistory = {};
     for (const c of calls) {
       if (c.patient && c.aiSeverityScore != null) {
@@ -159,12 +162,16 @@ router.get("/summary", async (req, res) => {
     const riskPredictions = [];
     for (const [pid, history] of Object.entries(patientCallHistory)) {
       const sorted = history.sort((a, b) => new Date(b.date) - new Date(a.date));
-      if (sorted.length >= 3 && sorted[0].severity > sorted[1].severity && sorted[1].severity >= sorted[2].severity) {
-        const increment = Math.round(sorted[0].severity - sorted[2].severity);
+      const current = sorted[0].severity;
+      const previous = sorted[1]?.severity ?? current;
+      const rising = sorted.length >= 3 && current > sorted[1].severity && sorted[1].severity >= sorted[2].severity;
+      if (current >= 7 || rising) {
+        const increment = rising ? Math.round(current - sorted[2].severity) : Math.max(0, current - previous);
         riskPredictions.push({
           patientId: pid, patientName: nameMap[pid] || "Unknown",
-          currentSeverity: sorted[0].severity, previousSeverity: sorted[2].severity,
-          predictedSeverity: Math.min(10, Math.round(sorted[0].severity + increment)), trend: "up",
+          currentSeverity: current, previousSeverity: previous,
+          predictedSeverity: Math.min(10, Math.round(current + increment)),
+          trend: rising ? "up" : "high",
         });
       }
     }

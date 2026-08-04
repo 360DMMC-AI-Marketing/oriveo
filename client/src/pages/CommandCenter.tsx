@@ -556,14 +556,18 @@ export default function CommandCenter() {
               <div key={r.patientId} className="min-w-[180px] flex-1 rounded-lg border border-red-100 bg-red-50/50 p-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-gray-800 truncate">{r.patientName}</h4>
-                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-red-500">
-                    <ArrowUp className="h-2.5 w-2.5" /> {r.currentSeverity}→{r.predictedSeverity}
-                  </span>
+                  {r.trend === "up" ? (
+                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-red-500">
+                      <ArrowUp className="h-2.5 w-2.5" /> {r.currentSeverity}→{r.predictedSeverity}
+                    </span>
+                  ) : (
+                    <span className="flex items-center text-[10px] font-bold text-red-500">{r.currentSeverity}/10</span>
+                  )}
                 </div>
                 <div className="mt-2 h-1.5 rounded-full bg-red-100">
                   <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-red-500 transition-all" style={{ width: `${(r.currentSeverity / 10) * 100}%` }} />
                 </div>
-                <p className="mt-1.5 text-[10px] text-gray-500">Trending upward — schedule review</p>
+                <p className="mt-1.5 text-[10px] text-gray-500">{r.trend === "up" ? "Trending upward — schedule review" : "High severity — urgent review"}</p>
               </div>
             ))}
             {riskPredictions.length === 0 && (
@@ -750,14 +754,18 @@ export default function CommandCenter() {
                 <div key={r.patientId} className="rounded-2xl border border-red-200 bg-red-50/50 p-8">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-gray-900">{r.patientName}</h3>
-                    <span className="flex items-center gap-1 text-red-500 text-sm font-semibold">
-                      <ArrowUp className="h-4 w-4" /> {r.currentSeverity}→{r.predictedSeverity}
-                    </span>
+                    {r.trend === "up" ? (
+                      <span className="flex items-center gap-1 text-red-500 text-sm font-semibold">
+                        <ArrowUp className="h-4 w-4" /> {r.currentSeverity}→{r.predictedSeverity}
+                      </span>
+                    ) : (
+                      <span className="text-red-500 text-sm font-semibold">{r.currentSeverity}/10</span>
+                    )}
                   </div>
                   <div className="mt-4 h-2 rounded-full bg-red-100">
                     <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-red-500 transition-all" style={{ width: `${(r.currentSeverity / 10) * 100}%` }} />
                   </div>
-                  <p className="mt-2 text-sm text-gray-500">Current severity: {r.currentSeverity}/10</p>
+                  <p className="mt-2 text-sm text-gray-500">{r.trend === "up" ? `Current severity: ${r.currentSeverity}/10 — trending up` : "High severity — urgent review"}</p>
                 </div>
               ))}
             </div>
