@@ -6,6 +6,7 @@ import CarePlan from "../models/CarePlan.js";
 import HomeVisit from "../models/HomeVisit.js";
 import Patient from "../models/Patient.js";
 import BookingToken from "../models/BookingToken.js";
+import { sendFamilyLinkEmail } from "../services/emailService.js";
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.get("/care-plans", authorize(...STAFF_ROLES), async (req, res) => {
     if (req.query.patient) filter.patient = req.query.patient;
     if (req.query.status) filter.status = req.query.status;
     const plans = await CarePlan.find(filter)
-      .populate("patient", "name phone email")
+      .populate("patient", "name phone email familyEmail")
       .populate("caregiver", "name email role")
       .populate("createdBy", "name")
       .sort({ createdAt: -1 });
@@ -261,7 +262,22 @@ router.post("/family-link", authorize("admin", "doctor", "nurse"), async (req, r
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
     const baseUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get("host")}`;
-    res.status(201).json({ familyLink: `${baseUrl}/family/${token}`, message: "Family link generated (valid 30 days)" });
+    const familyLink = `${baseUrl}/family/${token}`;
+    let emailed = false;
+    let emailReason = "";
+    if (patient.familyEmail) {
+      const emailResult = await sendFamilyLinkEmail({
+        toEmail: patient.familyEmail,
+        toName: patient.name,
+        patientName: patient.name,
+        familyLink,
+      });
+      emailed = emailResult.sent;
+      emailReason = emailResult.reason || "";
+    } else {
+      emailReason = "No family email on patient record";
+    }
+    res.status(201).json({ familyLink, emailed, message: emailed ? `Family link sent to ${patient.familyEmail} (valid 30 days)` : "Family link generated (valid 30 days)" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

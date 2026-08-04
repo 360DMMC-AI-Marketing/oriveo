@@ -551,6 +551,7 @@ export default function PatientDetail() {
               <Field label="Name"><Input value={patientForm.name || ""} onChange={e => setPatientForm((f: any) => ({...f, name: e.target.value}))} /></Field>
               <Field label="Phone"><Input value={patientForm.phone || ""} onChange={e => setPatientForm((f: any) => ({...f, phone: e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={patientForm.email || ""} onChange={e => setPatientForm((f: any) => ({...f, email: e.target.value}))} /></Field>
+              <Field label="Family Email"><Input type="email" placeholder="e.g. spouse@email.com" value={patientForm.familyEmail || ""} onChange={e => setPatientForm((f: any) => ({...f, familyEmail: e.target.value}))} /></Field>
               <Field label="Gender">
                 <select value={patientForm.gender || ""} onChange={e => setPatientForm((f: any) => ({...f, gender: e.target.value}))} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                   <option value="">Select...</option><option value="male">Male</option><option value="female">Female</option>

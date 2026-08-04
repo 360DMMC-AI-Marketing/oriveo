@@ -20,6 +20,7 @@ const patientSchema = new mongoose.Schema(
     address: { type: String, default: "" },
     emergencyContact: { type: String, default: "" },
     emergencyContactPhone: { type: String, default: "" },
+    familyEmail: { type: String, default: "", lowercase: true, trim: true },
     insuranceId: { type: String, default: "" },
     primaryDiagnosis: { type: String, default: "" },
     chronicConditions: { type: String, default: "" },
@@ -65,7 +66,7 @@ const patientSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const phiFields = ["name", "phone", "email", "address", "emergencyContact", "emergencyContactPhone", "insuranceId", "medicalNotes", "chronicConditions", "allergies", "currentMedications", "pastSurgeries", "primaryDiagnosis", "ownerName", "ownerPhone", "ownerEmail"];
+const phiFields = ["name", "phone", "email", "familyEmail", "address", "emergencyContact", "emergencyContactPhone", "insuranceId", "medicalNotes", "chronicConditions", "allergies", "currentMedications", "pastSurgeries", "primaryDiagnosis", "ownerName", "ownerPhone", "ownerEmail"];
 encryptPlugin(patientSchema, { fields: phiFields });
 
 patientSchema.pre("save", function (next) {

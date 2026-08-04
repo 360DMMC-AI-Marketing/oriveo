@@ -30,7 +30,7 @@ export default function Patients() {
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<string | null>(null);
   const [confirmDeletePatient, setConfirmDeletePatient] = useState<string | null>(null);
   const [patientForm, setPatientForm] = useState({
-    name: "", phone: "", email: "", language: "en", primaryDiagnosis: "", chronicConditions: "",
+    name: "", phone: "", email: "", familyEmail: "", language: "en", primaryDiagnosis: "", chronicConditions: "",
     allergies: "", currentMedications: "", pastSurgeries: "", medicalNotes: "", assignedDoctor: "",
     address: "", emergencyContact: "", emergencyContactPhone: "", insuranceId: "", kbNotes: "",
     patientType: isVet ? "pet" : "human",
@@ -198,6 +198,8 @@ export default function Patients() {
                     <Input value={patientForm.phone} onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })} className="h-9 text-sm" /></div>
                   <div className="space-y-1"><label className="text-xs font-medium">Email</label>
                     <Input value={patientForm.email} onChange={(e) => setPatientForm({ ...patientForm, email: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="space-y-1"><label className="text-xs font-medium" title="Where the Family Link is sent">Family Email</label>
+                    <Input type="email" placeholder="e.g. spouse@email.com" value={patientForm.familyEmail} onChange={(e) => setPatientForm({ ...patientForm, familyEmail: e.target.value })} className="h-9 text-sm" /></div>
                   <div className="space-y-1"><label className="text-xs font-medium">Language</label>
                     <LanguageSelect value={patientForm.language} onChange={(v) => setPatientForm({ ...patientForm, language: v })} /></div>
                   <div className="space-y-1"><label className="text-xs font-medium">Primary Diagnosis</label>

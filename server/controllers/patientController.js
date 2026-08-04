@@ -108,7 +108,7 @@ export const createPatient = async (req, res) => {
 export const updatePatient = async (req, res) => {
   try {
     delete req.body.specialty;
-    const allowedFields = ["name","phone","email","language","age","gender","dob","address","notes","primaryDiagnosis","chronicConditions","allergies","currentMedications","surgeries","insuranceProvider","insuranceId","emergencyContactName","emergencyContactPhone","patientType","species","breed","ownerName","ownerPhone","assignedDoctor","kbNotes"];
+    const allowedFields = ["name","phone","email","familyEmail","language","age","gender","dob","address","notes","primaryDiagnosis","chronicConditions","allergies","currentMedications","surgeries","insuranceProvider","insuranceId","emergencyContactName","emergencyContactPhone","patientType","species","breed","ownerName","ownerPhone","assignedDoctor","kbNotes"];
     const sanitized = {};
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) sanitized[key] = req.body[key];

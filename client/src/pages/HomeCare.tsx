@@ -34,6 +34,26 @@ function StatusBadge({ status, map }: { status: string; map: Record<string, { la
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.cls}`}>{cfg.label}</span>;
 }
 
+function copyText(text: string): boolean {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    return true;
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Schedule Visit Modal ───────────────────────────────
 function VisitForm({ patients, caregivers, onSave, onClose }: { patients: any[]; caregivers: any[]; onSave: (d: any) => void; onClose: () => void }) {
   const [form, setForm] = useState({ patient: "", caregiver: "", scheduledAt: new Date(Date.now() + 86400000).toISOString().slice(0, 16) });
@@ -281,7 +301,11 @@ export default function HomeCare() {
   });
   const familyLink = useMutation({
     mutationFn: (patientId: string) => api.post("/homecare/family-link", { patientId }),
-    onSuccess: (r: any) => { toast.success("Family link created"); navigator.clipboard?.writeText(r.data.familyLink); toast.info("Link copied to clipboard"); },
+    onSuccess: (r: any) => {
+      copyText(r.data.familyLink);
+      if (r.data.emailed) toast.success("Family link sent by email");
+      else toast.info(r.data.message || "Family link copied to clipboard");
+    },
     onError: (e: any) => toast.error(e.response?.data?.message || "Failed"),
   });
 
@@ -419,7 +443,7 @@ export default function HomeCare() {
                           <h3 className="font-semibold text-gray-900">{p.title}</h3>
                           <StatusBadge status={p.status} map={PLAN_STATUS} />
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">{p.patient?.name} · Caregiver: {p.caregiver?.name || "Unassigned"}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{p.patient?.name} · Caregiver: {p.caregiver?.name || "Unassigned"}{p.patient?.familyEmail ? ` · Family email: ${p.patient.familyEmail}` : ""}</p>
                         {p.description && <p className="text-sm text-gray-600 mt-2">{p.description}</p>}
                       </div>
                       <div className="flex items-center gap-2">
