@@ -148,24 +148,25 @@ export default function CommandCenter() {
   const [paused, setPaused] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const containerRef = useRef<HTMLDivElement>(null);
-  const rotateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pausedRef = useRef(false);
+  const dotResumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["population-health"],
     queryFn: () => api.get("/population-health/summary").then((r) => r.data),
-    refetchInterval: tvMode ? 30000 : 15000,
+    refetchInterval: paused ? false : (tvMode ? 30000 : 15000),
   });
 
   const { data: biomarkerData } = useQuery({
     queryKey: ["biomarkers", "flagged"],
     queryFn: () => api.get("/biomarkers/flagged").then((r) => r.data),
-    refetchInterval: tvMode ? 60000 : 30000,
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
   });
 
   const { data: biomarkerStats } = useQuery({
     queryKey: ["biomarkers", "stats"],
     queryFn: () => api.get("/biomarkers/stats").then((r) => r.data),
-    refetchInterval: tvMode ? 60000 : 30000,
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
   });
 
   const d = data || {} as any;
@@ -178,14 +179,19 @@ export default function CommandCenter() {
 
   useEffect(() => {
     if (!tvMode) return;
-    let idx = 0;
-    function rotate() {
-      if (!paused) { idx = (idx + 1) % TV_VIEWS.length; setTvView(idx); }
-      rotateTimer.current = setTimeout(rotate, 12000);
-    }
-    rotateTimer.current = setTimeout(rotate, 12000);
-    return () => { if (rotateTimer.current) clearTimeout(rotateTimer.current); };
-  }, [tvMode, paused]);
+    const id = setInterval(() => {
+      if (!pausedRef.current) setTvView((v) => (v + 1) % TV_VIEWS.length);
+    }, 12000);
+    return () => clearInterval(id);
+  }, [tvMode]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => () => {
+    if (dotResumeTimer.current) clearTimeout(dotResumeTimer.current);
+  }, []);
 
   const handleManualRefresh = useCallback(() => {
     refetch();
@@ -784,10 +790,16 @@ export default function CommandCenter() {
       )}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
         {TV_VIEWS.map((v, i) => (
-          <button key={v} onClick={() => { setTvView(i); setPaused(true); setTimeout(() => setPaused(false), 8000); }}
+          <button key={v} onClick={() => {
+            setTvView(i);
+            setPaused(true);
+            if (dotResumeTimer.current) clearTimeout(dotResumeTimer.current);
+            dotResumeTimer.current = setTimeout(() => setPaused(false), 8000);
+          }}
             className={`h-2 w-2 rounded-full transition-all ${tvView === i ? "bg-teal-600 w-6" : "bg-gray-300 hover:bg-gray-400"}`} />
         ))}
-        <button onClick={() => setPaused(!paused)} className="ml-4 text-xs text-gray-400 hover:text-gray-600">
+        <button onClick={() => { setPaused((p) => !p); if (dotResumeTimer.current) { clearTimeout(dotResumeTimer.current); dotResumeTimer.current = null; } }}
+          className="ml-4 text-xs text-gray-400 hover:text-gray-600" title={paused ? "Resume auto-rotation" : "Pause auto-rotation"}>
           {paused ? "▶ Auto" : "⏸ Pause"}
         </button>
       </div>
