@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2, PawPrint, Star,
+  Plus, Search, Phone, User, Users, ChevronDown, ChevronUp, UserMinus, Trash2, X, Upload, Loader2, PawPrint, Star, Link2,
 } from "lucide-react";
 import DncBadge from "@/components/DncBadge";
 import VoiceInputButton from "@/components/VoiceInputButton";
@@ -102,6 +102,36 @@ export default function Patients() {
     if (!p?.phone) { toast.error("No phone number"); return; }
     navigate(`/voice-agent?patientId=${p._id}&patientName=${encodeURIComponent(p.name)}`);
   }
+
+  function copyText(text: string): boolean {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+      return true;
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const familyLink = useMutation({
+    mutationFn: (patientId: string) => api.post("/homecare/family-link", { patientId }),
+    onSuccess: (r: any) => {
+      copyText(r.data.familyLink);
+      if (r.data.emailed) toast.success("Family link sent by email");
+      else toast.info(r.data.message || "Family link copied to clipboard");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Failed"),
+  });
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -416,6 +446,9 @@ export default function Patients() {
                         <Phone className="h-3.5 w-3.5" />
                       </button>
                     )}
+                    <button onClick={() => familyLink.mutate(p._id)} className="p-1.5 rounded hover:bg-primary/10 text-gray-400 hover:text-primary" title="Family Link">
+                      <Link2 className="h-3.5 w-3.5" />
+                    </button>
                     {groups.length > 0 && !memberIds.has(p._id) && (
                       <div className="relative group">
                         <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Add to group">

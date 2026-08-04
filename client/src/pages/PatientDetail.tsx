@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity, ClipboardList, Loader2 } from "lucide-react";
+import { Phone, Calendar, Ban, Save, X, BookOpen, Sparkles, User, PawPrint, Edit3, Lock, Download, Trash2, CheckSquare, Activity, ClipboardList, Loader2, Link2 } from "lucide-react";
 import VoiceInputButton from "@/components/VoiceInputButton";
 import LanguageSelect from "@/components/LanguageSelect";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,6 +84,36 @@ export default function PatientDetail() {
       toast.success("Patient data erased");
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || "Erasure failed"),
+  });
+
+  function copyText(text: string): boolean {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+      return true;
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const familyLinkMutation = useMutation({
+    mutationFn: (patientId: string) => api.post("/homecare/family-link", { patientId }),
+    onSuccess: (r: any) => {
+      copyText(r.data.familyLink);
+      if (r.data.emailed) toast.success("Family link sent by email");
+      else toast.info(r.data.message || "Family link copied to clipboard");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || "Failed"),
   });
 
   const { data: patientData } = useQuery({
@@ -219,6 +249,9 @@ export default function PatientDetail() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setShowBookingLink(true)}>
             <Calendar className="mr-2 h-4 w-4" /> Send Booking Link
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => familyLinkMutation.mutate(id!)}>
+            <Link2 className="mr-2 h-4 w-4" /> Family Link
           </Button>
           {patient.email && <Button variant="outline" size="sm" onClick={() => setShowPortal(true)}>
             <Lock className="mr-2 h-4 w-4" /> Patient Portal
