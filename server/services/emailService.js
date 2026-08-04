@@ -1,4 +1,5 @@
 import { EmailClient } from "@azure/communication-email";
+import nodemailer from "nodemailer";
 
 const connectionString = process.env.ACS_CONNECTION_STRING;
 const senderEmail = process.env.ACS_SENDER_EMAIL;
@@ -12,32 +13,73 @@ if (connectionString) {
   }
 }
 
+const smtpTransport = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || "587", 10),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: process.env.SMTP_USER
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    })
+  : null;
+
+const smtpFrom = process.env.SMTP_FROM || process.env.SMTP_USER || "";
+
 export function isEmailConfigured() {
-  return !!(client && senderEmail);
+  return !!(client && senderEmail) || !!smtpTransport;
+}
+
+async function sendMail({ to, toName, subject, html }) {
+  if (client && senderEmail) {
+    try {
+      const poller = await client.beginSend({
+        senderAddress: senderEmail,
+        recipients: { to: [{ address: to, displayName: toName }] },
+        content: { subject, htmlContent: html },
+      });
+      const result = await poller.pollUntilDone();
+      return { sent: true, messageId: result.id, via: "acs" };
+    } catch (err) {
+      if (smtpTransport) {
+        try {
+          await smtpTransport.sendMail({
+            from: smtpFrom,
+            to: toName ? `"${toName}" <${to}>` : to,
+            subject,
+            html,
+          });
+          return { sent: true, via: "smtp" };
+        } catch (smtpErr) {
+          return { sent: false, reason: `ACS failed (${err.message}); SMTP failed (${smtpErr.message})` };
+        }
+      }
+      return { sent: false, reason: err.message };
+    }
+  }
+
+  if (smtpTransport) {
+    try {
+      await smtpTransport.sendMail({
+        from: smtpFrom,
+        to: toName ? `"${toName}" <${to}>` : to,
+        subject,
+        html,
+      });
+      return { sent: true, via: "smtp" };
+    } catch (err) {
+      return { sent: false, reason: err.message };
+    }
+  }
+
+  return { sent: false, reason: "Email not configured (add ACS or SMTP env vars)" };
 }
 
 export async function sendEmail({ to, subject, html }) {
-  if (!client || !senderEmail) {
-    return { sent: false, reason: "ACS not configured" };
-  }
-  try {
-    const poller = await client.beginSend({
-      senderAddress: senderEmail,
-      recipients: { to: [{ address: to }] },
-      content: { subject, htmlContent: html },
-    });
-    const result = await poller.pollUntilDone();
-    return { sent: true, messageId: result.id };
-  } catch (err) {
-    return { sent: false, reason: err.message };
-  }
+  return sendMail({ to, subject, html });
 }
 
 export async function sendInviteEmail({ toEmail, toName, tempPassword, companyName, invitedByName }) {
-  if (!client || !senderEmail) {
-    return { sent: false, reason: "ACS not configured" };
-  }
-
   const subject = `You've been invited to ${companyName || "Oriveo"}`;
 
   const htmlContent = `
@@ -59,24 +101,10 @@ export async function sendInviteEmail({ toEmail, toName, tempPassword, companyNa
 </body>
 </html>`;
 
-  try {
-    const poller = await client.beginSend({
-      senderAddress: senderEmail,
-      recipients: { to: [{ address: toEmail, displayName: toName }] },
-      content: { subject, htmlContent },
-    });
-    const result = await poller.pollUntilDone();
-    return { sent: true, messageId: result.id };
-  } catch (err) {
-    return { sent: false, reason: err.message };
-  }
+  return sendMail({ to: toEmail, toName, subject, html: htmlContent });
 }
 
 export async function sendPasswordResetEmail({ toEmail, toName, resetUrl, companyName }) {
-  if (!client || !senderEmail) {
-    return { sent: false, reason: "ACS not configured" };
-  }
-
   const subject = `Reset your ${companyName || "Oriveo"} password`;
 
   const htmlContent = `
@@ -99,24 +127,10 @@ export async function sendPasswordResetEmail({ toEmail, toName, resetUrl, compan
 </body>
 </html>`;
 
-  try {
-    const poller = await client.beginSend({
-      senderAddress: senderEmail,
-      recipients: { to: [{ address: toEmail, displayName: toName }] },
-      content: { subject, htmlContent },
-    });
-    const result = await poller.pollUntilDone();
-    return { sent: true, messageId: result.id };
-  } catch (err) {
-    return { sent: false, reason: err.message };
-  }
+  return sendMail({ to: toEmail, toName, subject, html: htmlContent });
 }
 
 export async function sendFamilyLinkEmail({ toEmail, toName, patientName, familyLink, companyName }) {
-  if (!client || !senderEmail) {
-    return { sent: false, reason: "ACS not configured" };
-  }
-
   const subject = `${patientName}'s care — Family link from ${companyName || "Oriveo"}`;
 
   const htmlContent = `
@@ -130,7 +144,7 @@ export async function sendFamilyLinkEmail({ toEmail, toName, patientName, family
     <p>Hi ${toName || "there"},</p>
     <p>Your family member <strong>${patientName}</strong> has an active home care plan. Click below to view their care plan, medications, tasks and recent visits:</p>
     <div style="text-align: center; margin: 24px 0;">
-      <a href="${familyLink}" style="background: #0f172a; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View ${patientName}'s care</a>
+      <a href="${familyLink}" style="background: #0a7c6f; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View ${patientName}'s care</a>
     </div>
     <p style="color: #6b7280; font-size: 14px;">This link is valid for 30 days and shows read-only information for ${patientName} only.</p>
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
@@ -139,24 +153,10 @@ export async function sendFamilyLinkEmail({ toEmail, toName, patientName, family
 </body>
 </html>`;
 
-  try {
-    const poller = await client.beginSend({
-      senderAddress: senderEmail,
-      recipients: { to: [{ address: toEmail, displayName: toName }] },
-      content: { subject, htmlContent },
-    });
-    const result = await poller.pollUntilDone();
-    return { sent: true, messageId: result.id };
-  } catch (err) {
-    return { sent: false, reason: err.message };
-  }
+  return sendMail({ to: toEmail, toName, subject, html: htmlContent });
 }
 
 export async function sendVerificationEmail({ toEmail, toName, verifyUrl, companyName }) {
-  if (!client || !senderEmail) {
-    return { sent: false, reason: "ACS not configured" };
-  }
-
   const subject = `Verify your ${companyName || "Oriveo"} email`;
 
   const htmlContent = `
@@ -170,7 +170,7 @@ export async function sendVerificationEmail({ toEmail, toName, verifyUrl, compan
     <p>Hi ${toName || "there"},</p>
     <p>Thanks for signing up. Please verify your email address to get started:</p>
     <div style="text-align: center; margin: 24px 0;">
-      <a href="${verifyUrl}" style="background: #0f172a; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Verify Email</a>
+      <a href="${verifyUrl}" style="background: #0a7c6f; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Verify Email</a>
     </div>
     <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
@@ -179,15 +179,5 @@ export async function sendVerificationEmail({ toEmail, toName, verifyUrl, compan
 </body>
 </html>`;
 
-  try {
-    const poller = await client.beginSend({
-      senderAddress: senderEmail,
-      recipients: { to: [{ address: toEmail, displayName: toName }] },
-      content: { subject, htmlContent },
-    });
-    const result = await poller.pollUntilDone();
-    return { sent: true, messageId: result.id };
-  } catch (err) {
-    return { sent: false, reason: err.message };
-  }
+  return sendMail({ to: toEmail, toName, subject, html: htmlContent });
 }

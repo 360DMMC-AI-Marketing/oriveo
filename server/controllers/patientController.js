@@ -3,6 +3,7 @@ import Patient from "../models/Patient.js";
 import { addDocument, removeDocument } from "../services/knowledgeBase.js";
 import { cacheGet, cacheSet, cacheDel } from "../utils/cache.js";
 import { escapeRegex } from "../utils/encryption.js";
+import { familyLinkBaseUrl, generateAndEmailFamilyLink } from "../services/familyLinkService.js";
 
 function syncKbNotes(patient) {
   if (!patient.kbNotes || !patient.kbNotes.trim()) {
@@ -97,6 +98,17 @@ export const createPatient = async (req, res) => {
     delete req.body.specialty;
     const patient = await Patient.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null, specialty: orgSpecialty || "general-practice" });
     syncKbNotes(patient);
+    if (patient.familyEmail) {
+      try {
+        await generateAndEmailFamilyLink({
+          patient,
+          organizationId: req.user.organization,
+          baseUrl: familyLinkBaseUrl(req),
+        });
+      } catch (e) {
+        console.error("Family link email on create failed:", e.message);
+      }
+    }
     const populated = await patient.populate("assignedDoctor", "name email");
     await cacheDel("patients:*");
     res.status(201).json({ patient: populated });
@@ -113,14 +125,27 @@ export const updatePatient = async (req, res) => {
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) sanitized[key] = req.body[key];
     }
+    const previous = await Patient.findOne({ _id: req.params.id, ...req.tenantFilter }).lean();
+    if (!previous) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+    const familyEmailChanged = !!sanitized.familyEmail && sanitized.familyEmail !== previous.familyEmail;
     const patient = await Patient.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, sanitized, {
       new: true,
       runValidators: true,
     }).populate("assignedDoctor", "name email");
-    if (!patient) {
-      return res.status(404).json({ message: "Patient not found" });
-    }
     syncKbNotes(patient);
+    if (familyEmailChanged) {
+      try {
+        await generateAndEmailFamilyLink({
+          patient,
+          organizationId: req.user.organization,
+          baseUrl: familyLinkBaseUrl(req),
+        });
+      } catch (e) {
+        console.error("Family link email on update failed:", e.message);
+      }
+    }
     await cacheDel("patients:*");
     res.json({ patient });
   } catch (error) {

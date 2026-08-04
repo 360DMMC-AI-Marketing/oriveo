@@ -1,12 +1,11 @@
 import { Router } from "express";
 import mongoose from "mongoose";
-import crypto from "crypto";
 import { protect, authorize } from "../middleware/auth.js";
 import CarePlan from "../models/CarePlan.js";
 import HomeVisit from "../models/HomeVisit.js";
 import Patient from "../models/Patient.js";
 import BookingToken from "../models/BookingToken.js";
-import { sendFamilyLinkEmail } from "../services/emailService.js";
+import { familyLinkBaseUrl, generateAndEmailFamilyLink } from "../services/familyLinkService.js";
 
 const router = Router();
 
@@ -254,30 +253,20 @@ router.post("/family-link", authorize("admin", "doctor", "nurse"), async (req, r
     }
     const patient = await Patient.findOne({ _id: patientId, organization: req.user.organization });
     if (!patient) return res.status(404).json({ message: "Patient not found" });
-    const token = crypto.randomBytes(24).toString("hex");
-    await BookingToken.create({
-      patient: patient._id,
-      organization: req.user.organization,
-      token,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    const baseUrl = familyLinkBaseUrl(req);
+    const { sent: emailed, reason, familyLink } = await generateAndEmailFamilyLink({
+      patient,
+      organizationId: req.user.organization,
+      baseUrl,
     });
-    const baseUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get("host")}`;
-    const familyLink = `${baseUrl}/family/${token}`;
-    let emailed = false;
-    let emailReason = "";
-    if (patient.familyEmail) {
-      const emailResult = await sendFamilyLinkEmail({
-        toEmail: patient.familyEmail,
-        toName: patient.name,
-        patientName: patient.name,
-        familyLink,
-      });
-      emailed = emailResult.sent;
-      emailReason = emailResult.reason || "";
-    } else {
-      emailReason = "No family email on patient record";
-    }
-    res.status(201).json({ familyLink, emailed, message: emailed ? `Family link sent to ${patient.familyEmail} (valid 30 days)` : "Family link generated (valid 30 days)" });
+    res.status(201).json({
+      familyLink,
+      emailed,
+      emailReason: reason || "",
+      message: emailed
+        ? `Family link sent to ${patient.familyEmail} (valid 30 days)`
+        : `Family link generated (valid 30 days)${reason ? ` — ${reason}` : ""}`,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
