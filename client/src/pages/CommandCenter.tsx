@@ -45,7 +45,7 @@ function getTileMeta(severity: number | null, status?: string) {
   return { label: "No Data", color: "#9ca3af", bg: "bg-gray-50", border: "border-gray-200", iconColor: "text-gray-400", ring: "ring-gray-300" };
 }
 
-const TV_VIEWS = ["overview", "population", "risk", "summary"] as const;
+const TV_VIEWS = ["overview", "schedule", "population", "risk", "attention", "live", "qa", "rooms", "summary"] as const;
 
 function IndexGauge({ score, size = 180 }: { score: number; size?: number }) {
   const [animatedScore, setAnimatedScore] = useState(0);
@@ -166,6 +166,41 @@ export default function CommandCenter() {
   const { data: biomarkerStats } = useQuery({
     queryKey: ["biomarkers", "stats"],
     queryFn: () => api.get("/biomarkers/stats").then((r) => r.data),
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
+  });
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  const { data: apptStats } = useQuery({
+    queryKey: ["appointments-stats"],
+    queryFn: () => api.get("/appointments/stats").then((r) => r.data),
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
+  });
+  const { data: apptList } = useQuery({
+    queryKey: ["appointments-today"],
+    queryFn: () => api.get(`/appointments?start=${todayStart.toISOString()}&end=${todayEnd.toISOString()}`).then((r) => r.data),
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
+  });
+  const { data: qaData } = useQuery({
+    queryKey: ["qa-scores"],
+    queryFn: () => api.get("/qa/scores").then((r) => r.data),
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
+  });
+  const { data: labsStats } = useQuery({
+    queryKey: ["labs-stats"],
+    queryFn: () => api.get("/labs/stats").then((r) => r.data),
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
+  });
+  const { data: rxStats } = useQuery({
+    queryKey: ["rx-stats"],
+    queryFn: () => api.get("/prescriptions/stats").then((r) => r.data),
+    refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
+  });
+  const { data: roomStats } = useQuery({
+    queryKey: ["room-stats"],
+    queryFn: () => api.get("/rooms/stats").then((r) => r.data),
     refetchInterval: paused ? false : (tvMode ? 60000 : 30000),
   });
 
@@ -794,6 +829,154 @@ export default function CommandCenter() {
             </div>
             <p className="mt-2 text-xs text-gray-400">Powered by Oriveo AI</p>
           </div>
+        </div>
+      )}
+      {TV_VIEWS[tvView] === "schedule" && (
+        <div className="w-full max-w-6xl">
+          <h2 className="mb-6 text-center text-sm font-semibold text-gray-400 tracking-widest">TODAY'S SCHEDULE</h2>
+          <div className="mb-6 grid grid-cols-4 gap-4">
+            {[
+              { label: "Confirmed", value: apptStats?.confirmed ?? 0, cls: "bg-indigo-100 text-indigo-700" },
+              { label: "Scheduled", value: apptStats?.scheduled ?? 0, cls: "bg-blue-100 text-blue-700" },
+              { label: "Completed", value: apptStats?.completed ?? 0, cls: "bg-emerald-100 text-emerald-700" },
+              { label: "No-Shows", value: apptStats?.noShow ?? 0, cls: "bg-red-100 text-red-700" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-gray-100 bg-white p-4 text-center shadow-sm">
+                <p className={`mx-auto w-fit rounded-full px-3 py-1 text-xs font-semibold ${s.cls}`}>{s.label}</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{s.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {(apptList?.appointments || []).slice(0, 8).map((a: any) => (
+              <div key={a._id} className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white px-5 py-3 shadow-sm">
+                <span className="w-16 text-lg font-bold text-gray-900">
+                  {new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span className="flex-1 truncate font-medium text-gray-800">{a.patient?.name || "Unknown"}</span>
+                {a.type && <span className="text-sm text-gray-400">{a.type}</span>}
+                {a.bookedBy?.name && <span className="text-sm text-gray-400">Dr. {a.bookedBy.name}</span>}
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  a.status === "completed" ? "bg-emerald-100 text-emerald-700"
+                  : a.status === "no-show" ? "bg-red-100 text-red-700"
+                  : a.status === "cancelled" ? "bg-gray-100 text-gray-500"
+                  : "bg-indigo-100 text-indigo-700"
+                }`}>
+                  {a.status}
+                </span>
+              </div>
+            ))}
+            {(apptList?.appointments || []).length === 0 && (
+              <p className="py-8 text-center text-gray-400">No appointments today</p>
+            )}
+          </div>
+        </div>
+      )}
+      {TV_VIEWS[tvView] === "attention" && (
+        <div className="w-full max-w-6xl">
+          <h2 className="mb-6 text-center text-sm font-semibold text-amber-600 tracking-widest">NEEDS ATTENTION</h2>
+          <div className="grid grid-cols-2 gap-5">
+            {riskPredictions.slice(0, 2).map((r: any) => (
+              <div key={r.patientId} className="rounded-2xl border border-red-200 bg-red-50/60 p-6">
+                <p className="text-lg font-bold text-gray-900">{r.patientName}</p>
+                <p className="mt-1 text-sm font-semibold text-red-600">
+                  {r.trend === "up" ? `Severity trending up ${r.currentSeverity}→${r.predictedSeverity}` : `High severity ${r.currentSeverity}/10`}
+                </p>
+              </div>
+            ))}
+            {biomarkerData?.flagged?.length > 0 && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-6">
+                <p className="text-lg font-bold text-gray-900">Flagged Biomarkers</p>
+                <p className="mt-1 text-2xl font-bold text-amber-600">{biomarkerData.flagged.length}</p>
+              </div>
+            )}
+            {(labsStats?.pending > 0 || labsStats?.abnormal > 0) && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6">
+                <p className="text-lg font-bold text-gray-900">Labs</p>
+                <p className="mt-1 text-sm text-gray-600">{labsStats.pending || 0} pending · {labsStats.abnormal || 0} abnormal</p>
+              </div>
+            )}
+            {rxStats?.active > 0 && (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-6">
+                <p className="text-lg font-bold text-gray-900">Prescriptions</p>
+                <p className="mt-1 text-sm text-gray-600">{rxStats.active || 0} active</p>
+              </div>
+            )}
+          </div>
+          {riskPredictions.length === 0 && !(biomarkerData?.flagged?.length > 0) && !(labsStats?.pending > 0 || labsStats?.abnormal > 0) && (
+            <p className="py-16 text-center text-gray-400">Nothing needs attention right now</p>
+          )}
+        </div>
+      )}
+      {TV_VIEWS[tvView] === "live" && (
+        <div className="w-full max-w-6xl">
+          <h2 className="mb-6 text-center text-sm font-semibold text-gray-400 tracking-widest">LIVE CALLS & ACTIVITY</h2>
+          {liveActivity.length > 0 ? (
+            <div className="grid grid-cols-3 gap-4">
+              {liveActivity.slice(0, 9).map((act: any, i: number) => (
+                <div key={i} className={`rounded-xl border p-4 shadow-sm ${act.type === "emergency" ? "border-red-300 bg-red-50" : "border-gray-100 bg-white"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate font-semibold text-gray-900">{act.patient}</span>
+                    {act.severity != null && (
+                      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${act.severity >= 7 ? "bg-red-500" : act.severity >= 4 ? "bg-amber-500" : "bg-emerald-500"}`}>
+                        {act.severity}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-sm ${act.type === "emergency" ? "font-semibold text-red-600" : "text-gray-500"}`}>{act.message}</p>
+                  <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(act.timestamp)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-16 text-center text-gray-400">No calls today yet</p>
+          )}
+        </div>
+      )}
+      {TV_VIEWS[tvView] === "qa" && (
+        <div className="w-full max-w-6xl">
+          <h2 className="mb-6 text-center text-sm font-semibold text-gray-400 tracking-widest">CALL QA SCORES</h2>
+          {qaData?.summary?.total > 0 ? (
+            <>
+              <div className="mb-6 flex justify-center">
+                <div className="rounded-xl border border-gray-100 bg-white px-10 py-4 text-center shadow-sm">
+                  <p className="text-3xl font-bold text-gray-900">{qaData.summary.averageOverall}/100</p>
+                  <p className="mt-1 text-xs text-gray-500">Average overall</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {(qaData.scores || []).slice(0, 7).map((c: any) => (
+                  <div key={c._id} className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white px-5 py-3 shadow-sm">
+                    <span className="w-44 truncate font-medium text-gray-800">{c.patient?.name || "Unknown"}</span>
+                    <div className="h-2 flex-1 rounded-full bg-gray-100">
+                      <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-teal-500" style={{ width: `${c.qaScore?.overall || 0}%` }} />
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">{c.qaScore?.overall || 0}</span>
+                    <span className="w-24 text-right text-xs text-gray-400">{formatRelativeTime(c.qaScore?.scoredAt || c.createdAt)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="py-16 text-center text-gray-400">No calls scored yet</p>
+          )}
+        </div>
+      )}
+      {TV_VIEWS[tvView] === "rooms" && (
+        <div className="w-full max-w-6xl">
+          <h2 className="mb-6 text-center text-sm font-semibold text-gray-400 tracking-widest">ROOM STATUS</h2>
+          {roomStats?.byStatus?.length > 0 ? (
+            <div className="grid grid-cols-3 gap-6">
+              {(roomStats.byStatus || []).map((s: any) => (
+                <div key={s._id} className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+                  <p className="text-4xl font-bold text-gray-900">{s.count}</p>
+                  <p className="mt-2 text-sm text-gray-500 capitalize">{s._id}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-16 text-center text-gray-400">No rooms configured</p>
+          )}
         </div>
       )}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
