@@ -199,7 +199,18 @@ export default function App() {
         <BrowserRouter>
           <AuthProvider>
             <AppRoutes />
-            <Toaster position="top-right" richColors />
+            <Toaster
+              position="top-right"
+              richColors
+              toastOptions={{
+                style: {
+                  fontFamily: "inherit",
+                  borderRadius: "12px",
+                  border: "1px solid var(--color-gray-200)",
+                  boxShadow: "0 10px 30px -10px rgba(0,0,0,0.2)",
+                },
+              }}
+            />
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

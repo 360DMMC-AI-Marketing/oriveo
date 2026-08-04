@@ -1,21 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, PhoneIncoming, PhoneCall, FileText, XCircle, Clock, Calendar, Info, CheckCheck, Trash2, Bell } from "lucide-react";
+import { CheckCheck, Trash2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getSocket, type NotificationData } from "@/lib/socket";
-
-const typeConfig: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  emergency: { icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", label: "Emergency" },
-  high_severity: { icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50", label: "High Severity" },
-  inbound_received: { icon: PhoneIncoming, color: "text-blue-600", bg: "bg-blue-50", label: "Inbound Call" },
-  inbound_completed: { icon: PhoneCall, color: "text-green-600", bg: "bg-green-50", label: "Call Completed" },
-  report_ready: { icon: FileText, color: "text-purple-600", bg: "bg-purple-50", label: "Report Ready" },
-  call_failed: { icon: XCircle, color: "text-red-600", bg: "bg-red-50", label: "Call Failed" },
-  follow_up_needed: { icon: Clock, color: "text-amber-600", bg: "bg-amber-50", label: "Follow-up Needed" },
-  appointment_reminder: { icon: Calendar, color: "text-indigo-600", bg: "bg-indigo-50", label: "Appointment" },
-  system_alert: { icon: Info, color: "text-gray-600", bg: "bg-gray-50", label: "System Alert" },
-};
+import { typeConfig, timeAgo } from "@/lib/notifications";
 
 const typeFilterOptions = [
   { value: "", label: "All Types" },
@@ -28,18 +17,6 @@ const typeFilterOptions = [
   { value: "report_ready", label: "Reports" },
   { value: "system_alert", label: "System" },
 ];
-
-function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(date).toLocaleDateString();
-}
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -188,8 +165,8 @@ export default function Notifications() {
               <div
                 key={notif._id}
                 className={cn(
-                  "flex items-start gap-4 rounded-lg border p-4 transition-colors cursor-pointer hover:bg-gray-50",
-                  !notif.read && "bg-blue-50/40 border-blue-100"
+                  "flex items-start gap-4 rounded-xl border p-4 transition-colors cursor-pointer hover:bg-gray-50",
+                  !notif.read && "bg-teal-50/40 border-teal-100"
                 )}
                 onClick={() => handleClick(notif)}
               >
@@ -199,11 +176,11 @@ export default function Notifications() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className={cn("text-sm", !notif.read ? "font-semibold text-gray-900" : "text-gray-700")}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {!notif.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                      <p className={cn("text-sm truncate", !notif.read ? "font-semibold text-gray-900" : "text-gray-700")}>
                         {notif.title}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{cfg.label}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(notif.createdAt)}</span>

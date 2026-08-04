@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { Bell, Phone, Users, Brain, X } from "lucide-react";
+import { Bell, Phone, Users, Brain } from "lucide-react";
+import { typeConfig, timeAgo } from "@/lib/notifications";
 
 interface GreetingHeaderProps {
   userName: string;
@@ -14,14 +15,6 @@ const ROLE_COLORS: Record<string, { bg: string; text: string; label: string }> =
   doctor: { bg: "bg-blue-100", text: "text-blue-700", label: "Doctor" },
   nurse: { bg: "bg-emerald-100", text: "text-emerald-700", label: "Nurse" },
   receptionist: { bg: "bg-orange-100", text: "text-orange-700", label: "Receptionist" },
-};
-
-const NOTIF_ICONS: Record<string, any> = {
-  emergency: Phone,
-  high_severity: Phone,
-  call_failed: X,
-  follow_up_needed: Brain,
-  appointment_reminder: Phone,
 };
 
 function getGreeting(): string {
@@ -155,7 +148,8 @@ export function GreetingHeader({ userName, userRole }: GreetingHeaderProps) {
                   </div>
                 )}
                 {notifData?.notifications?.map((n: any) => {
-                  const NIcon = NOTIF_ICONS[n.type] || Bell;
+                  const cfg = typeConfig[n.type] || typeConfig.system_alert;
+                  const Icon = cfg.icon;
                   return (
                     <Link
                       key={n._id}
@@ -164,38 +158,23 @@ export function GreetingHeader({ userName, userRole }: GreetingHeaderProps) {
                         if (!n.read) markNotifRead(n._id);
                         setShowNotifications(false);
                       }}
-                      className={`flex items-start gap-3 px-4 py-3 text-sm transition-colors hover:bg-gray-50 ${
-                        !n.read ? "bg-blue-50/50" : ""
+                      className={`flex items-start gap-3 px-4 py-3 text-sm transition-colors hover:bg-gray-50 border-b border-gray-100 last:border-0 ${
+                        !n.read ? "bg-teal-50/40" : ""
                       }`}
                     >
-                      <div
-                        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                          !n.read ? "bg-blue-100" : "bg-gray-100"
-                        }`}
-                      >
-                        <NIcon
-                          className={`h-3.5 w-3.5 ${
-                            !n.read ? "text-blue-600" : "text-gray-500"
-                          }`}
-                        />
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cfg.bg}`}>
+                        <Icon className={`h-4 w-4 ${cfg.color}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p
-                          className={`truncate ${
-                            !n.read
-                              ? "font-semibold text-gray-900"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {n.title}
-                        </p>
-                        <p className="truncate text-xs text-gray-400">
-                          {n.message}
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`truncate ${!n.read ? "font-medium text-gray-900" : "text-gray-700"}`}>
+                            {n.title}
+                          </p>
+                          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                        </div>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{n.message}</p>
+                        <p className="mt-1 text-[10px] text-gray-400">{timeAgo(n.createdAt)}</p>
                       </div>
-                      {!n.read && (
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                      )}
                     </Link>
                   );
                 })}

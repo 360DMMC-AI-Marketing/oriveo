@@ -1,35 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, AlertTriangle, PhoneIncoming, PhoneCall, FileText, XCircle, Clock, Calendar, Info, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getSocket, type NotificationData } from "@/lib/socket";
-
-const typeConfig: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-  emergency: { icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
-  high_severity: { icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50" },
-  inbound_received: { icon: PhoneIncoming, color: "text-blue-600", bg: "bg-blue-50" },
-  inbound_completed: { icon: PhoneCall, color: "text-green-600", bg: "bg-green-50" },
-  report_ready: { icon: FileText, color: "text-purple-600", bg: "bg-purple-50" },
-  call_failed: { icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-  follow_up_needed: { icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-  appointment_reminder: { icon: Calendar, color: "text-indigo-600", bg: "bg-indigo-50" },
-  system_alert: { icon: Info, color: "text-gray-600", bg: "bg-gray-50" },
-  call_transferred: { icon: PhoneCall, color: "text-blue-600", bg: "bg-blue-50" },
-  appointment_pending: { icon: Calendar, color: "text-amber-600", bg: "bg-amber-50" },
-  appointment_confirmed: { icon: CheckCheck, color: "text-green-600", bg: "bg-green-50" },
-};
-
-function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
+import { typeConfig, timeAgo } from "@/lib/notifications";
 
 export default function NotificationsDropdown() {
   const [open, setOpen] = useState(false);
@@ -101,13 +76,13 @@ export default function NotificationsDropdown() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border bg-white shadow-lg z-50">
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+        <div className="absolute right-0 top-full mt-2 w-80 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl z-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="flex items-center gap-1 text-xs text-primary hover:text-primary-dark cursor-pointer"
+                className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-dark cursor-pointer"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark all read
@@ -117,7 +92,7 @@ export default function NotificationsDropdown() {
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">No new notifications</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-400">No new notifications</div>
             ) : (
               notifications.map((notif) => {
                 const cfg = typeConfig[notif.type] || typeConfig.system_alert;
@@ -126,17 +101,21 @@ export default function NotificationsDropdown() {
                   <button
                     key={notif._id}
                     onClick={() => handleClick(notif)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors cursor-pointer"
+                    className={cn(
+                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer",
+                      !notif.read && "bg-teal-50/40"
+                    )}
                   >
-                    <div className="flex gap-3">
-                      <div className={cn("flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0", cfg.bg)}>
-                        <Icon className={cn("h-4 w-4", cfg.color)} />
+                    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", cfg.bg)}>
+                      <Icon className={cn("h-4 w-4", cfg.color)} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-gray-900">{notif.title}</p>
+                        {!notif.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{notif.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{timeAgo(notif.createdAt)}</p>
-                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{notif.message}</p>
+                      <p className="mt-1 text-[10px] text-gray-400">{timeAgo(notif.createdAt)}</p>
                     </div>
                   </button>
                 );
