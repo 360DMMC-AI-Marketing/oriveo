@@ -69,7 +69,7 @@ export function extractRxFromText(ocrText) {
   const doseMatch = full.match(/(\d+\s*(?:mg|g|mcg|mcg|ml|units?|%)|#[12]\s*[a-z]+)/i);
   if (doseMatch) dosage = doseMatch[1];
 
-  const freqMatch = full.match(/\b(twice\s*daily|three\s*times\s*daily|four\s*times\s*daily|every\s*\d+\s*hours|once\s*daily|\d+\s*x\s*(?:daily|a\s*day)|q\d+h|bid|tid|qhs|qd|prn)\b/i);
+  const freqMatch = full.match(/\b(nightly|daily|twice\s*daily|three\s*times\s*daily|four\s*times\s*daily|every\s*\d+\s*hours|once\s*daily|\d+\s*x\s*(?:daily|a\s*day)|q\d+h|bid|tid|qhs|qd|prn)\b/i);
   if (freqMatch) frequency = freqMatch[1];
 
   const qtyMatch = full.match(/(?:qty|quantity|dispense)\s*[:.#]?\s*(\d+)/i);
@@ -78,7 +78,7 @@ export function extractRxFromText(ocrText) {
   let medIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i].toLowerCase();
-    if (/^[a-z][a-z -]{2,}$/.test(lines[i]) && !/(take|dispense|label|signature|pharmacist|doctor|patient|date|refill|qty)/i.test(l) && !/\d\s*x\s|twice|daily/.test(l)) {
+    if (/^[a-z][a-z0-9 -]{2,}$/i.test(lines[i]) && !/^(rx|mrn)\b/i.test(lines[i]) && !/(take|dispense|label|signature|pharmacist|doctor|patient|date|refill|qty)/i.test(l) && !/\d\s*x\s|twice|daily/.test(l)) {
       medIdx = i;
       break;
     }
@@ -87,7 +87,7 @@ export function extractRxFromText(ocrText) {
     medication = lines[medIdx].replace(/\d+\s*(mg|g|mcg|ml).*$/i, "").replace(/[;:]$/, "").trim();
     const rest = lines.slice(medIdx, medIdx + 4).join(" ").toLowerCase();
     if (!frequency && /take|\d+\s*(?:tablet|capsule)/.test(rest)) {
-      const f = rest.match(/(\d+\s*(?:tablets?|capsules?|tabs?|pills?))\s*(?:by\s*mouth|po)?\s*((?:twice|three|four)\s*times\s*daily|once\s*daily|every\s*\d+\s*hours|\d+\s*x\s*(?:daily|a\s*day)|bid|tid|qd)/i);
+      const f = rest.match(/((?:\d+|one|two|three|four)\s*(?:tablets?|capsules?|tabs?|pills?))\s*(?:by\s*mouth|po)?\s*((?:twice|three|four)\s*times\s*daily|nightly|once\s*daily|every\s*\d+\s*hours|\d+\s*x\s*(?:daily|a\s*day)|bid|tid|qd)/i);
       if (f) frequency = `${f[1]} ${f[2]}`.trim();
     }
     const instr = lines.slice(medIdx, medIdx + 4).join(" ");
