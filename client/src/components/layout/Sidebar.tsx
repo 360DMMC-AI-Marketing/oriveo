@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Phone, Stethoscope,
   ClipboardList, BarChart3, ShieldCheck,
   ChevronDown, ChevronRight, Menu, Calendar, ScrollText,
-  FileText, Radio, Building2, UserPlus,
+  FileText, Radio, Building2,
   Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft, Home
 } from "lucide-react";
 
@@ -16,7 +16,7 @@ const TYPE_LABELS: Record<string, string> = { human: "Oriveo", dental: "Oriveo D
 interface NavChild { to: string; icon: React.ElementType; label: string; roles: string[]; }
 interface NavGroup { label: string; icon: React.ElementType; roles: string[]; children: NavChild[]; }
 
-function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
+function getNavGroups(clinicType: string, isLarge: boolean, role?: string): NavGroup[] {
   return [
     {
       label: "Overview", icon: LayoutDashboard, roles: ["admin", "doctor", "nurse", "receptionist"],
@@ -47,8 +47,7 @@ function getNavGroups(clinicType: string, isLarge: boolean): NavGroup[] {
       label: "Organization", icon: Building2, roles: ["admin", "doctor", "nurse", "receptionist"],
       children: [
         { to: "/clinic", icon: Building2, label: "Clinic", roles: ["admin", "doctor", "nurse", "receptionist"] },
-        { to: "/clinic/users", icon: UserPlus, label: "Team", roles: ["admin"] },
-        ...(isLarge ? [{ to: "/rooms", icon: Building2, label: "Rooms", roles: ["admin", "doctor", "nurse", "receptionist"] as string[] }] : []),
+        ...(role === "admin" || isLarge ? [{ to: "/clinic/operations", icon: Building2, label: "Operations", roles: ["admin", "doctor", "nurse", "receptionist"] as string[] }] : []),
         { to: "/audit-log", icon: ScrollText, label: "Audit Log", roles: ["admin"] },
         { to: "/clinic/settings", icon: Settings, label: "Settings", roles: ["admin"] },
       ],
@@ -66,7 +65,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const location = useLocation();
   const clinicType = user?.organization?.clinicType || "human";
   const isLarge = user?.organization?.clinicSize === "large";
-  const navGroups = getNavGroups(clinicType, isLarge);
+  const navGroups = getNavGroups(clinicType, isLarge, user?.role);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     for (const group of navGroups) {

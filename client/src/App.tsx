@@ -58,7 +58,7 @@ const Appointments = lazy(() => import("@/pages/Appointments"));
 const CalendarSchedule = lazy(() => import("@/pages/CalendarSchedule"));
 const CallDetail = lazy(() => import("@/pages/CallDetail"));
 const ClinicDashboard = lazy(() => import("@/pages/ClinicDashboard"));
-const ClinicUsers = lazy(() => import("@/pages/ClinicUsers"));
+const TeamFacilities = lazy(() => import("@/pages/TeamFacilities"));
 const CallCenter = lazy(() => import("@/pages/CallCenter"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const KnowledgeBase = lazy(() => import("@/pages/KnowledgeBase"));
@@ -73,7 +73,6 @@ const OnboardingGuide = lazy(() => import("@/pages/OnboardingGuide"));
 const AdminAvailability = lazy(() => import("@/pages/AdminAvailability"));
 const CalendarSettings = lazy(() => import("@/pages/CalendarSettings"));
 const MyProfile = lazy(() => import("@/pages/MyProfile"));
-const Rooms = lazy(() => import("@/pages/Rooms"));
 const ClinicSettings = lazy(() => import("@/pages/ClinicSettings"));
 const HomeCare = lazy(() => import("@/pages/HomeCare"));
 const Labs = lazy(() => import("@/pages/Labs"));
@@ -174,8 +173,9 @@ function AppRoutes() {
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/clinic" element={<ClinicDashboard />} />
           <Route path="/clinic/settings" element={<ProtectedRoute allowedRoles={["admin"]}><ClinicSettings /></ProtectedRoute>} />
-          <Route path="/clinic/users" element={<ProtectedRoute allowedRoles={["admin"]}><ClinicUsers /></ProtectedRoute>} />
-          <Route path="/rooms" element={<Rooms />} />
+          <Route path="/clinic/users" element={<Navigate to="/clinic/operations" replace />} />
+          <Route path="/rooms" element={<Navigate to="/clinic/operations" replace />} />
+          <Route path="/clinic/operations" element={<TeamFacilities />} />
           <Route path="/onboarding-guide" element={<OnboardingGuide />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/admin/availability" element={<AdminAvailability />} />

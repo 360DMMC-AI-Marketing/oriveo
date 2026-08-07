@@ -18,7 +18,7 @@ const COMMANDS: Command[] = [
   { pattern: /^(go to|open|navigate to|show)\s+(call review|reports?|completed calls)/i, route: "/call-review", label: "Go to Call Review" },
   { pattern: /^(go to|open|navigate to|show)\s+(analytics?|statistics?|stats)/i, route: "/analytics", label: "Go to Analytics" },
   { pattern: /^(go to|open|navigate to|show)\s+(settings|config|configuration)/i, route: "/clinic/settings", label: "Go to Settings" },
-  { pattern: /^(go to|open|navigate to|show)\s+(users?|team|staff)/i, route: "/clinic/users", label: "Go to Users" },
+  { pattern: /^(go to|open|navigate to|show)\s+(users?|team|staff|rooms?|facilities|operations)/i, route: "/clinic/operations", label: "Go to Operations" },
   { pattern: /^(go to|open|navigate to|show)\s+(knowledge base|kb|documents)/i, route: "/knowledge-base", label: "Go to Knowledge Base" },
   { pattern: /^(go to|open|navigate to|show)\s+(templates?|questionnaires?)/i, route: "/templates", label: "Go to Templates" },
   { pattern: /^(go to|open|navigate to|show)\s+(live monitoring|supervisor|monitor)/i, route: "/live-monitoring", label: "Go to Live Monitoring" },

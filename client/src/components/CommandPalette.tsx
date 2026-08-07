@@ -48,8 +48,7 @@ export default function CommandPalette() {
     { label: "Command Center", icon: Radio, action: () => navigate("/command-center"), section: "Navigation" },
     { label: "Knowledge Base", icon: BookOpen, action: () => navigate("/knowledge-base"), section: "Navigation" },
     ...(user.role === "admin" ? [
-      { label: "Team Management", icon: Users, action: () => navigate("/clinic/users"), section: "Admin" },
-      { label: "Room Management", icon: Building2, action: () => navigate("/rooms"), section: "Admin" },
+      { label: "Operations", icon: Building2, action: () => navigate("/clinic/operations"), section: "Admin" },
       { label: "Audit Log", icon: ShieldCheck, action: () => navigate("/audit-log"), section: "Admin" },
       { label: "Clinic Settings", icon: Settings, action: () => navigate("/clinic"), section: "Admin" },
     ] : []),
