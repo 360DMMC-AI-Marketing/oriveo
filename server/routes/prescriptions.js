@@ -4,6 +4,7 @@ import { protect, authorize } from "../middleware/auth.js";
 import Prescription from "../models/Prescription.js";
 import Patient from "../models/Patient.js";
 import User from "../models/User.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.get("/stats", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const prescription = await Prescription.findById(req.params.id)
+    const prescription = await Prescription.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name dob gender")
       .populate("prescribedBy", "name title")
       .populate("signedBy", "name title");
@@ -64,6 +65,9 @@ router.post("/", authorize("admin", "doctor"), async (req, res) => {
     }
     if (!medication || !medication.trim()) {
       return res.status(400).json({ message: "Medication name required" });
+    }
+    if (!(await assertPatientInOrg(req, patient))) {
+      return res.status(404).json({ message: "Patient not found" });
     }
     const prescription = await Prescription.create({
       organization: req.user.organization,
@@ -88,7 +92,7 @@ router.post("/", authorize("admin", "doctor"), async (req, res) => {
 
 router.put("/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
-    const prescription = await Prescription.findById(req.params.id);
+    const prescription = await Prescription.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!prescription) return res.status(404).json({ message: "Prescription not found" });
     const allowed = ["medication", "dosage", "route", "frequency", "instructions", "quantity", "refills", "startDate", "endDate", "status"];
     for (const key of allowed) {
@@ -103,7 +107,7 @@ router.put("/:id", authorize("admin", "doctor"), async (req, res) => {
 
 router.post("/:id/sign", authorize("admin", "doctor"), async (req, res) => {
   try {
-    const prescription = await Prescription.findById(req.params.id);
+    const prescription = await Prescription.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!prescription) return res.status(404).json({ message: "Prescription not found" });
     const signature = req.body.signatureName || req.user.digitalSignature || req.user.name;
     prescription.isSigned = true;
@@ -119,7 +123,7 @@ router.post("/:id/sign", authorize("admin", "doctor"), async (req, res) => {
 
 router.post("/:id/renew", authorize("admin", "doctor"), async (req, res) => {
   try {
-    const original = await Prescription.findById(req.params.id);
+    const original = await Prescription.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!original) return res.status(404).json({ message: "Prescription not found" });
     const renewed = await Prescription.create({
       organization: original.organization,
@@ -145,7 +149,7 @@ router.post("/:id/renew", authorize("admin", "doctor"), async (req, res) => {
 
 router.delete("/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
-    await Prescription.findByIdAndDelete(req.params.id);
+    await Prescription.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     res.json({ message: "Prescription deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });

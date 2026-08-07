@@ -45,7 +45,7 @@ export const getCall = async (req, res) => {
 export const createCall = async (req, res) => {
   try {
     const { patient, questionnaire, scheduledAt, language, customQuestions } = req.body;
-    const patientDoc = await Patient.findById(patient);
+    const patientDoc = await Patient.findOne({ _id: patient, ...req.tenantFilter });
     if (!patientDoc) {
       return res.status(404).json({ message: "Patient not found" });
     }
@@ -247,7 +247,7 @@ export const getActiveCalls = async (req, res) => {
 
     const enriched = await Promise.all(
       active.map(async ([callId, data]) => {
-        const callDoc = await Call.findById(callId)
+        const callDoc = await Call.findOne({ _id: callId, ...req.tenantFilter })
           .populate("patient", "name phone")
           .populate("questionnaire", "title")
           .select("status direction language aiSeverityScore transcript startedAt");

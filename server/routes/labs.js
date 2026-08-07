@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { protect, authorize } from "../middleware/auth.js";
 import LabResult from "../models/LabResult.js";
 import Patient from "../models/Patient.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.get("/stats", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const result = await LabResult.findById(req.params.id)
+    const result = await LabResult.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name dob gender")
       .populate("orderedBy", "name");
     if (!result) return res.status(404).json({ message: "Lab result not found" });
@@ -75,6 +76,9 @@ router.post("/", authorize("admin", "doctor", "nurse"), async (req, res) => {
     const { patient, panel, orderedAt, tests, notes, status } = req.body;
     if (!patient || !mongoose.Types.ObjectId.isValid(patient)) {
       return res.status(400).json({ message: "Valid patient ID required" });
+    }
+    if (!(await assertPatientInOrg(req, patient))) {
+      return res.status(404).json({ message: "Patient not found" });
     }
     const result = await LabResult.create({
       organization: req.user.organization,
@@ -95,7 +99,7 @@ router.post("/", authorize("admin", "doctor", "nurse"), async (req, res) => {
 
 router.put("/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
-    const result = await LabResult.findById(req.params.id);
+    const result = await LabResult.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!result) return res.status(404).json({ message: "Lab result not found" });
     const allowed = ["panel", "status", "orderedAt", "collectedAt", "notes", "tests"];
     for (const key of allowed) {
@@ -115,7 +119,7 @@ router.put("/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
 
 router.delete("/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
-    await LabResult.findByIdAndDelete(req.params.id);
+    await LabResult.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     res.json({ message: "Lab result deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -124,7 +128,7 @@ router.delete("/:id", authorize("admin", "doctor"), async (req, res) => {
 
 router.get("/:id/fhir", async (req, res) => {
   try {
-    const result = await LabResult.findById(req.params.id).populate("patient", "name gender dob");
+    const result = await LabResult.findOne({ _id: req.params.id, ...req.tenantFilter }).populate("patient", "name gender dob");
     if (!result) return res.status(404).json({ message: "Lab result not found" });
     const bundle = {
       resourceType: "Bundle",

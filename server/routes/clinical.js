@@ -32,7 +32,7 @@ router.post("/ambient/generate", async (req, res) => {
     if (!transcript?.trim()) return res.status(400).json({ message: "Transcript is required" });
     let patientContext = "";
     if (patientId) {
-      const patient = await Patient.findById(patientId).lean();
+      const patient = await Patient.findOne({ _id: patientId, ...req.tenantFilter }).lean();
       if (patient) patientContext = buildPatientInfo(patient);
     }
     const note = await generateLiveNoteChunk({
@@ -55,7 +55,7 @@ router.post("/ambient/finalize", async (req, res) => {
     if (!transcript?.trim()) return res.status(400).json({ message: "Transcript is required" });
     let patientContext = "";
     if (patientId) {
-      const patient = await Patient.findById(patientId).lean();
+      const patient = await Patient.findOne({ _id: patientId, ...req.tenantFilter }).lean();
       if (patient) patientContext = buildPatientInfo(patient);
     }
     const finalData = await finalizeNote({
@@ -69,6 +69,7 @@ router.post("/ambient/finalize", async (req, res) => {
       try {
         await ClinicalNote.create({
           patient: patientId,
+          organization: req.user.organization || null,
           specialty: specialty || "general-practice",
           clinicType: clinicType || "human",
           encounterDate: new Date(),
@@ -102,7 +103,7 @@ router.post("/query", async (req, res) => {
     const context = {};
 
     if (patientId) {
-      const patient = await Patient.findById(patientId).lean();
+      const patient = await Patient.findOne({ _id: patientId, ...req.tenantFilter }).lean();
       if (patient) {
         context.patientInfo = {
           name: patient.name,
@@ -118,7 +119,7 @@ router.post("/query", async (req, res) => {
     }
 
     if (callId) {
-      const call = await Call.findById(callId).populate("patient", "name").lean();
+      const call = await Call.findOne({ _id: callId, ...req.tenantFilter }).populate("patient", "name").lean();
       if (call) {
         context.callContext = `Call severity: ${call.aiSeverityScore}/10, triage: ${call.triageLevel}, status: ${call.status}, chief complaint: ${call.chiefComplaint || "N/A"}`;
       }
@@ -140,7 +141,7 @@ router.post("/coding", async (req, res) => {
     let type = callType || "phone";
 
     if (callId) {
-      const call = await Call.findById(callId).lean();
+      const call = await Call.findOne({ _id: callId, ...req.tenantFilter }).lean();
       if (call) {
         level = call.aiSeverityScore != null ? Math.round(call.aiSeverityScore / 2.5) : call.triageLevel;
         duration = call.duration;

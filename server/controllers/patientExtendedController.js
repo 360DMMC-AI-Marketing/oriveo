@@ -9,6 +9,7 @@ import { autoTagDocument } from "../utils/ocrDictionaries.js";
 import { createWorker } from "tesseract.js";
 import fs from "fs";
 import path from "path";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 export const getUnifiedPatient = async (req, res) => {
   try {
@@ -34,6 +35,9 @@ export const getUnifiedPatient = async (req, res) => {
 
 export const createMedicalRecord = async (req, res) => {
   try {
+    if (!(await assertPatientInOrg(req, req.params.id))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
     const record = await MedicalRecord.create({
       ...req.body,
       patient: req.params.id,
@@ -64,6 +68,9 @@ export const deleteMedicalRecord = async (req, res) => {
 export const uploadDocument = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "File required" });
+    if (!(await assertPatientInOrg(req, req.params.id))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
 
     let ocrText = "";
     let docType = "other";
@@ -127,6 +134,9 @@ export const deleteDocument = async (req, res) => {
 
 export const addVitalSign = async (req, res) => {
   try {
+    if (!(await assertPatientInOrg(req, req.params.id))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
     const vital = await VitalSign.create({
       ...req.body,
       patient: req.params.id,

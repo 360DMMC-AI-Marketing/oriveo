@@ -9,6 +9,7 @@ import { validateSlot } from "../utils/slotGenerator.js";
 import { sendEmail } from "../services/emailService.js";
 import { sendSms } from "../services/alertService.js";
 import { notifyForAppointment } from "../services/notificationService.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 
@@ -100,7 +101,7 @@ router.get("/stats", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id)
+    const appointment = await Appointment.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone email language")
       .populate("bookedBy", "name")
       .populate("call");
@@ -115,6 +116,10 @@ router.post("/", authorize("admin", "doctor", "nurse", "receptionist"), validate
   try {
     const { date, time, provider } = req.body;
     const orgId = req.user.organization;
+
+    if (req.body.patient && !(await assertPatientInOrg(req, req.body.patient))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
 
     if (date && time) {
       const d = new Date(date);
@@ -167,6 +172,11 @@ router.post("/batch", authorize("admin", "doctor", "receptionist"), async (req, 
     if (!patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
       return res.status(400).json({ message: "patientIds array required" });
     }
+    for (const pid of patientIds) {
+      if (!(await assertPatientInOrg(req, pid))) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+    }
     const appts = await Appointment.create(
       patientIds.map((pid) => ({
         ...data,
@@ -184,7 +194,7 @@ router.post("/batch", authorize("admin", "doctor", "receptionist"), async (req, 
 
 router.put("/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
-    const existing = await Appointment.findById(req.params.id);
+    const existing = await Appointment.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!existing) return res.status(404).json({ message: "Appointment not found" });
 
     const newDate = req.body.date || existing.date;
@@ -208,8 +218,8 @@ router.put("/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
     if (updateData.date) updateData.date = new Date(updateData.date);
     delete updateData.time;
 
-    const appointment = await Appointment.findByIdAndUpdate(
-      req.params.id,
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.id, ...req.tenantFilter },
       { $set: updateData },
       { new: true, runValidators: true }
     ).populate("patient", "name phone");
@@ -225,8 +235,8 @@ const statusSchema = z.object({ status: z.enum(["scheduled", "confirmed", "in-pr
 router.put("/:id/status", authorize("admin", "doctor", "nurse"), validate(statusSchema), async (req, res) => {
   try {
     const { status } = req.body;
-    const appointment = await Appointment.findByIdAndUpdate(
-      req.params.id,
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.id, ...req.tenantFilter },
       { status },
       { new: true }
     ).populate("patient", "name phone");
@@ -239,7 +249,7 @@ router.put("/:id/status", authorize("admin", "doctor", "nurse"), validate(status
 
 router.delete("/:id", authorize("admin"), async (req, res) => {
   try {
-    const appointment = await Appointment.findByIdAndDelete(req.params.id);
+    const appointment = await Appointment.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     if (!appointment) return res.status(404).json({ message: "Appointment not found" });
     res.json({ message: "Appointment cancelled" });
   } catch (error) {

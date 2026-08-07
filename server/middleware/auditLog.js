@@ -14,6 +14,7 @@ export function audit(action) {
           userId: req.user?._id || null,
           userEmail: req.user?.email || "",
           userRole: req.user?.role || "",
+          organization: req.user?.organization || null,
           resourceType,
           resourceId,
           description: `${req.method} ${req.originalUrl}`,
@@ -76,13 +77,14 @@ function sanitizeForLog(obj) {
   return sanitized;
 }
 
-export async function createAuditLog({ action, userId, userEmail, userRole, resourceType, resourceId, description, metadata }) {
+export async function createAuditLog({ action, userId, userEmail, userRole, resourceType, resourceId, description, metadata, organization }) {
   try {
     await AuditLog.create({
       action,
       userId,
       userEmail,
       userRole,
+      organization: organization || null,
       resourceType,
       resourceId,
       description,

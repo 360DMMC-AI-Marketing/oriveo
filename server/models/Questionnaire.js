@@ -24,6 +24,8 @@ const questionnaireSchema = new mongoose.Schema(
     isTemplate: { type: Boolean, default: false },
     isDefault: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    isBuiltIn: { type: Boolean, default: false },
+    organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
   },
   { timestamps: true }
 );
@@ -33,6 +35,7 @@ questionnaireSchema.index({ createdBy: 1, createdAt: -1 });
 questionnaireSchema.index({ category: 1 });
 questionnaireSchema.index({ language: 1 });
 questionnaireSchema.index({ isTemplate: 1 });
+questionnaireSchema.index({ organization: 1 });
 questionnaireSchema.index({ title: "text", description: "text" });
 
 export default mongoose.model("Questionnaire", questionnaireSchema);

@@ -473,7 +473,7 @@ router.post("/twilio/status", validateTwilioSignature, async (req, res) => {
 router.post("/outbound", protect, authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
     const { patientId, questionnaireId, customQuestions } = req.body;
-    const patient = await Patient.findById(patientId);
+    const patient = await Patient.findOne({ _id: patientId, ...req.tenantFilter });
     if (!patient) {
       return res.status(404).json({ message: "Patient not found" });
     }
@@ -491,6 +491,7 @@ router.post("/outbound", protect, authorize("admin", "doctor", "nurse"), async (
 
     const call = await Call.create({
       patient: patient._id,
+      organization: req.user.organization || null,
       questionnaire: questionnaireId || null,
       customQuestions: customQuestions || [],
       startedBy: req.user._id,
@@ -614,8 +615,8 @@ router.delete("/knowledge/documents/:id", protect, authorize("admin"), async (re
 
 router.put("/:patientId/do-not-call", protect, authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
-    const patient = await Patient.findByIdAndUpdate(
-      req.params.patientId,
+    const patient = await Patient.findOneAndUpdate(
+      { _id: req.params.patientId, ...req.tenantFilter },
       { doNotCall: req.body.doNotCall, doNotCallReason: req.body.reason || "" },
       { new: true }
     );
@@ -623,7 +624,7 @@ router.put("/:patientId/do-not-call", protect, authorize("admin", "doctor", "nur
 
     if (req.body.doNotCall) {
       const cancelled = await Call.updateMany(
-        { patient: req.params.patientId, status: { $in: ["scheduled", "queued", "pending"] } },
+        { patient: req.params.patientId, status: { $in: ["scheduled", "queued", "pending"] }, ...req.tenantFilter },
         { $set: {
           status: "cancelled",
           notes: `Cancelled — patient marked Do Not Call${req.body.reason ? `: ${req.body.reason}` : ""}`,
@@ -641,7 +642,7 @@ router.put("/:patientId/do-not-call", protect, authorize("admin", "doctor", "nur
 
 router.get("/transfer/:callId", protect, authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
-    const call = await Call.findById(req.params.callId)
+    const call = await Call.findOne({ _id: req.params.callId, ...req.tenantFilter })
       .populate("patient", "name phone language dateOfBirth")
       .populate("startedBy", "name email");
     if (!call) return res.status(404).json({ message: "Call not found" });

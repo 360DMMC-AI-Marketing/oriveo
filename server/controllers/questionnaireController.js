@@ -11,7 +11,9 @@ function getOpenAI() {
 
 export const getQuestionnaires = async (req, res) => {
   try {
-    const query = {};
+    const query = {
+      $or: [{ organization: req.user.organization }, { organization: null }, { isBuiltIn: true }],
+    };
     if (req.query.category) query.category = req.query.category;
     if (req.query.language) query.language = req.query.language;
     const questionnaires = await Questionnaire.find(query)
@@ -25,8 +27,10 @@ export const getQuestionnaires = async (req, res) => {
 
 export const getQuestionnaire = async (req, res) => {
   try {
-    const questionnaire = await Questionnaire.findById(req.params.id)
-      .populate("createdBy", "name");
+    const questionnaire = await Questionnaire.findOne({
+      _id: req.params.id,
+      $or: [{ organization: req.user.organization }, { organization: null }, { isBuiltIn: true }],
+    }).populate("createdBy", "name");
     if (!questionnaire) {
       return res.status(404).json({ message: "Questionnaire not found" });
     }
@@ -38,7 +42,7 @@ export const getQuestionnaire = async (req, res) => {
 
 export const createQuestionnaire = async (req, res) => {
   try {
-    const questionnaire = await Questionnaire.create({ ...req.body, createdBy: req.user._id });
+    const questionnaire = await Questionnaire.create({ ...req.body, createdBy: req.user._id, organization: req.user.organization || null });
     res.status(201).json({ questionnaire });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -47,10 +51,15 @@ export const createQuestionnaire = async (req, res) => {
 
 export const updateQuestionnaire = async (req, res) => {
   try {
-    const questionnaire = await Questionnaire.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const questionnaire = await Questionnaire.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        isBuiltIn: { $ne: true },
+        $or: [{ organization: req.user.organization }, { organization: null }],
+      },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!questionnaire) {
       return res.status(404).json({ message: "Questionnaire not found" });
     }
@@ -62,7 +71,11 @@ export const updateQuestionnaire = async (req, res) => {
 
 export const deleteQuestionnaire = async (req, res) => {
   try {
-    const questionnaire = await Questionnaire.findByIdAndDelete(req.params.id);
+    const questionnaire = await Questionnaire.findOneAndDelete({
+      _id: req.params.id,
+      isBuiltIn: { $ne: true },
+      $or: [{ organization: req.user.organization }, { organization: null }],
+    });
     if (!questionnaire) {
       return res.status(404).json({ message: "Questionnaire not found" });
     }

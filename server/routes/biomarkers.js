@@ -3,6 +3,7 @@ import { protect, authorize } from "../middleware/auth.js";
 import VoiceBiomarker from "../models/VoiceBiomarker.js";
 import Call from "../models/Call.js";
 import { processCallBiomarkers, getPatientTrend, getFlaggedPatients } from "../services/biomarkerService.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 router.use(protect);
@@ -10,6 +11,9 @@ router.use(protect);
 // GET /biomarkers/patient/:patientId - trend data for a patient
 router.get("/patient/:patientId", async (req, res) => {
   try {
+    if (!(await assertPatientInOrg(req, req.params.patientId))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
     const limit = parseInt(req.query.limit) || 20;
     const markers = await getPatientTrend(req.params.patientId, limit);
     res.json({ markers });
@@ -66,6 +70,8 @@ router.get("/stats", authorize("admin", "doctor"), async (req, res) => {
 // POST /biomarkers/process/:callId - process a completed call
 router.post("/process/:callId", authorize("admin", "doctor"), async (req, res) => {
   try {
+    const call = await Call.findOne({ _id: req.params.callId, ...req.tenantFilter });
+    if (!call) return res.status(404).json({ message: "Call not found" });
     const marker = await processCallBiomarkers(req.params.callId);
     if (!marker) return res.status(400).json({ message: "Call not eligible for biomarker processing" });
     res.json({ marker });

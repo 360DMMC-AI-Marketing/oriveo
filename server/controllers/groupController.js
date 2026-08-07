@@ -80,7 +80,12 @@ export const createGroup = async (req, res) => {
 
 export const updateGroup = async (req, res) => {
   try {
-    const group = await Group.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, req.body, {
+    const allowed = ["name", "description", "diagnosisFilter", "members", "specialty"];
+    const sanitized = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) sanitized[key] = req.body[key];
+    }
+    const group = await Group.findOneAndUpdate({ _id: req.params.id, ...req.tenantFilter }, sanitized, {
       new: true,
       runValidators: true,
     });
@@ -166,6 +171,7 @@ export const callGroup = async (req, res) => {
       }
       const call = await Call.create({
         patient: patient._id,
+        organization: group.organization || null,
         questionnaire: questionnaire || null,
         customQuestions: customQuestions || [],
         scheduledAt: scheduledAt || new Date(),

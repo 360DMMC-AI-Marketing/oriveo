@@ -46,11 +46,12 @@ Clinical requirements:
 - For dental cases: USE ADA TOOTH NUMBERING (1-32 permanent, A-T primary)`;
 }
 
-export async function generateReport(callId) {
-  const call = await Call.findById(callId).populate("patient").populate("startedBy");
+export async function generateReport(callId, organizationId) {
+  const scope = organizationId ? { organization: organizationId } : {};
+  const call = await Call.findOne({ _id: callId, ...scope }).populate("patient").populate("startedBy");
   if (!call) throw new Error("Call not found");
 
-  const existing = await Report.findOne({ call: callId });
+  const existing = await Report.findOne({ call: callId, ...scope });
   if (existing) return existing;
 
   const client = getOpenAI();
@@ -182,10 +183,12 @@ export async function generateReport(callId) {
   return report;
 }
 
-export async function generateAllMissingReports() {
+export async function generateAllMissingReports(organizationId) {
+  const scope = organizationId ? { organization: organizationId } : {};
   const calls = await Call.find({
     status: "completed",
-    _id: { $nin: (await Report.find({}).distinct("call")) },
+    ...scope,
+    _id: { $nin: (await Report.find(scope).distinct("call")) },
   }).populate("patient");
 
   const results = [];

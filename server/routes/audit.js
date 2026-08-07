@@ -9,7 +9,7 @@ router.use(protect);
 router.get("/logs", authorize("admin"), async (req, res) => {
   try {
     const { action, userId, resourceType, days = 30, page = 1, limit = 50 } = req.query;
-    const filter = {};
+    const filter = { ...req.tenantFilter };
 
     if (action) filter.action = action;
     if (userId) filter.userId = userId;
@@ -42,7 +42,7 @@ router.get("/logs", authorize("admin"), async (req, res) => {
 });
 
 router.get("/logs/actions", authorize("admin"), async (req, res) => {
-  const actions = await AuditLog.distinct("action");
+  const actions = await AuditLog.distinct("action", req.tenantFilter);
   res.json({ actions });
 });
 
@@ -53,7 +53,7 @@ router.get("/logs/summary", authorize("admin"), async (req, res) => {
     since.setDate(since.getDate() - days);
 
     const summary = await AuditLog.aggregate([
-      { $match: { timestamp: { $gte: since } } },
+      { $match: { timestamp: { $gte: since }, ...req.tenantFilter } },
       { $group: { _id: "$action", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]);

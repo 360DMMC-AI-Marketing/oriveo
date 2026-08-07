@@ -29,6 +29,7 @@ const auditLogSchema = new mongoose.Schema({
     default: null,
   },
   resourceId: { type: String, default: null },
+  organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
   description: { type: String, default: "" },
   ipAddress: { type: String, default: "" },
   userAgent: { type: String, default: "" },
@@ -42,5 +43,6 @@ auditLogSchema.index({ resourceType: 1, resourceId: 1 });
 auditLogSchema.index({ action: 1 });
 auditLogSchema.index({ userId: 1, action: 1 });
 auditLogSchema.index({ action: 1, timestamp: -1 });
+auditLogSchema.index({ organization: 1, timestamp: -1 });
 
 export default mongoose.model("AuditLog", auditLogSchema);

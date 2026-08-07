@@ -9,7 +9,7 @@ router.use(protect);
 
 router.get("/scores", async (req, res) => {
   try {
-    const query = { "qaScore.overall": { $exists: true, $ne: null } };
+    const query = { "qaScore.overall": { $exists: true, $ne: null }, ...req.tenantFilter };
     if (req.query.status) query.status = req.query.status;
     const calls = await Call.find(query)
       .populate("patient", "name phone")
@@ -35,7 +35,7 @@ router.get("/scores", async (req, res) => {
 
 router.post("/score/:callId", authorize("admin", "doctor"), async (req, res) => {
   try {
-    const call = await Call.findById(req.params.callId);
+    const call = await Call.findOne({ _id: req.params.callId, ...req.tenantFilter });
     if (!call) {
       return res.status(404).json({ message: "Call not found" });
     }
@@ -62,6 +62,7 @@ router.post("/score-all", authorize("admin"), async (req, res) => {
   try {
     const calls = await Call.find({
       status: "completed",
+      ...req.tenantFilter,
       $or: [
         { "qaScore.overall": { $exists: false } },
         { "qaScore": null },
@@ -98,6 +99,7 @@ router.get("/trends", async (req, res) => {
     const calls = await Call.find({
       "qaScore.overall": { $exists: true, $ne: null },
       "qaScore.scoredAt": { $gte: since },
+      ...req.tenantFilter,
     }).sort({ "qaScore.scoredAt": 1 });
 
     const dailyMap = new Map();

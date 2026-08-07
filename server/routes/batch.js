@@ -3,6 +3,7 @@ import Call from "../models/Call.js";
 import Patient from "../models/Patient.js";
 import { protect, authorize } from "../middleware/auth.js";
 import confirmAppointments from "../utils/confirmAppointments.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 
@@ -16,10 +17,16 @@ router.post("/start", authorize("admin", "doctor"), async (req, res) => {
     if (!name || !patientIds || !Array.isArray(patientIds)) {
       return res.status(400).json({ message: "Name and patientIds array required" });
     }
+    for (const pid of patientIds) {
+      if (!(await assertPatientInOrg(req, pid))) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+    }
 
     const campaign = {
       id: `camp-${Date.now()}`,
       name,
+      organization: req.user.organization || null,
       status: scheduledAt ? "scheduled" : "running",
       totalPatients: patientIds.length,
       completedCalls: 0,
@@ -48,7 +55,10 @@ router.post("/start", authorize("admin", "doctor"), async (req, res) => {
 
 router.get("/campaigns", (req, res) => {
   const userCampaigns = campaigns
-    .filter((c) => c.createdBy === req.user._id || req.user.role === "admin")
+    .filter((c) => {
+      const orgMatch = req.user.superAdmin || c.organization === req.user.organization;
+      return orgMatch && (c.createdBy === req.user._id || req.user.role === "admin");
+    })
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -64,7 +74,7 @@ router.get("/campaigns", (req, res) => {
 });
 
 router.get("/campaigns/:id", (req, res) => {
-  const campaign = campaigns.find((c) => c.id === req.params.id);
+  const campaign = campaigns.find((c) => c.id === req.params.id && (req.user.superAdmin || c.organization === req.user.organization));
   if (!campaign) {
     return res.status(404).json({ message: "Campaign not found" });
   }
@@ -72,7 +82,7 @@ router.get("/campaigns/:id", (req, res) => {
 });
 
 router.post("/campaigns/:id/pause", authorize("admin", "doctor"), (req, res) => {
-  const campaign = campaigns.find((c) => c.id === req.params.id);
+  const campaign = campaigns.find((c) => c.id === req.params.id && (req.user.superAdmin || c.organization === req.user.organization));
   if (!campaign) return res.status(404).json({ message: "Campaign not found" });
   if (campaign.status !== "running") return res.status(400).json({ message: "Campaign is not running" });
   campaign.status = "paused";
@@ -80,7 +90,7 @@ router.post("/campaigns/:id/pause", authorize("admin", "doctor"), (req, res) => 
 });
 
 router.post("/campaigns/:id/resume", authorize("admin", "doctor"), (req, res) => {
-  const campaign = campaigns.find((c) => c.id === req.params.id);
+  const campaign = campaigns.find((c) => c.id === req.params.id && (req.user.superAdmin || c.organization === req.user.organization));
   if (!campaign) return res.status(404).json({ message: "Campaign not found" });
   if (campaign.status !== "paused") return res.status(400).json({ message: "Campaign is not paused" });
   campaign.status = "running";
@@ -106,6 +116,7 @@ async function processCampaign(campaign, req) {
 
       const call = await Call.create({
         patient: patient._id,
+        organization: campaign.organization || req.user?.organization || null,
         questionnaire: campaign.questionnaireId || null,
         customQuestions: campaign.customQuestions || [],
         startedBy: campaign.createdBy,

@@ -6,6 +6,7 @@ import HomeVisit from "../models/HomeVisit.js";
 import Patient from "../models/Patient.js";
 import BookingToken from "../models/BookingToken.js";
 import { familyLinkBaseUrl, generateAndEmailFamilyLink } from "../services/familyLinkService.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 
@@ -41,7 +42,7 @@ router.get("/care-plans", authorize(...STAFF_ROLES), async (req, res) => {
 
 router.get("/care-plans/:id", authorize(...STAFF_ROLES), async (req, res) => {
   try {
-    const plan = await CarePlan.findById(req.params.id)
+    const plan = await CarePlan.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone email dob gender address")
       .populate("caregiver", "name email role")
       .populate("createdBy", "name");
@@ -57,6 +58,9 @@ router.post("/care-plans", authorize("admin", "doctor", "nurse"), async (req, re
     const { patient, caregiver, title, description, startDate, endDate, tasks, medications, emergencyContacts, notes, status } = req.body;
     if (!patient || !mongoose.Types.ObjectId.isValid(patient)) {
       return res.status(400).json({ message: "Valid patient ID required" });
+    }
+    if (!(await assertPatientInOrg(req, patient))) {
+      return res.status(404).json({ message: "Patient not found" });
     }
     const plan = await CarePlan.create({
       organization: req.user.organization,
@@ -81,7 +85,7 @@ router.post("/care-plans", authorize("admin", "doctor", "nurse"), async (req, re
 
 router.put("/care-plans/:id", authorize("admin", "doctor", "nurse", "caregiver"), async (req, res) => {
   try {
-    const plan = await CarePlan.findById(req.params.id);
+    const plan = await CarePlan.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!plan) return res.status(404).json({ message: "Care plan not found" });
     const allowed = ["title", "description", "startDate", "endDate", "tasks", "medications", "emergencyContacts", "notes", "status", "caregiver"];
     for (const key of allowed) {
@@ -96,7 +100,7 @@ router.put("/care-plans/:id", authorize("admin", "doctor", "nurse", "caregiver")
 
 router.post("/care-plans/:id/tasks/:taskId/complete", authorize("admin", "doctor", "nurse", "caregiver"), async (req, res) => {
   try {
-    const plan = await CarePlan.findById(req.params.id);
+    const plan = await CarePlan.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!plan) return res.status(404).json({ message: "Care plan not found" });
     const task = plan.tasks.id(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
@@ -112,7 +116,7 @@ router.post("/care-plans/:id/tasks/:taskId/complete", authorize("admin", "doctor
 
 router.delete("/care-plans/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
-    await CarePlan.findByIdAndDelete(req.params.id);
+    await CarePlan.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     res.json({ message: "Care plan deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -142,7 +146,7 @@ router.get("/visits", authorize(...STAFF_ROLES), async (req, res) => {
 
 router.get("/visits/:id", authorize(...STAFF_ROLES), async (req, res) => {
   try {
-    const visit = await HomeVisit.findById(req.params.id)
+    const visit = await HomeVisit.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone email address dob gender")
       .populate("caregiver", "name email role")
       .populate("carePlan", "title");
@@ -158,6 +162,9 @@ router.post("/visits", authorize("admin", "doctor", "nurse"), async (req, res) =
     const { patient, caregiver, carePlan, scheduledAt } = req.body;
     if (!patient || !mongoose.Types.ObjectId.isValid(patient) || !scheduledAt) {
       return res.status(400).json({ message: "Valid patient ID and scheduledAt required" });
+    }
+    if (!(await assertPatientInOrg(req, patient))) {
+      return res.status(404).json({ message: "Patient not found" });
     }
     const visit = await HomeVisit.create({
       organization: req.user.organization,
@@ -175,7 +182,7 @@ router.post("/visits", authorize("admin", "doctor", "nurse"), async (req, res) =
 
 router.post("/visits/:id/check-in", authorize("admin", "doctor", "nurse", "caregiver"), async (req, res) => {
   try {
-    const visit = await HomeVisit.findById(req.params.id);
+    const visit = await HomeVisit.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!visit) return res.status(404).json({ message: "Visit not found" });
     if (visit.status === "completed") return res.status(400).json({ message: "Visit already completed" });
     visit.status = "in-progress";
@@ -195,7 +202,7 @@ router.post("/visits/:id/check-in", authorize("admin", "doctor", "nurse", "careg
 
 router.post("/visits/:id/check-out", authorize("admin", "doctor", "nurse", "caregiver"), async (req, res) => {
   try {
-    const visit = await HomeVisit.findById(req.params.id);
+    const visit = await HomeVisit.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!visit) return res.status(404).json({ message: "Visit not found" });
     if (visit.status === "completed") return res.status(400).json({ message: "Visit already completed" });
     visit.status = "completed";
@@ -221,7 +228,7 @@ router.post("/visits/:id/check-out", authorize("admin", "doctor", "nurse", "care
 
 router.put("/visits/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
-    const visit = await HomeVisit.findById(req.params.id);
+    const visit = await HomeVisit.findOne({ _id: req.params.id, ...req.tenantFilter });
     if (!visit) return res.status(404).json({ message: "Visit not found" });
     const allowed = ["caregiver", "carePlan", "scheduledAt", "status", "notes", "vitals", "soap", "billableCodes"];
     for (const key of allowed) {
@@ -236,7 +243,7 @@ router.put("/visits/:id", authorize("admin", "doctor", "nurse"), async (req, res
 
 router.delete("/visits/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
-    await HomeVisit.findByIdAndDelete(req.params.id);
+    await HomeVisit.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     res.json({ message: "Visit deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });

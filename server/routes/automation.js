@@ -2,6 +2,7 @@ import { Router } from "express";
 import { protect, authorize } from "../middleware/auth.js";
 import { scheduleAutomatedCall, executeAutomatedCall } from "../services/patientVoiceAgent.js";
 import Call from "../models/Call.js";
+import { assertPatientInOrg } from "../utils/tenant.js";
 
 const router = Router();
 
@@ -10,7 +11,7 @@ router.use(protect);
 router.get("/calls", authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
     const { status, type, patientId } = req.query;
-    const filter = { isAutomated: true };
+    const filter = { isAutomated: true, ...req.tenantFilter };
     if (status) filter.status = status;
     if (type) filter.automatedType = type;
     if (patientId) filter.patient = patientId;
@@ -37,6 +38,9 @@ router.post("/schedule", authorize("admin", "doctor", "nurse"), async (req, res)
     if (!validTypes.includes(type)) {
       return res.status(400).json({ message: `Invalid type. Must be one of: ${validTypes.join(", ")}` });
     }
+    if (!(await assertPatientInOrg(req, patientId))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
     const call = await scheduleAutomatedCall({
       patientId,
       type,
@@ -52,6 +56,10 @@ router.post("/schedule", authorize("admin", "doctor", "nurse"), async (req, res)
 
 router.post("/execute/:id", authorize("admin", "doctor"), async (req, res) => {
   try {
+    const call = await Call.findOne({ _id: req.params.id, ...req.tenantFilter });
+    if (!call) {
+      return res.status(404).json({ message: "Call not found" });
+    }
     const result = await executeAutomatedCall(req.params.id);
     if (!result) {
       return res.status(400).json({ message: "Could not execute call" });

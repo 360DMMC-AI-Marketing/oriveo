@@ -4,6 +4,7 @@ import { protect, authorize } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { reportQuerySchema, signReportSchema, bulkSignSchema, bulkDeleteSchema } from "../validators/report.js";
 import Report from "../models/Report.js";
+import Call from "../models/Call.js";
 import { generateReport, generateAllMissingReports } from "../services/reportGenerator.js";
 import { convertReportToFhirBundle } from "../services/fhirConverter.js";
 import { SPECIALTY_DASHBOARD_LABELS } from "../config/specialties.js";
@@ -19,7 +20,7 @@ router.use(protect);
 router.get("/", authorize("admin", "doctor", "nurse", "receptionist"), validate(reportQuerySchema, "query"), async (req, res) => {
   try {
     const { page = 1, limit = 50, patientId, signed, sort = "-createdAt" } = req.query;
-    const filter = {};
+    const filter = { ...req.tenantFilter };
     if (patientId) filter.patient = patientId;
     if (signed === "true") filter.doctorSigned = true;
     if (signed === "false") filter.doctorSigned = false;
@@ -46,7 +47,7 @@ router.get("/", authorize("admin", "doctor", "nurse", "receptionist"), validate(
 
 router.get("/:id", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
   try {
-    const report = await Report.findById(req.params.id)
+    const report = await Report.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone dob gender")
       .populate("call")
       .populate("generatedBy", "name")
@@ -60,7 +61,7 @@ router.get("/:id", authorize("admin", "doctor", "nurse", "receptionist"), valida
 
 router.get("/:id/pdf", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
   try {
-    const report = await Report.findById(req.params.id)
+    const report = await Report.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone dob gender")
       .populate("call")
       .populate("generatedBy", "name")
@@ -338,7 +339,7 @@ router.get("/:id/pdf", authorize("admin", "doctor", "nurse", "receptionist"), va
 
 router.get("/:id/fhir", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
   try {
-    const report = await Report.findById(req.params.id)
+    const report = await Report.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone dob gender")
       .populate("call")
       .populate("generatedBy", "name")
@@ -354,7 +355,7 @@ router.get("/:id/fhir", authorize("admin", "doctor", "nurse", "receptionist"), v
 
 router.get("/call/:callId", authorize("admin", "doctor", "nurse", "receptionist"), validate(callIdParam, "params"), async (req, res) => {
   try {
-    const report = await Report.findOne({ call: req.params.callId })
+    const report = await Report.findOne({ call: req.params.callId, ...req.tenantFilter })
       .populate("patient", "name phone dob gender")
       .populate("call")
       .populate("generatedBy", "name")
@@ -367,7 +368,9 @@ router.get("/call/:callId", authorize("admin", "doctor", "nurse", "receptionist"
 
 router.post("/generate/:callId", authorize("admin", "doctor"), validate(callIdParam, "params"), async (req, res) => {
   try {
-    const report = await generateReport(req.params.callId);
+    const call = await Call.findOne({ _id: req.params.callId, ...req.tenantFilter });
+    if (!call) return res.status(404).json({ message: "Call not found" });
+    const report = await generateReport(req.params.callId, req.user.organization);
     res.status(201).json({ report });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -376,7 +379,7 @@ router.post("/generate/:callId", authorize("admin", "doctor"), validate(callIdPa
 
 router.post("/generate-all", authorize("admin", "doctor"), async (req, res) => {
   try {
-    const results = await generateAllMissingReports();
+    const results = await generateAllMissingReports(req.user.organization);
     res.json({ generated: results.filter((r) => r.status === "ok").length, failed: results.filter((r) => r.status === "error").length, results });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -393,8 +396,8 @@ router.put("/:id/sign", authorize("admin", "doctor"), validate(idParam, "params"
     if (req.user.specialty) titleParts.push(req.user.specialty);
     const signatureTitle = titleParts.length ? titleParts.join(", ") : "";
 
-    const report = await Report.findByIdAndUpdate(
-      req.params.id,
+    const report = await Report.findOneAndUpdate(
+      { _id: req.params.id, ...req.tenantFilter },
       {
         doctorSigned: true,
         signedBy: req.user._id,
@@ -423,7 +426,7 @@ router.post("/bulk/sign", authorize("admin", "doctor"), validate(bulkSignSchema)
     const signatureTitle = titleParts.length ? titleParts.join(", ") : "";
 
     const result = await Report.updateMany(
-      { _id: { $in: ids }, doctorSigned: false },
+      { _id: { $in: ids }, doctorSigned: false, ...req.tenantFilter },
       {
         doctorSigned: true,
         signedBy: req.user._id,
@@ -442,7 +445,7 @@ router.post("/bulk/sign", authorize("admin", "doctor"), validate(bulkSignSchema)
 router.post("/bulk/delete", authorize("admin"), validate(bulkDeleteSchema), async (req, res) => {
   try {
     const { ids } = req.body;
-    const result = await Report.deleteMany({ _id: { $in: ids } });
+    const result = await Report.deleteMany({ _id: { $in: ids }, ...req.tenantFilter });
     res.json({ deletedCount: result.deletedCount });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -451,7 +454,7 @@ router.post("/bulk/delete", authorize("admin"), validate(bulkDeleteSchema), asyn
 
 router.delete("/:id", authorize("admin"), validate(idParam, "params"), async (req, res) => {
   try {
-    await Report.findByIdAndDelete(req.params.id);
+    await Report.findOneAndDelete({ _id: req.params.id, ...req.tenantFilter });
     res.json({ message: "Report deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
