@@ -7,7 +7,7 @@ import {
   ClipboardList, BarChart3, ShieldCheck,
   ChevronDown, ChevronRight, Menu, Calendar, ScrollText,
   FileText, Radio, Building2,
-  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft, Home
+  Dog, Smile, HeartPulse, X, Activity, Settings, ChevronLeft, Home, BookOpen
 } from "lucide-react";
 
 const TYPE_ICONS: Record<string, any> = { human: HeartPulse, dental: Smile, veterinary: Dog };
@@ -50,6 +50,12 @@ function getNavGroups(clinicType: string, isLarge: boolean, role?: string): NavG
         ...(role === "admin" || isLarge ? [{ to: "/clinic/operations", icon: Building2, label: "Operations", roles: ["admin", "doctor", "nurse", "receptionist"] as string[] }] : []),
         { to: "/audit-log", icon: ScrollText, label: "Audit Log", roles: ["admin"] },
         { to: "/clinic/settings", icon: Settings, label: "Settings", roles: ["admin"] },
+      ],
+    },
+    {
+      label: "Help", icon: BookOpen, roles: ["admin", "doctor", "nurse", "receptionist", "caregiver", "staff", "user"],
+      children: [
+        { to: "/onboarding-guide", icon: BookOpen, label: "Onboarding Guide", roles: ["admin", "doctor", "nurse", "receptionist", "caregiver", "staff", "user"] },
       ],
     },
   ];

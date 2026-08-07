@@ -50,22 +50,23 @@ export default function OnboardingTour() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">Welcome to Oriveo!</h2>
-              <p className="text-sm text-gray-500">Your AI-powered medical voice assistant</p>
+              <p className="text-sm text-gray-500">AI-powered patient care, voice calls and clinic operations</p>
             </div>
           </div>
 
           <p className="text-sm text-gray-600 leading-relaxed mb-4">
-            Welcome to Oriveo! This app helps you manage patients, launch AI-powered voice calls,
-            view analytics, schedule appointments, and much more. Before you dive in, we recommend
-            checking the <strong>Onboarding Guide</strong> — it explains every feature with step-by-step instructions.
+            Welcome to Oriveo! This app helps you run your clinic: AI voice calls, patient records,
+            appointments, home care, lab results, prescriptions, analytics and much more. Before you
+            dive in, we recommend checking the <strong>Onboarding Guide</strong> — it explains every feature with
+            step-by-step instructions.
           </p>
 
           <div className="rounded-lg bg-gray-50 p-3 mb-5 text-sm text-gray-600">
             <p className="font-medium text-gray-900 mb-1">Quick start:</p>
             <ul className="space-y-1 list-disc list-inside">
               <li>Use the sidebar to navigate between sections</li>
-              <li>Click the voice command button to navigate hands-free</li>
-              <li>Open the Onboarding Guide anytime from the sidebar</li>
+              <li>Press Ctrl+K (Cmd+K) to jump anywhere with the command palette</li>
+              <li>Open the Onboarding Guide anytime from the Help section of the sidebar</li>
             </ul>
           </div>
 
