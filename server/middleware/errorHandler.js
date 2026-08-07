@@ -8,8 +8,9 @@ export class AppError extends Error {
 }
 
 export function errorHandler(err, req, res, _next) {
-  const statusCode = err.statusCode || 500;
-  const message = err.isOperational ? err.message : "Internal server error";
+  const isMulterError = err?.name === "MulterError" || err?.code === "LIMIT_FILE_SIZE";
+  const statusCode = err.statusCode || (isMulterError ? 400 : 500);
+  const message = err.isOperational || isMulterError ? err.message : "Internal server error";
   if (!err.isOperational) {
     console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
   }

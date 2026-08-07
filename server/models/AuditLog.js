@@ -8,10 +8,20 @@ const auditLogSchema = new mongoose.Schema({
       "patient.viewed",
       "patient.updated",
       "patient.created",
+      "patient.deleted",
+      "patient.erased",
+      "patient.exported",
       "call.viewed",
       "call.transcript.viewed",
       "call.recorded",
       "call.transferred",
+      "report.viewed",
+      "report.exported",
+      "lab.viewed",
+      "prescription.viewed",
+      "clinicalNote.viewed",
+      "clinicalNote.created",
+      "clinicalNote.updated",
       "ehr.synced",
       "ehr.exported",
       "settings.changed",
@@ -25,7 +35,7 @@ const auditLogSchema = new mongoose.Schema({
   userRole: { type: String, default: "" },
   resourceType: {
     type: String,
-    enum: ["Patient", "Call", "Appointment", "Questionnaire", "Config", "User", "Group"],
+    enum: ["Patient", "Call", "Appointment", "Questionnaire", "Config", "User", "Group", "Report", "LabResult", "Prescription", "ClinicalNote"],
     default: null,
   },
   resourceId: { type: String, default: null },
@@ -35,6 +45,7 @@ const auditLogSchema = new mongoose.Schema({
   userAgent: { type: String, default: "" },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   timestamp: { type: Date, default: Date.now },
+  deleted: { type: Boolean, default: false },
 });
 
 auditLogSchema.index({ timestamp: -1 });

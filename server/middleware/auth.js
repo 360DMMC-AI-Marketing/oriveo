@@ -1,11 +1,34 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+function getCookie(req, name) {
+  const header = req.headers.cookie || "";
+  const match = header.match(new RegExp("(?:^|;\\s*)" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export function setAuthCookie(res, token, req) {
+  res.cookie("oriveo_token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: req?.secure || process.env.NODE_ENV === "production" || !!process.env.SSL_CERT_PATH,
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+}
+
+export function clearAuthCookie(res) {
+  res.clearCookie("oriveo_token", { httpOnly: true, sameSite: "lax", path: "/" });
+}
+
 export const protect = async (req, res, next) => {
   try {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
+    }
+    if (!token) {
+      token = getCookie(req, "oriveo_token");
     }
     if (!token) {
       return res.status(401).json({ message: "Not authorized, no token" });

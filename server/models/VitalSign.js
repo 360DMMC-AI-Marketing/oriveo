@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import encryptPlugin from "../utils/encryptPlugin.js";
 
 const vitalSignSchema = new mongoose.Schema({
   patient:     { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
@@ -16,5 +17,7 @@ const vitalSignSchema = new mongoose.Schema({
 
 vitalSignSchema.index({ patient: 1, recordedAt: -1 });
 vitalSignSchema.index({ organization: 1 });
+
+encryptPlugin(vitalSignSchema, { fields: ["notes"] });
 
 export default mongoose.model("VitalSign", vitalSignSchema);

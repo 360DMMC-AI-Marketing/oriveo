@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import encryptPlugin from "../utils/encryptPlugin.js";
 
 const specialtyExamFindingsSchema = new mongoose.Schema({
   testName: { type: String },
@@ -86,5 +87,20 @@ const reportSchema = new mongoose.Schema({
 
 reportSchema.index({ patient: 1, createdAt: -1 });
 reportSchema.index({ "patientInfo.name": "text", chiefComplaint: "text", aiAssessment: "text" });
+
+encryptPlugin(reportSchema, {
+  fields: [
+    "chiefComplaint",
+    "aiAssessment",
+    "adviceGiven",
+    "medicationsReviewed",
+    "allergiesFlagged",
+    "chronicConditions",
+    "vitalsMentioned",
+    "physicalExamFindings",
+    "callSummary",
+    "doctorNotes",
+  ],
+});
 
 export default mongoose.model("Report", reportSchema);

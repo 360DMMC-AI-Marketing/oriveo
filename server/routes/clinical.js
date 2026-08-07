@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { protect, authorize } from "../middleware/auth.js";
+import { audit } from "../middleware/auditLog.js";
 import { clinicalQuery } from "../services/clinicalSupport.js";
 import { suggestCptCode, getCptCodeInfo } from "../services/medicalCoding.js";
 import { SPECIALTY_TEMPLATES, getSpecialtyForKeywords } from "../config/specialtyTemplates.js";
@@ -186,9 +187,9 @@ router.post("/templates", createClinicalTemplate);
 
 // Clinical notes (under /api/clinical/patients/:patientId/notes)
 router.get("/patients/:id/notes", getClinicalNotes);
-router.post("/patients/:id/notes", createClinicalNote);
-router.get("/patients/:id/notes/:noteId", getClinicalNote);
-router.put("/patients/:id/notes/:noteId", updateClinicalNote);
+router.post("/patients/:id/notes", audit("clinicalNote.created"), createClinicalNote);
+router.get("/patients/:id/notes/:noteId", audit("clinicalNote.viewed"), getClinicalNote);
+router.put("/patients/:id/notes/:noteId", audit("clinicalNote.updated"), updateClinicalNote);
 router.delete("/patients/:id/notes/:noteId", deleteClinicalNote);
 router.post("/patients/:id/notes/:noteId/sign", signClinicalNote);
 

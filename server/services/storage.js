@@ -17,6 +17,31 @@ function getS3() {
   return s3;
 }
 
+export function resolveUploadPath(filePath) {
+  const resolved = path.resolve(filePath);
+  const uploadsRoot = path.resolve("uploads");
+  if (!resolved.startsWith(uploadsRoot + path.sep)) return null;
+  return resolved;
+}
+
+export function deleteLocalUpload(fileUrlOrPath) {
+  if (!fileUrlOrPath) return false;
+  if (/^https?:\/\//.test(fileUrlOrPath)) return false;
+  let rel = fileUrlOrPath;
+  if (rel.startsWith("/uploads/")) rel = rel.replace(/^\/uploads\//, "uploads/");
+  const resolved = resolveUploadPath(rel);
+  if (!resolved) return false;
+  try {
+    if (fs.existsSync(resolved)) {
+      fs.unlinkSync(resolved);
+      return true;
+    }
+  } catch (err) {
+    console.error("[storage] Failed to delete upload:", err.message);
+  }
+  return false;
+}
+
 export async function uploadAudio(fileBuffer, fileName) {
   const s3Client = getS3();
   if (s3Client) {

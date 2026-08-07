@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { protect, authorize } from "../middleware/auth.js";
+import { audit } from "../middleware/auditLog.js";
 import { validate } from "../middleware/validate.js";
 import { reportQuerySchema, signReportSchema, bulkSignSchema, bulkDeleteSchema } from "../validators/report.js";
 import Report from "../models/Report.js";
@@ -45,7 +46,7 @@ router.get("/", authorize("admin", "doctor", "nurse", "receptionist"), validate(
   }
 });
 
-router.get("/:id", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), async (req, res) => {
+router.get("/:id", authorize("admin", "doctor", "nurse", "receptionist"), validate(idParam, "params"), audit("report.viewed"), async (req, res) => {
   try {
     const report = await Report.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name phone dob gender")

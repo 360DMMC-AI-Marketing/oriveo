@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Organization from "../models/Organization.js";
 import Subscription from "../models/Subscription.js";
+import { setAuthCookie, clearAuthCookie } from "../middleware/auth.js";
 import { SPECIALTIES_BY_TYPE, getSpecialty } from "../config/specialties.js";
 import { getDepartmentsForSpecialty } from "../config/specialtyDepartments.js";
 import { sendVerificationEmail } from "../services/emailService.js";
@@ -115,6 +116,7 @@ export const signup = async (req, res) => {
 
     await user.populate("organization", "name slug specialty clinicType clinicSize billingSetup");
     const token = generateToken(user);
+    setAuthCookie(res, token, req);
 
     // Send verification email (non-blocking)
     try {
@@ -152,6 +154,7 @@ export const login = async (req, res) => {
       return res.json({ requires2FA: true, email: user.email });
     }
     const token = generateToken(user);
+    setAuthCookie(res, token, req);
     res.json({ token, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -184,8 +187,8 @@ export const changePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: "Current password and new password required" });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: "New password must be at least 8 characters" });
+    if (newPassword.length < 12) {
+      return res.status(400).json({ message: "New password must be at least 12 characters" });
     }
     const user = await User.findById(req.user._id);
     if (!(await user.comparePassword(currentPassword))) {
@@ -196,6 +199,7 @@ export const changePassword = async (req, res) => {
     await user.save();
     await user.populate("organization", "name slug clinicType clinicSize billingSetup");
     const token = generateToken(user);
+    setAuthCookie(res, token, req);
     res.json({ message: "Password changed successfully", token, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -205,6 +209,7 @@ export const changePassword = async (req, res) => {
 export const revokeAllSessions = async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, { $inc: { tokenVersion: 1 } });
+    clearAuthCookie(res);
     res.json({ message: "All sessions revoked. Please login again." });
   } catch (error) {
     res.status(500).json({ message: error.message });

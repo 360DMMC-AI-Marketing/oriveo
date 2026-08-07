@@ -14,6 +14,7 @@ import mongoose from "mongoose";
 import { createServer } from "http";
 import { createServer as createHttpsServer } from "https";
 import fs from "fs";
+import path from "path";
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import IORedis from "ioredis";
@@ -184,7 +185,16 @@ app.use(httpLogger);
 app.use("/api", createRateLimiter());
 
 app.use(express.json({ limit: "10mb" }));
-app.use("/uploads", protect, express.static("uploads"));
+app.use("/uploads", protect, express.static("uploads", {
+  setHeaders: (res, filePath) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    const ext = path.extname(filePath).toLowerCase().replace(".", "");
+    const inlineExts = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "pdf", "mp3", "wav", "webm", "m4a", "ogg", "mp4", "txt", "csv"]);
+    if (!inlineExts.has(ext)) {
+      res.setHeader("Content-Disposition", "attachment");
+    }
+  },
+}));
 
 app.get("/health", (req, res) => {
   res.json({

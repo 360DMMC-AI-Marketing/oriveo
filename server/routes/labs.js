@@ -1,6 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { protect, authorize } from "../middleware/auth.js";
+import { audit } from "../middleware/auditLog.js";
 import LabResult from "../models/LabResult.js";
 import Patient from "../models/Patient.js";
 import { assertPatientInOrg } from "../utils/tenant.js";
@@ -59,7 +60,7 @@ router.get("/stats", async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", audit("lab.viewed"), async (req, res) => {
   try {
     const result = await LabResult.findOne({ _id: req.params.id, ...req.tenantFilter })
       .populate("patient", "name dob gender")

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import encryptPlugin from "../utils/encryptPlugin.js";
 
 const diagnosisSchema = new mongoose.Schema({
   code: { type: String, required: true },
@@ -80,5 +81,21 @@ const clinicalNoteSchema = new mongoose.Schema({
 clinicalNoteSchema.index({ patient: 1, encounterDate: -1 });
 clinicalNoteSchema.index({ organization: 1, specialty: 1 });
 clinicalNoteSchema.index({ isSigned: 1 });
+
+encryptPlugin(clinicalNoteSchema, {
+  fields: [
+    "subjective",
+    "objective",
+    "assessment",
+    "plan",
+    "hpi",
+    "ros",
+    "physicalExam",
+    "imagingFindings",
+    "labResults",
+    "treatmentSummary",
+    "medicalHistory",
+  ],
+});
 
 export default mongoose.model("ClinicalNote", clinicalNoteSchema);

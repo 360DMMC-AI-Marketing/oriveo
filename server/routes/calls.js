@@ -13,6 +13,7 @@ import {
   getActiveCalls,
 } from "../controllers/callController.js";
 import { protect, authorize } from "../middleware/auth.js";
+import { audit } from "../middleware/auditLog.js";
 import { validate } from "../middleware/validate.js";
 import { createCallSchema, updateCallSchema, updateCallStatusSchema, transferCallSchema } from "../validators/call.js";
 
@@ -22,7 +23,7 @@ router.use(protect);
 router.get("/", getCalls);
 router.get("/patient/:patientId/history", getPatientCallHistory);
 router.get("/active", getActiveCalls);
-router.get("/:id", getCall);
+router.get("/:id", audit("call.viewed"), getCall);
 router.post("/", authorize("admin", "doctor", "nurse"), validate(createCallSchema), createCall);
 router.put("/:id", authorize("admin", "doctor", "nurse"), validate(updateCallSchema), updateCall);
 router.put("/:id/status", authorize("admin", "doctor"), validate(updateCallStatusSchema), updateCallStatus);

@@ -9,6 +9,12 @@ import AuditLog from "../models/AuditLog.js";
 import VitalSign from "../models/VitalSign.js";
 import BookingToken from "../models/BookingToken.js";
 import Notification from "../models/Notification.js";
+import path from "path";
+import { deleteLocalUpload } from "../services/storage.js";
+import { decryptLeanDoc } from "../utils/encryptPlugin.js";
+
+const PATIENT_PHI_FIELDS = ["name", "phone", "email", "familyEmail", "address", "emergencyContact", "emergencyContactPhone", "insuranceId", "medicalNotes", "chronicConditions", "allergies", "currentMedications", "pastSurgeries", "primaryDiagnosis", "ownerName", "ownerPhone", "ownerEmail"];
+const CLINICAL_NOTE_PHI_FIELDS = ["subjective", "objective", "assessment", "plan", "hpi", "ros", "physicalExam", "imagingFindings", "labResults", "treatmentSummary", "medicalHistory"];
 
 export async function getConsents(req, res) {
   try {
@@ -69,8 +75,19 @@ export async function erasePatient(req, res) {
 
     const patientId = patient._id;
 
-    const calls = await Call.find({ patient: patientId });
+    const [calls, documents] = await Promise.all([
+      Call.find({ patient: patientId }),
+      PatientDocument.find({ patient: patientId }),
+    ]);
     const audioUrls = calls.map((c) => c.audioUrl).filter(Boolean);
+
+    const deletedFiles = { audio: 0, documents: 0 };
+    for (const url of audioUrls) {
+      if (deleteLocalUpload(url)) deletedFiles.audio++;
+    }
+    for (const doc of documents) {
+      if (deleteLocalUpload(path.join("uploads", "documents", path.basename(doc.fileName)))) deletedFiles.documents++;
+    }
 
     const results = await Promise.all([
       Patient.deleteOne({ _id: patientId }),
@@ -83,8 +100,18 @@ export async function erasePatient(req, res) {
       BookingToken.deleteMany({ patient: patientId }),
       Notification.deleteMany({ patient: patientId }),
       Consent.deleteMany({ patient: patientId }),
-      AuditLog.deleteMany({ resourceType: "Patient", resourceId: patientId.toString() }),
     ]);
+
+    await AuditLog.updateMany(
+      { resourceType: "Patient", resourceId: patientId.toString() },
+      {
+        $set: {
+          deleted: true,
+          "metadata.deletedAt": new Date(),
+          "metadata.deletedBy": req.user?.email || "",
+        },
+      }
+    );
 
     res.json({
       message: "Patient and all associated data permanently deleted",
@@ -99,8 +126,9 @@ export async function erasePatient(req, res) {
         bookingTokens: results[7].deletedCount,
         notifications: results[8].deletedCount,
         consents: results[9].deletedCount,
-        auditLogs: results[10].deletedCount,
       },
+      deletedFiles,
+      auditLogsFlagged: true,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -130,7 +158,7 @@ export async function exportPatientData(req, res) {
       exportedAt: new Date().toISOString(),
       exportedBy: req.user.email,
       formatVersion: "1.0",
-      patient,
+      patient: decryptLeanDoc(patient, PATIENT_PHI_FIELDS),
       calls: calls.map((c) => ({
         id: c._id,
         direction: c.direction,
@@ -145,9 +173,9 @@ export async function exportPatientData(req, res) {
         consentRecorded: c.consentRecorded,
       })),
       medicalRecords,
-      clinicalNotes,
+      clinicalNotes: decryptLeanDoc(clinicalNotes, CLINICAL_NOTE_PHI_FIELDS),
       appointments,
-      vitals,
+      vitals: decryptLeanDoc(vitals, ["notes"]),
       consents,
     };
 

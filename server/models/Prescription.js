@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import encryptPlugin from "../utils/encryptPlugin.js";
 
 const prescriptionSchema = new mongoose.Schema(
   {
@@ -29,5 +30,7 @@ prescriptionSchema.index({ patient: 1 });
 prescriptionSchema.index({ status: 1 });
 prescriptionSchema.index({ patient: 1, createdAt: -1 });
 prescriptionSchema.index({ organization: 1, status: 1 });
+
+encryptPlugin(prescriptionSchema, { fields: ["medication", "dosage", "instructions", "frequency"] });
 
 export default mongoose.model("Prescription", prescriptionSchema);

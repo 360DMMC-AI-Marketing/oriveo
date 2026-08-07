@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import encryptPlugin from "../utils/encryptPlugin.js";
 
 const labTestSchema = new mongoose.Schema(
   {
@@ -36,5 +37,7 @@ labResultSchema.index({ patient: 1 });
 labResultSchema.index({ status: 1 });
 labResultSchema.index({ patient: 1, orderedAt: -1 });
 labResultSchema.index({ organization: 1, status: 1 });
+
+encryptPlugin(labResultSchema, { fields: ["notes"] });
 
 export default mongoose.model("LabResult", labResultSchema);

@@ -6,7 +6,7 @@ import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import rateLimit from "express-rate-limit";
 import { signup, login, getMe, updateProfile, changePassword, revokeAllSessions } from "../controllers/authController.js";
-import { protect, authorize } from "../middleware/auth.js";
+import { protect, authorize, setAuthCookie } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { inviteSchema, loginSchema, signupSchema } from "../validators/auth.js";
 import User from "../models/User.js";
@@ -86,7 +86,7 @@ router.post("/reset-password", async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ message: "Token and password are required" });
-    if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+    if (password.length < 12) return res.status(400).json({ message: "Password must be at least 12 characters" });
 
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
@@ -315,6 +315,8 @@ router.post("/2fa/verify", twoFactorVerifyLimiter, async (req, res) => {
     );
 
     const populatedUser = await User.findById(user._id).populate("organization", "name slug specialty clinicType clinicSize billingSetup");
+
+    setAuthCookie(res, jwtToken, req);
 
     res.json({ token: jwtToken, user: populatedUser });
   } catch (error) {

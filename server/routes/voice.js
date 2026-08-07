@@ -17,8 +17,15 @@ import crypto from "crypto";
 const router = Router();
 
 function validateTwilioSignature(req, res, next) {
+  if (!process.env.TWILIO_AUTH_TOKEN) {
+    console.warn("[Twilio] TWILIO_AUTH_TOKEN not configured — rejecting webhook (fail-closed)");
+    return res.status(503).json({ error: "Twilio webhook rejected: auth token not configured" });
+  }
   const twilioSignature = req.headers["x-twilio-signature"];
-  if (!twilioSignature || !process.env.TWILIO_AUTH_TOKEN) return next();
+  if (!twilioSignature) {
+    console.warn("[Twilio] Missing signature header — rejecting webhook");
+    return res.status(403).json({ error: "Invalid Twilio signature" });
+  }
   const url = `${process.env.SERVER_URL || `${req.protocol}://${req.headers.host}`}${req.originalUrl}`;
   const params = {};
   for (const [key, value] of Object.entries(req.body || {})) {

@@ -45,6 +45,10 @@ function detectResourceType(url) {
   if (url.includes("/config") || url.includes("/integrations")) return "Config";
   if (url.includes("/users")) return "User";
   if (url.includes("/groups")) return "Group";
+  if (url.includes("/reports")) return "Report";
+  if (url.includes("/labs")) return "LabResult";
+  if (url.includes("/prescriptions")) return "Prescription";
+  if (url.includes("/clinical")) return "ClinicalNote";
   return null;
 }
 
@@ -53,8 +57,15 @@ function shouldLog(action, method) {
     "patient.viewed",
     "patient.updated",
     "patient.created",
+    "patient.deleted",
+    "patient.erased",
+    "patient.exported",
     "call.viewed",
     "call.transcript.viewed",
+    "report.viewed",
+    "lab.viewed",
+    "prescription.viewed",
+    "clinicalNote.viewed",
     "ehr.synced",
     "ehr.exported",
   ];
