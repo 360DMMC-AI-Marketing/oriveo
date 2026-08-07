@@ -26,6 +26,10 @@ export function audit(action) {
           },
         });
 
+        if (action === "patient.erased") {
+          logEntry.deleted = true;
+        }
+
         logEntry.save().catch((err) => {
           console.error("Audit log save error:", err.message);
         });
