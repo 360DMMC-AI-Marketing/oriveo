@@ -6,7 +6,7 @@ import Call from "../models/Call.js";
 import Appointment from "../models/Appointment.js";
 import Report from "../models/Report.js";
 import { autoTagDocument } from "../utils/ocrDictionaries.js";
-import { createWorker } from "tesseract.js";
+import { runOcr } from "../utils/runOcr.js";
 import fs from "fs";
 import path from "path";
 import { assertPatientInOrg } from "../utils/tenant.js";
@@ -78,13 +78,13 @@ export const uploadDocument = async (req, res) => {
 
     if (req.file.mimetype === "application/pdf" || req.file.mimetype.startsWith("image/")) {
       try {
-        const worker = await createWorker("eng");
-        const { data: { text } } = await worker.recognize(req.file.buffer);
-        await worker.terminate();
-        ocrText = text || "";
-        const auto = autoTagDocument(ocrText);
-        docType = auto.type;
-        tags = auto.tags;
+        const result = await runOcr(req.file.path);
+        ocrText = result.ok ? result.text : "";
+        if (ocrText) {
+          const auto = autoTagDocument(ocrText);
+          docType = auto.type;
+          tags = auto.tags;
+        }
       } catch {
         ocrText = "";
       }
