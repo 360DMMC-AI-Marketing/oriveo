@@ -4,7 +4,12 @@ import { protect, authorize } from "../middleware/auth.js";
 import { audit } from "../middleware/auditLog.js";
 import LabResult from "../models/LabResult.js";
 import Patient from "../models/Patient.js";
+import PatientDocument from "../models/PatientDocument.js";
 import { assertPatientInOrg } from "../utils/tenant.js";
+import { documentUpload } from "../middleware/upload.js";
+import { runOcr } from "../utils/runOcr.js";
+import { extractStructuredFromImage } from "../services/openai.js";
+import { extractLabsFromText } from "../utils/ocrExtract.js";
 
 const router = Router();
 
@@ -35,6 +40,7 @@ router.get("/", async (req, res) => {
     const results = await LabResult.find(filter)
       .populate("patient", "name phone")
       .populate("orderedBy", "name")
+      .populate("attachments", "fileName mimeType size")
       .sort({ orderedAt: -1 });
     res.json({ results });
   } catch (error) {
@@ -60,6 +66,61 @@ router.get("/stats", async (req, res) => {
   }
 });
 
+router.post("/scan", authorize("admin", "doctor", "nurse"), documentUpload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Image required" });
+    const { patient } = req.body;
+    if (!patient || !mongoose.Types.ObjectId.isValid(patient)) {
+      return res.status(400).json({ message: "Valid patient ID required" });
+    }
+    if (!(await assertPatientInOrg(req, patient))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    let ocrText = "";
+    let draft = null;
+    try {
+      const ai = await extractStructuredFromImage(req.file.path, req.file.mimetype, "labs");
+      if (ai.ok && ai.draft && Array.isArray(ai.draft.tests) && ai.draft.tests.length) {
+        draft = ai.draft;
+      }
+    } catch {
+      draft = null;
+    }
+    if (!draft) {
+      try {
+        const r = await runOcr(req.file.path);
+        ocrText = r.ok ? r.text : "";
+        draft = ocrText ? extractLabsFromText(ocrText) : null;
+      } catch {
+        draft = null;
+      }
+    }
+
+    if (draft?.tests) {
+      draft.tests = draft.tests.map((t) => ({ ...t, status: deriveTestStatus(t) }));
+    }
+
+    const doc = await PatientDocument.create({
+      patient,
+      organization: req.user.organization || null,
+      fileName: req.file.filename,
+      originalName: req.file.originalname || "scan.jpg",
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      docType: "Lab Result",
+      tags: ["scan"],
+      ocrText,
+      ocrProcessed: !!ocrText,
+      uploadedBy: req.user._id,
+    });
+
+    res.json({ ok: !!draft, draft, documentId: doc._id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/:id", audit("lab.viewed"), async (req, res) => {
   try {
     const result = await LabResult.findOne({ _id: req.params.id, ...req.tenantFilter })
@@ -74,12 +135,17 @@ router.get("/:id", audit("lab.viewed"), async (req, res) => {
 
 router.post("/", authorize("admin", "doctor", "nurse"), async (req, res) => {
   try {
-    const { patient, panel, orderedAt, tests, notes, status } = req.body;
+    const { patient, panel, orderedAt, tests, notes, status, attachments } = req.body;
     if (!patient || !mongoose.Types.ObjectId.isValid(patient)) {
       return res.status(400).json({ message: "Valid patient ID required" });
     }
     if (!(await assertPatientInOrg(req, patient))) {
       return res.status(404).json({ message: "Patient not found" });
+    }
+    let validAttachments = [];
+    if (Array.isArray(attachments) && attachments.length) {
+      const docs = await PatientDocument.find({ _id: { $in: attachments }, patient, organization: req.user.organization || null }).select("_id");
+      validAttachments = docs.map((d) => d._id);
     }
     const result = await LabResult.create({
       organization: req.user.organization,
@@ -91,6 +157,7 @@ router.post("/", authorize("admin", "doctor", "nurse"), async (req, res) => {
       notes: notes || "",
       status: status || (tests?.length ? "completed" : "ordered"),
       completedAt: tests?.length ? new Date() : null,
+      attachments: validAttachments,
     });
     res.status(201).json({ result });
   } catch (error) {
@@ -105,6 +172,10 @@ router.put("/:id", authorize("admin", "doctor", "nurse"), async (req, res) => {
     const allowed = ["panel", "status", "orderedAt", "collectedAt", "notes", "tests"];
     for (const key of allowed) {
       if (req.body[key] !== undefined) result[key] = req.body[key];
+    }
+    if (Array.isArray(req.body.attachments) && req.body.attachments.length) {
+      const docs = await PatientDocument.find({ _id: { $in: req.body.attachments }, patient: result.patient, organization: req.user.organization || null }).select("_id");
+      result.attachments = docs.map((d) => d._id);
     }
     if (Array.isArray(req.body.tests)) {
       result.tests = req.body.tests.map((t) => ({ ...t, status: deriveTestStatus(t) }));

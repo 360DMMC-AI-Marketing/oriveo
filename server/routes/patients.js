@@ -1,11 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
-import path from "path";
-import fs from "fs";
 import bcrypt from "bcryptjs";
 import Patient from "../models/Patient.js";
 import Organization from "../models/Organization.js";
+import { documentUpload } from "../middleware/upload.js";
 import {
   getPatients,
   getPatient,
@@ -34,56 +33,17 @@ import {
   exportPatientData,
 } from "../controllers/patientGDPRController.js";
 
-const docDir = "uploads/documents";
-fs.mkdirSync(docDir, { recursive: true });
-
-const ALLOWED_DOC_MIME = new Set([
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "image/bmp",
-  "image/tiff",
-  "text/plain",
-  "text/csv",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-]);
-
-function rejectUnsafeFile(file, cb) {
-  const err = new Error(`File type not allowed (${file.mimetype}). Allowed: PDF, images, plain text, CSV, and Office documents.`);
-  err.isOperational = true;
-  err.statusCode = 400;
-  cb(err);
-}
-
-function docFileFilter(req, file, cb) {
-  if (ALLOWED_DOC_MIME.has(file.mimetype)) return cb(null, true);
-  return rejectUnsafeFile(file, cb);
-}
-
 function csvFileFilter(req, file, cb) {
   if (file.mimetype === "text/csv" || file.mimetype === "application/csv" || file.mimetype === "application/vnd.ms-excel" || file.originalname.toLowerCase().endsWith(".csv")) {
     return cb(null, true);
   }
-  return rejectUnsafeFile(file, cb);
+  const err = new Error(`File type not allowed (${file.mimetype}). Allowed: PDF, images, plain text, CSV, and Office documents.`);
+  err.isOperational = true;
+  err.statusCode = 400;
+  return cb(err);
 }
 
-const documentStorage = multer.diskStorage({
-  destination: docDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
-
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: csvFileFilter });
-const documentUpload = multer({ storage: documentStorage, limits: { fileSize: 20 * 1024 * 1024 }, fileFilter: docFileFilter });
 
 const router = Router();
 

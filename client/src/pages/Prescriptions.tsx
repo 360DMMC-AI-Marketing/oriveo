@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import CameraCapture from "@/components/CameraCapture";
 import {
-  Pill, Loader2, Plus, X, Search, Trash2, PenLine, RefreshCw, Printer,
+  Pill, Loader2, Plus, X, Search, Trash2, PenLine, RefreshCw, Printer, Camera, Image as ImageIcon,
 } from "lucide-react";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -20,16 +21,25 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 const ROUTES = ["oral", "topical", "IV", "IM", "subcutaneous", "inhalation", "ophthalmic", "otic", "rectal", "sublingual"];
 
-function RxForm({ patients, onSave, onClose }: { patients: any[]; onSave: (d: any) => void; onClose: () => void }) {
-  const [form, setForm] = useState<any>({ patient: "", medication: "", dosage: "", route: "", frequency: "", instructions: "", quantity: "", refills: 0 });
+function RxForm({ patients, onSave, onClose, initial, photo }: { patients: any[]; onSave: (d: any) => void; onClose: () => void; initial?: any; photo?: string | null }) {
+  const [form, setForm] = useState<any>(initial || { patient: "", medication: "", dosage: "", route: "", frequency: "", instructions: "", quantity: "", refills: 0 });
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b">
-          <h3 className="text-lg font-semibold">Write Prescription</h3>
+          <h3 className="text-lg font-semibold">{initial ? "Review extracted prescription" : "Write Prescription"}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
         </div>
         <div className="p-5 space-y-4">
+          {photo && (
+            <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+              <img src={photo} alt="scanned" className="h-20 w-20 object-cover rounded-lg border border-gray-200" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Scanned photo attached</p>
+                <p className="text-xs text-gray-500">It will be saved with this prescription. Edit any fields below before saving.</p>
+              </div>
+            </div>
+          )}
           <div><Label>Patient *</Label><select value={form.patient} onChange={e => setForm({ ...form, patient: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"><option value="">Select patient</option>{patients.map((p: any) => <option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
           <div><Label>Medication *</Label><Input value={form.medication} onChange={e => setForm({ ...form, medication: e.target.value })} placeholder="e.g. Amoxicillin 500mg" className="mt-1" /></div>
           <div className="grid grid-cols-3 gap-3">
@@ -87,9 +97,113 @@ function RxPrint({ rx }: { rx: any }) {
   return <button onClick={openPrint} className="p-1.5 hover:bg-gray-100 rounded text-gray-500"><Printer size={13} /></button>;
 }
 
+function ScanRxModal({ patients, onClose }: { patients: any[]; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [patient, setPatient] = useState("");
+  const [stage, setStage] = useState<"pick" | "camera" | "loading" | "review">("pick");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [draft, setDraft] = useState<any>(null);
+  const [docId, setDocId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const cleanup = () => {
+    if (docId && patient) {
+      api.delete(`/patients/${patient}/documents/${docId}`).catch(() => {});
+    }
+  };
+
+  const onCapture = async (url: string) => {
+    setPhoto(url);
+    setStage("loading");
+    setError("");
+    try {
+      const blob = await (await fetch(url)).blob();
+      const form = new FormData();
+      form.append("image", blob, "scan.jpg");
+      form.append("patient", patient);
+      const r = await api.post("/prescriptions/scan", form, { headers: { "Content-Type": "multipart/form-data" } });
+      setDocId(r.data.documentId);
+      const base = { patient, medication: "", dosage: "", route: "", frequency: "", instructions: "", quantity: "", refills: 0 };
+      setDraft(r.data.draft ? { ...base, ...r.data.draft } : base);
+      if (!r.data.draft) setError("Could not read the photo — please fill the details manually below.");
+      setStage("review");
+    } catch (e: any) {
+      setError(e.response?.data?.message || "Scan failed. Try again.");
+      setStage("camera");
+    }
+  };
+
+  const save = (d: any) => {
+    const payload = { ...d, quantity: d.quantity ? Number(d.quantity) : null, endDate: d.endDate ? new Date(d.endDate) : null, attachments: docId ? [docId] : [] };
+    api.post("/prescriptions", payload)
+      .then(() => {
+        toast.success("Prescription written");
+        queryClient.invalidateQueries({ queryKey: ["rx"] });
+        queryClient.invalidateQueries({ queryKey: ["rx-stats"] });
+        setDocId(null);
+        onClose();
+      })
+      .catch((e: any) => toast.error(e.response?.data?.message || "Failed to write"));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (stage !== "camera") { cleanup(); onClose(); } }}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-5 space-y-4">
+          {stage === "pick" && (
+            <>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Scan prescription</h3>
+                <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
+              </div>
+              <p className="text-sm text-gray-500">Choose the patient, then take a photo of the prescription. AI will read it and fill the form for you.</p>
+              <div>
+                <Label>Patient *</Label>
+                <select value={patient} onChange={e => setPatient(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+                  <option value="">Select patient</option>
+                  {patients.map((p: any) => <option key={p._id} value={p._id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!patient} onClick={() => setStage("camera")}>
+                  <Camera size={14} className="mr-1" /> Open Camera
+                </Button>
+              </div>
+            </>
+          )}
+
+          {stage === "camera" && (
+            <>
+              <CameraCapture onCapture={onCapture} onCancel={() => setStage("pick")} />
+              {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            </>
+          )}
+
+          {stage === "loading" && (
+            <div className="py-16 text-center">
+              <Loader2 className="animate-spin text-emerald-500 mx-auto mb-4" size={36} />
+              <p className="text-sm text-gray-600">Reading the photo with AI…</p>
+            </div>
+          )}
+
+          {stage === "review" && (
+            <>
+              {error && <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{error}</p>}
+              <RxForm patients={patients} photo={photo} initial={draft} onSave={save}
+                onClose={() => { cleanup(); onClose(); }} />
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Prescriptions() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [showScan, setShowScan] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -134,7 +248,10 @@ export default function Prescriptions() {
           <h1 className="text-2xl font-bold text-gray-900">Prescriptions</h1>
           <p className="text-sm text-gray-500 mt-1">Write, sign and print prescriptions</p>
         </div>
-        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setShowForm(true)}><Plus size={14} className="mr-1" /> Write Rx</Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="text-emerald-600" onClick={() => setShowScan(true)}><Camera size={14} className="mr-1" /> Scan</Button>
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setShowForm(true)}><Plus size={14} className="mr-1" /> Write Rx</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -190,15 +307,16 @@ export default function Prescriptions() {
                       <p className="text-xs text-gray-500 mt-0.5">{rx.patient?.name} · Rx by {rx.prescribedBy?.name || "—"} · {new Date(rx.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${(STATUS_MAP[rx.status] || STATUS_MAP.active).cls}`}>{(STATUS_MAP[rx.status] || STATUS_MAP.active).label}</span>
-                    {rx.isSigned ? (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">Signed</span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200">Unsigned</span>
-                    )}
-                    <RxPrint rx={rx} />
-                  </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${(STATUS_MAP[rx.status] || STATUS_MAP.active).cls}`}>{(STATUS_MAP[rx.status] || STATUS_MAP.active).label}</span>
+                      {rx.isSigned ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">Signed</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200">Unsigned</span>
+                      )}
+                      {rx.attachments?.length > 0 && <span className="inline-flex items-center gap-1 text-xs text-gray-500 px-2 py-0.5 bg-gray-100 rounded-full"><ImageIcon size={12} /> photo</span>}
+                      <RxPrint rx={rx} />
+                    </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
                   {rx.frequency && <span className="px-2 py-1 bg-gray-100 rounded">{rx.frequency}</span>}
@@ -221,6 +339,7 @@ export default function Prescriptions() {
       )}
 
       {showForm && <RxForm patients={patients} onSave={(d) => createMut.mutate(d)} onClose={() => setShowForm(false)} />}
+      {showScan && <ScanRxModal patients={patients} onClose={() => setShowScan(false)} />}
     </div>
   );
 }

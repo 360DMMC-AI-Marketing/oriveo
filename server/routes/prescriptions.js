@@ -4,8 +4,12 @@ import { protect, authorize } from "../middleware/auth.js";
 import { audit } from "../middleware/auditLog.js";
 import Prescription from "../models/Prescription.js";
 import Patient from "../models/Patient.js";
-import User from "../models/User.js";
+import PatientDocument from "../models/PatientDocument.js";
 import { assertPatientInOrg } from "../utils/tenant.js";
+import { documentUpload } from "../middleware/upload.js";
+import { runOcr } from "../utils/runOcr.js";
+import { extractStructuredFromImage } from "../services/openai.js";
+import { extractRxFromText } from "../utils/ocrExtract.js";
 
 const router = Router();
 
@@ -23,6 +27,7 @@ router.get("/", async (req, res) => {
     const prescriptions = await Prescription.find(filter)
       .populate("patient", "name phone")
       .populate("prescribedBy", "name")
+      .populate("attachments", "fileName mimeType size")
       .sort({ createdAt: -1 });
     res.json({ prescriptions });
   } catch (error) {
@@ -58,9 +63,67 @@ router.get("/:id", audit("prescription.viewed"), async (req, res) => {
   }
 });
 
+router.post("/scan", authorize("admin", "doctor"), documentUpload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Image required" });
+    const { patient } = req.body;
+    if (!patient || !mongoose.Types.ObjectId.isValid(patient)) {
+      return res.status(400).json({ message: "Valid patient ID required" });
+    }
+    if (!(await assertPatientInOrg(req, patient))) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    let ocrText = "";
+    let draft = null;
+    try {
+      const ai = await extractStructuredFromImage(req.file.path, req.file.mimetype, "rx");
+      if (ai.ok && ai.draft && ai.draft.medication) {
+        draft = ai.draft;
+      }
+    } catch {
+      draft = null;
+    }
+    if (!draft) {
+      try {
+        const r = await runOcr(req.file.path);
+        ocrText = r.ok ? r.text : "";
+        draft = ocrText ? extractRxFromText(ocrText) : null;
+      } catch {
+        draft = null;
+      }
+    }
+
+    if (draft) {
+      const validRoutes = ["oral", "topical", "IV", "IM", "subcutaneous", "inhalation", "ophthalmic", "otic", "rectal", "sublingual"];
+      if (draft.route && !validRoutes.includes(draft.route)) draft.route = "";
+      if (draft.quantity !== null && draft.quantity !== undefined) draft.quantity = Number(draft.quantity) || null;
+      if (draft.refills === null || draft.refills === undefined) draft.refills = 0;
+    }
+
+    const doc = await PatientDocument.create({
+      patient,
+      organization: req.user.organization || null,
+      fileName: req.file.filename,
+      originalName: req.file.originalname || "scan.jpg",
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      docType: "Prescription",
+      tags: ["scan"],
+      ocrText,
+      ocrProcessed: !!ocrText,
+      uploadedBy: req.user._id,
+    });
+
+    res.json({ ok: !!draft, draft, documentId: doc._id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/", authorize("admin", "doctor"), async (req, res) => {
   try {
-    const { patient, medication, dosage, route, frequency, instructions, quantity, refills, startDate, endDate } = req.body;
+    const { patient, medication, dosage, route, frequency, instructions, quantity, refills, startDate, endDate, attachments } = req.body;
     if (!patient || !mongoose.Types.ObjectId.isValid(patient)) {
       return res.status(400).json({ message: "Valid patient ID required" });
     }
@@ -69,6 +132,11 @@ router.post("/", authorize("admin", "doctor"), async (req, res) => {
     }
     if (!(await assertPatientInOrg(req, patient))) {
       return res.status(404).json({ message: "Patient not found" });
+    }
+    let validAttachments = [];
+    if (Array.isArray(attachments) && attachments.length) {
+      const docs = await PatientDocument.find({ _id: { $in: attachments }, patient, organization: req.user.organization || null }).select("_id");
+      validAttachments = docs.map((d) => d._id);
     }
     const prescription = await Prescription.create({
       organization: req.user.organization,
@@ -84,6 +152,7 @@ router.post("/", authorize("admin", "doctor"), async (req, res) => {
       startDate: startDate || new Date(),
       endDate: endDate || null,
       createdBy: req.user._id,
+      attachments: validAttachments,
     });
     res.status(201).json({ prescription });
   } catch (error) {
@@ -98,6 +167,10 @@ router.put("/:id", authorize("admin", "doctor"), async (req, res) => {
     const allowed = ["medication", "dosage", "route", "frequency", "instructions", "quantity", "refills", "startDate", "endDate", "status"];
     for (const key of allowed) {
       if (req.body[key] !== undefined) prescription[key] = req.body[key];
+    }
+    if (Array.isArray(req.body.attachments) && req.body.attachments.length) {
+      const docs = await PatientDocument.find({ _id: { $in: req.body.attachments }, patient: prescription.patient, organization: req.user.organization || null }).select("_id");
+      prescription.attachments = docs.map((d) => d._id);
     }
     await prescription.save();
     res.json({ prescription });

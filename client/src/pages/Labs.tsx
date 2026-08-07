@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import CameraCapture from "@/components/CameraCapture";
 import {
-  FlaskConical, Loader2, Plus, X, Search, Trash2, FileDown, Activity,
+  FlaskConical, Loader2, Plus, X, Search, Trash2, FileDown, Activity, Camera, Image as ImageIcon,
 } from "lucide-react";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -28,8 +29,8 @@ const TEST_STATUS: Record<string, { label: string; cls: string }> = {
 
 const COMMON_PANELS = ["General", "CBC", "CMP", "Lipid Panel", "HbA1c", "Thyroid Panel", "Urinalysis", "Coagulation", "Vitamins"];
 
-function LabForm({ patients, onSave, onClose }: { patients: any[]; onSave: (d: any) => void; onClose: () => void }) {
-  const [form, setForm] = useState<any>({ patient: "", panel: "General", tests: [{ name: "", value: "", unit: "", referenceLow: "", referenceHigh: "" }], notes: "" });
+function LabForm({ patients, onSave, onClose, initial, photo }: { patients: any[]; onSave: (d: any) => void; onClose: () => void; initial?: any; photo?: string | null }) {
+  const [form, setForm] = useState<any>(initial || { patient: "", panel: "General", tests: [{ name: "", value: "", unit: "", referenceLow: "", referenceHigh: "" }], notes: "" });
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
   const setTest = (i: number, k: string, v: any) => setForm((p: any) => ({ ...p, tests: p.tests.map((t: any, j: number) => (j === i ? { ...t, [k]: v } : t)) }));
   const addTest = () => set("tests", [...form.tests, { name: "", value: "", unit: "", referenceLow: "", referenceHigh: "" }]);
@@ -40,10 +41,19 @@ function LabForm({ patients, onSave, onClose }: { patients: any[]; onSave: (d: a
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b">
-          <h3 className="text-lg font-semibold">Add Lab Result</h3>
+          <h3 className="text-lg font-semibold">{initial ? "Review extracted lab result" : "Add Lab Result"}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
         </div>
         <div className="p-5 space-y-4">
+          {photo && (
+            <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+              <img src={photo} alt="scanned" className="h-20 w-20 object-cover rounded-lg border border-gray-200" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Scanned photo attached</p>
+                <p className="text-xs text-gray-500">It will be saved with this lab result. Edit any fields below before saving.</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Patient *</Label><select value={form.patient} onChange={e => set("patient", e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"><option value="">Select patient</option>{patients.map((p: any) => <option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
             <div><Label>Panel</Label>
@@ -86,9 +96,116 @@ function LabForm({ patients, onSave, onClose }: { patients: any[]; onSave: (d: a
   );
 }
 
+function ScanLabsModal({ patients, onClose }: { patients: any[]; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [patient, setPatient] = useState("");
+  const [stage, setStage] = useState<"pick" | "camera" | "loading" | "review">("pick");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [draft, setDraft] = useState<any>(null);
+  const [docId, setDocId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const cleanup = () => {
+    if (docId && patient) {
+      api.delete(`/patients/${patient}/documents/${docId}`).catch(() => {});
+    }
+  };
+
+  const onCapture = async (url: string) => {
+    setPhoto(url);
+    setStage("loading");
+    setError("");
+    try {
+      const blob = await (await fetch(url)).blob();
+      const form = new FormData();
+      form.append("image", blob, "scan.jpg");
+      form.append("patient", patient);
+      const r = await api.post("/labs/scan", form, { headers: { "Content-Type": "multipart/form-data" } });
+      setDocId(r.data.documentId);
+      if (r.data.draft) {
+        setDraft({ patient, ...r.data.draft });
+        setStage("review");
+      } else {
+        setDraft({ patient, panel: "General", tests: [{ name: "", value: "", unit: "", referenceLow: "", referenceHigh: "" }], notes: "" });
+        setError("Could not read the photo — please fill the details manually below.");
+        setStage("review");
+      }
+    } catch (e: any) {
+      setError(e.response?.data?.message || "Scan failed. Try again.");
+      setStage("camera");
+    }
+  };
+
+  const save = (d: any) => {
+    api.post("/labs", { ...d, attachments: docId ? [docId] : [] })
+      .then(() => {
+        toast.success("Lab result saved");
+        queryClient.invalidateQueries({ queryKey: ["labs"] });
+        queryClient.invalidateQueries({ queryKey: ["labs-stats"] });
+        setDocId(null);
+        onClose();
+      })
+      .catch((e: any) => toast.error(e.response?.data?.message || "Failed to save"));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (stage !== "camera") { cleanup(); onClose(); } }}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-5 space-y-4">
+          {stage === "pick" && (
+            <>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Scan lab result</h3>
+                <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
+              </div>
+              <p className="text-sm text-gray-500">Choose the patient, then take a photo of the lab report. AI will read it and fill the form for you.</p>
+              <div>
+                <Label>Patient *</Label>
+                <select value={patient} onChange={e => setPatient(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+                  <option value="">Select patient</option>
+                  {patients.map((p: any) => <option key={p._id} value={p._id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!patient} onClick={() => setStage("camera")}>
+                  <Camera size={14} className="mr-1" /> Open Camera
+                </Button>
+              </div>
+            </>
+          )}
+
+          {stage === "camera" && (
+            <>
+              <CameraCapture onCapture={onCapture} onCancel={() => setStage("pick")} />
+              {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            </>
+          )}
+
+          {stage === "loading" && (
+            <div className="py-16 text-center">
+              <Loader2 className="animate-spin text-emerald-500 mx-auto mb-4" size={36} />
+              <p className="text-sm text-gray-600">Reading the photo with AI…</p>
+            </div>
+          )}
+
+          {stage === "review" && (
+            <>
+              {error && <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{error}</p>}
+              <LabForm patients={patients} photo={photo} initial={draft} onSave={save}
+                onClose={() => { cleanup(); onClose(); }} />
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Labs() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [showScan, setShowScan] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -120,7 +237,10 @@ export default function Labs() {
           <h1 className="text-2xl font-bold text-gray-900">Lab Results</h1>
           <p className="text-sm text-gray-500 mt-1">Structured lab panels with auto-detected abnormal values</p>
         </div>
-        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setShowForm(true)}><Plus size={14} className="mr-1" /> Add Result</Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="text-emerald-600" onClick={() => setShowScan(true)}><Camera size={14} className="mr-1" /> Scan</Button>
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setShowForm(true)}><Plus size={14} className="mr-1" /> Add Result</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -177,6 +297,7 @@ export default function Labs() {
                 <div className="text-xs text-gray-400 flex items-center gap-3">
                   <span>{new Date(r.orderedAt).toLocaleDateString()}</span>
                   {r.orderedBy && <span>· {r.orderedBy.name}</span>}
+                  {r.attachments?.length > 0 && <span className="inline-flex items-center gap-1 text-gray-500"><ImageIcon size={12} /> photo</span>}
                   <button onClick={() => api.get(`/labs/${r._id}/fhir`).then((res) => { navigator.clipboard?.writeText(JSON.stringify(res.data, null, 2)); toast.info("FHIR Bundle copied"); })} className="text-emerald-600 hover:underline inline-flex items-center gap-1"><FileDown size={12} /> FHIR</button>
                   <button onClick={() => { if (confirm("Delete this lab result?")) deleteMut.mutate(r._id); }} className="text-red-400 hover:text-red-600 inline-flex items-center gap-1"><Trash2 size={12} /> Delete</button>
                 </div>
@@ -214,6 +335,7 @@ export default function Labs() {
       )}
 
       {showForm && <LabForm patients={patients} onSave={(d) => createMut.mutate(d)} onClose={() => setShowForm(false)} />}
+      {showScan && <ScanLabsModal patients={patients} onClose={() => setShowScan(false)} />}
     </div>
   );
 }

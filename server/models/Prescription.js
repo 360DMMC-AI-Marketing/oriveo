@@ -21,6 +21,7 @@ const prescriptionSchema = new mongoose.Schema(
     signedAt: { type: Date, default: null },
     signatureName: { type: String, default: "" },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: "PatientDocument", default: [] }],
   },
   { timestamps: true }
 );
