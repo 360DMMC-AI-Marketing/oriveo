@@ -27,11 +27,11 @@ export async function generateFamilyLinkToken({ patientId, organizationId }) {
 }
 
 export async function generateAndEmailFamilyLink({ patient, organizationId, baseUrl }) {
-  if (!patient?.familyEmail) {
-    return { sent: false, reason: "No family email on patient record", familyLink: null };
-  }
   const { token, fresh } = await generateFamilyLinkToken({ patientId: patient._id, organizationId });
   const familyLink = `${baseUrl}/family/${token}`;
+  if (!patient?.familyEmail) {
+    return { sent: false, reason: "No family email on patient record — link copied for manual sharing", familyLink };
+  }
   if (!fresh) {
     return { sent: false, reason: "A valid family link already exists for this patient (not re-sent)", familyLink };
   }

@@ -34,10 +34,15 @@ function StatusBadge({ status, map }: { status: string; map: Record<string, { la
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.cls}`}>{cfg.label}</span>;
 }
 
-function copyText(text: string): boolean {
+async function copyText(text: string): Promise<boolean> {
+  if (!text) return false;
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).catch(() => {});
-    return true;
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // clipboard rejected (e.g. transient activation expired) — fall back below
+    }
   }
   try {
     const ta = document.createElement("textarea");
@@ -46,9 +51,9 @@ function copyText(text: string): boolean {
     ta.style.opacity = "0";
     document.body.appendChild(ta);
     ta.select();
-    document.execCommand("copy");
+    const ok = document.execCommand("copy");
     document.body.removeChild(ta);
-    return true;
+    return ok;
   } catch {
     return false;
   }
@@ -301,10 +306,11 @@ export default function HomeCare() {
   });
   const familyLink = useMutation({
     mutationFn: (patientId: string) => api.post("/homecare/family-link", { patientId }),
-    onSuccess: (r: any) => {
-      copyText(r.data.familyLink);
+    onSuccess: async (r: any) => {
+      const copied = await copyText(r.data.familyLink);
       if (r.data.emailed) toast.success("Family link sent by email");
-      else toast.info(r.data.message || "Family link copied to clipboard");
+      else if (copied) toast.info(r.data.message || "Family link copied to clipboard");
+      else toast.error(r.data.message || "Copy failed — link: " + r.data.familyLink);
     },
     onError: (e: any) => toast.error(e.response?.data?.message || "Failed"),
   });
